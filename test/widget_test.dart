@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
@@ -37,8 +38,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('計算履歴'), findsOneWidget);
-    expect(find.text('a/b'), findsOneWidget);
+    expect(find.byKey(const Key('historyPanel')), findsOneWidget);
+    expect(find.bySemanticsLabel('a/b'), findsOneWidget);
   });
 
   testWidgets('業種を保存すると電卓へ移動する', (tester) async {
@@ -54,6 +55,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(preferences.savedOccupation, '土木監督');
-    expect(find.text('計算履歴'), findsOneWidget);
+    expect(find.byKey(const Key('historyPanel')), findsOneWidget);
   });
 }
