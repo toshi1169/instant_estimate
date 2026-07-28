@@ -57,4 +57,25 @@ void main() {
     expect(preferences.savedOccupation, '土木監督');
     expect(find.byKey(const Key('historyPanel')), findsOneWidget);
   });
+
+  testWidgets('電卓ボタンから四則演算できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final preferences = FakeOnboardingPreferences(hasSelected: true);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
+
+    for (final key in ['1', '2', '+', '3', '=']) {
+      await tester.tap(find.text(key));
+      await tester.pump();
+    }
+
+    expect(find.text('=  15'), findsOneWidget);
+    expect(find.byKey(const Key('calculatorCaret')), findsNothing);
+  });
 }

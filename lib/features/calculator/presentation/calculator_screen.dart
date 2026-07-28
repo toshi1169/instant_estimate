@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../application/calculator_controller.dart';
 
-class CalculatorScreen extends StatelessWidget {
-  const CalculatorScreen({super.key});
+class CalculatorScreen extends StatefulWidget {
+  const CalculatorScreen({this.controller, super.key});
 
-  static const _history = <({String expression, String result})>[
-    (expression: '12.8 ÷ 4 =', result: '3.2'),
-    (expression: '79.05 × 0.03 =', result: '2.3715'),
-    (expression: '(9.3 × 8.5) × 0.5 =', result: '39.525'),
-    (expression: '79.05 × 0.05 =', result: '3.9525'),
-    (expression: '4 × 580 =', result: '2,320'),
-  ];
+  final CalculatorController? controller;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -41,33 +36,76 @@ class CalculatorScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxHeight < 700;
-            final gap = compact ? 4.0 : 6.0;
+  State<CalculatorScreen> createState() => _CalculatorScreenState();
+}
 
-            return Padding(
-              padding: EdgeInsets.fromLTRB(gap, 4, gap, gap),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _AdBanner(height: compact ? 50 : 58),
-                  SizedBox(height: gap),
-                  Expanded(
-                    flex: 18,
-                    child: const _HistoryPanel(key: Key('historyPanel')),
-                  ),
-                  SizedBox(height: gap),
-                  Expanded(flex: 20, child: const _ExpressionPanel()),
-                  SizedBox(height: gap),
-                  Expanded(flex: 56, child: _Keypad(gap: gap)),
-                ],
-              ),
-            );
-          },
+class _CalculatorScreenState extends State<CalculatorScreen> {
+  late final CalculatorController _controller =
+      widget.controller ?? CalculatorController();
+  late final bool _ownsController = widget.controller == null;
+
+  @override
+  void dispose() {
+    if (_ownsController) _controller.dispose();
+    super.dispose();
+  }
+
+  void _pressKey(_CalculatorKey key) {
+    if (const {
+      _KeyKind.menu,
+      _KeyKind.settings,
+      _KeyKind.fraction,
+    }.contains(key.kind)) {
+      return;
+    }
+    _controller.press(key.label);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => Scaffold(
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxHeight < 700;
+              final gap = compact ? 4.0 : 6.0;
+
+              return Padding(
+                padding: EdgeInsets.fromLTRB(gap, 4, gap, gap),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _AdBanner(height: compact ? 50 : 58),
+                    SizedBox(height: gap),
+                    Expanded(
+                      flex: 18,
+                      child: _HistoryPanel(
+                        key: const Key('historyPanel'),
+                        history: _controller.history,
+                      ),
+                    ),
+                    SizedBox(height: gap),
+                    Expanded(
+                      flex: 20,
+                      child: _ExpressionPanel(controller: _controller),
+                    ),
+                    SizedBox(height: gap),
+                    Expanded(
+                      flex: 56,
+                      child: _Keypad(
+                        gap: gap,
+                        canCycleFraction: _controller.canCycleFraction,
+                        onPressed: _pressKey,
+                        onBackLongPressed: _controller.clear,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -149,7 +187,9 @@ class _AdBanner extends StatelessWidget {
 }
 
 class _HistoryPanel extends StatelessWidget {
-  const _HistoryPanel({super.key});
+  const _HistoryPanel({required this.history, super.key});
+
+  final List<CalculationHistoryEntry> history;
 
   @override
   Widget build(BuildContext context) {
@@ -164,10 +204,10 @@ class _HistoryPanel extends StatelessWidget {
       child: ListView.builder(
         reverse: true,
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        itemCount: CalculatorScreen._history.length,
+        itemCount: history.length,
         itemBuilder: (context, reversedIndex) {
-          final index = CalculatorScreen._history.length - 1 - reversedIndex;
-          final item = CalculatorScreen._history[index];
+          final index = history.length - 1 - reversedIndex;
+          final item = history[index];
           return SizedBox(
             height: 24,
             child: Row(
@@ -182,7 +222,7 @@ class _HistoryPanel extends StatelessWidget {
                   child: Text.rich(
                     TextSpan(
                       children: [
-                        TextSpan(text: '${item.expression} '),
+                        TextSpan(text: '${item.expression} = '),
                         TextSpan(
                           text: item.result,
                           style: const TextStyle(color: AppColors.accent),
@@ -205,7 +245,9 @@ class _HistoryPanel extends StatelessWidget {
 }
 
 class _ExpressionPanel extends StatelessWidget {
-  const _ExpressionPanel();
+  const _ExpressionPanel({required this.controller});
+
+  final CalculatorController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -224,27 +266,49 @@ class _ExpressionPanel extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text(
-                '(12.5 + 3.75) × 2.8 ÷ 4',
-                maxLines: 1,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w400,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      controller.displayExpression,
+                      key: const Key('expressionText'),
+                      maxLines: 1,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                if (controller.showCaret) ...[
+                  const SizedBox(width: 3),
+                  Container(
+                    key: const Key('calculatorCaret'),
+                    width: 2,
+                    height: 29,
+                    color: AppColors.accent,
+                  ),
+                ],
+              ],
             ),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerRight,
               child: Text(
-                '=  11.375',
+                controller.state == CalculatorState.error
+                    ? controller.errorMessage!
+                    : '=  ${controller.result}',
+                key: const Key('resultText'),
                 maxLines: 1,
                 style: theme.textTheme.displaySmall?.copyWith(
-                  color: AppColors.accent,
-                  fontSize: 42,
+                  color: controller.state == CalculatorState.error
+                      ? theme.colorScheme.error
+                      : AppColors.accent,
+                  fontSize: controller.state == CalculatorState.error ? 23 : 42,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -257,9 +321,17 @@ class _ExpressionPanel extends StatelessWidget {
 }
 
 class _Keypad extends StatelessWidget {
-  const _Keypad({required this.gap});
+  const _Keypad({
+    required this.gap,
+    required this.canCycleFraction,
+    required this.onPressed,
+    required this.onBackLongPressed,
+  });
 
   final double gap;
+  final bool canCycleFraction;
+  final ValueChanged<_CalculatorKey> onPressed;
+  final VoidCallback onBackLongPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -273,29 +345,45 @@ class _Keypad extends StatelessWidget {
         childAspectRatio: 1.52,
       ),
       itemBuilder: (context, index) {
-        return _KeyButton(keyData: CalculatorScreen._keys[index]);
+        final keyData = CalculatorScreen._keys[index];
+        return _KeyButton(
+          keyData: keyData,
+          useFractionToggleColor:
+              keyData.kind == _KeyKind.fractionToggle && canCycleFraction,
+          onPressed: () => onPressed(keyData),
+          onLongPressed: keyData.label == '←' ? onBackLongPressed : null,
+        );
       },
     );
   }
 }
 
 class _KeyButton extends StatelessWidget {
-  const _KeyButton({required this.keyData});
+  const _KeyButton({
+    required this.keyData,
+    required this.useFractionToggleColor,
+    required this.onPressed,
+    this.onLongPressed,
+  });
 
   final _CalculatorKey keyData;
+  final bool useFractionToggleColor;
+  final VoidCallback onPressed;
+  final VoidCallback? onLongPressed;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isGreen = keyData.kind == _KeyKind.operator;
-    final isOrange = keyData.kind == _KeyKind.fractionToggle;
+    final isOrange = useFractionToggleColor;
 
-    final backgroundColor = switch (keyData.kind) {
-      _KeyKind.operator => AppColors.accent,
-      _KeyKind.fractionToggle => AppColors.fractionToggle,
-      _ => isDark ? AppColors.darkKey : AppColors.lightKey,
-    };
+    final backgroundColor = isOrange
+        ? AppColors.fractionToggle
+        : switch (keyData.kind) {
+            _KeyKind.operator || _KeyKind.fractionToggle => AppColors.accent,
+            _ => isDark ? AppColors.darkKey : AppColors.lightKey,
+          };
 
     final foregroundColor = isGreen || isOrange
         ? Colors.white
@@ -305,7 +393,8 @@ class _KeyButton extends StatelessWidget {
       button: true,
       label: keyData.semanticLabel,
       child: FilledButton(
-        onPressed: () {},
+        onPressed: onPressed,
+        onLongPress: onLongPressed,
         style: FilledButton.styleFrom(
           padding: EdgeInsets.zero,
           backgroundColor: backgroundColor,
