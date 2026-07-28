@@ -12,5 +12,34 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    let channel = FlutterMethodChannel(
+      name: "jp.instant_estimate/onboarding_preferences",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "hasSelectedOccupation":
+        result(UserDefaults.standard.object(forKey: "occupation") != nil)
+      case "saveOccupation":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let occupation = arguments["occupation"] as? String
+        else {
+          result(
+            FlutterError(
+              code: "INVALID_ARGUMENT",
+              message: "Occupation is required.",
+              details: nil
+            )
+          )
+          return
+        }
+        UserDefaults.standard.set(occupation, forKey: "occupation")
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }

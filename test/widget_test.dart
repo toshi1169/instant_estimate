@@ -1,30 +1,59 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/app/app.dart';
+import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 
-import 'package:instant_estimate/main.dart';
+class FakeOnboardingPreferences implements OnboardingPreferences {
+  FakeOnboardingPreferences({required this.hasSelected});
+
+  bool hasSelected;
+  String? savedOccupation;
+
+  @override
+  Future<bool> hasSelectedOccupation() async => hasSelected;
+
+  @override
+  Future<void> saveOccupation(String occupation) async {
+    savedOccupation = occupation;
+    hasSelected = true;
+  }
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('初回起動では業種選択を表示する', (tester) async {
+    final preferences = FakeOnboardingPreferences(hasSelected: false);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('業種を選択'), findsOneWidget);
+    expect(find.text('建築監督'), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('選択済みの通常起動では電卓を表示する', (tester) async {
+    final preferences = FakeOnboardingPreferences(hasSelected: true);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('計算履歴'), findsOneWidget);
+    expect(find.text('a/b'), findsOneWidget);
+  });
+
+  testWidgets('業種を保存すると電卓へ移動する', (tester) async {
+    final preferences = FakeOnboardingPreferences(hasSelected: false);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('土木監督'));
     await tester.pump();
+    await tester.tap(find.text('この業種で始める'));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(preferences.savedOccupation, '土木監督');
+    expect(find.text('計算履歴'), findsOneWidget);
   });
 }
