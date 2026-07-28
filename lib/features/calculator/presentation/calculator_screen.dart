@@ -98,7 +98,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         gap: gap,
                         canCycleFraction: _controller.canCycleFraction,
                         onPressed: _pressKey,
-                        onBackLongPressed: _controller.clear,
+                        onBackLongPressed: _controller.clearLeftOfCaret,
                       ),
                     ),
                   ],
@@ -266,35 +266,7 @@ class _ExpressionPanel extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      controller.displayExpression,
-                      key: const Key('expressionText'),
-                      maxLines: 1,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                ),
-                if (controller.showCaret) ...[
-                  const SizedBox(width: 3),
-                  Container(
-                    key: const Key('calculatorCaret'),
-                    width: 2,
-                    height: 29,
-                    color: AppColors.accent,
-                  ),
-                ],
-              ],
-            ),
+            _EditableExpressionLine(controller: controller),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerRight,
@@ -315,6 +287,92 @@ class _ExpressionPanel extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _EditableExpressionLine extends StatelessWidget {
+  const _EditableExpressionLine({required this.controller});
+
+  final CalculatorController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final formatted = controller.formattedExpression;
+
+    return SizedBox(
+      height: 38,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          var fontSize = 26.0;
+          late TextPainter painter;
+          TextStyle style;
+
+          do {
+            style = theme.textTheme.headlineMedium!.copyWith(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w400,
+            );
+            painter = TextPainter(
+              text: TextSpan(text: formatted.text, style: style),
+              textDirection: TextDirection.ltr,
+              maxLines: 1,
+            )..layout();
+            fontSize--;
+          } while (painter.width > constraints.maxWidth - 8 && fontSize >= 14);
+
+          void moveCaret(TapDownDetails details) {
+            final startX = constraints.maxWidth - painter.width;
+            final localX = (details.localPosition.dx - startX).clamp(
+              0.0,
+              painter.width,
+            );
+            final position = painter.getPositionForOffset(Offset(localX, 0));
+            controller.moveCaretToDisplayOffset(position.offset);
+          }
+
+          final caretOffset = formatted.caretOffset.clamp(
+            0,
+            formatted.text.length,
+          );
+          final beforeCaret = formatted.text.substring(0, caretOffset);
+          final afterCaret = formatted.text.substring(caretOffset);
+
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: moveCaret,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text.rich(
+                key: const Key('expressionText'),
+                TextSpan(
+                  style: style,
+                  children: [
+                    TextSpan(text: beforeCaret),
+                    if (controller.showCaret)
+                      const WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 2),
+                          child: SizedBox(
+                            key: Key('calculatorCaret'),
+                            width: 2,
+                            height: 29,
+                            child: ColoredBox(color: AppColors.accent),
+                          ),
+                        ),
+                      ),
+                    TextSpan(text: afterCaret),
+                  ],
+                ),
+                maxLines: 1,
+                textAlign: TextAlign.right,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

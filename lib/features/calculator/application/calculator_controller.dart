@@ -14,6 +14,13 @@ class CalculationHistoryEntry {
   final String result;
 }
 
+class FormattedExpression {
+  const FormattedExpression({required this.text, required this.caretOffset});
+
+  final String text;
+  final int caretOffset;
+}
+
 class CalculatorController extends ChangeNotifier {
   CalculatorController({this._engine = const CalculationEngine()});
 
@@ -26,6 +33,7 @@ class CalculatorController extends ChangeNotifier {
   String? _errorMessage;
   CalculatorState _state = CalculatorState.input;
   bool _canCycleFraction = false;
+  int _caretPosition = 0;
 
   String get expression => _expression;
   String get result => _result;
@@ -33,19 +41,39 @@ class CalculatorController extends ChangeNotifier {
   CalculatorState get state => _state;
   bool get showCaret => _state == CalculatorState.input;
   bool get canCycleFraction => _canCycleFraction;
+  int get caretPosition => _caretPosition;
   List<CalculationHistoryEntry> get history => List.unmodifiable(_history);
 
-  String get displayExpression {
-    if (_expression.isEmpty) return '';
-    return _expression
-        .replaceAll('×', ' × ')
-        .replaceAll('÷', ' ÷ ')
-        .replaceAll('+', ' + ')
-        .replaceAll('−', ' − ')
-        .replaceAll('^', ' ^ ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+  FormattedExpression get formattedExpression {
+    final buffer = StringBuffer();
+    var displayCaret = 0;
+
+    for (var index = 0; index <= _expression.length; index++) {
+      if (index == _caretPosition) displayCaret = buffer.length;
+      if (index == _expression.length) break;
+
+      final character = _expression[index];
+      if (_isOperator(character)) {
+        if (buffer.isNotEmpty && !buffer.toString().endsWith(' ')) {
+          buffer.write(' ');
+        }
+        if (index == _caretPosition) displayCaret = buffer.length;
+        buffer
+          ..write(character)
+          ..write(' ');
+      } else {
+        buffer.write(character);
+      }
+    }
+
+    final text = buffer.toString().trimRight();
+    return FormattedExpression(
+      text: text,
+      caretOffset: displayCaret.clamp(0, text.length),
+    );
   }
+
+  String get displayExpression => formattedExpression.text;
 
   void press(String key) {
     switch (key) {
@@ -91,6 +119,7 @@ class CalculatorController extends ChangeNotifier {
       _state = CalculatorState.result;
       _errorMessage = null;
       _canCycleFraction = _findSimpleFraction(value);
+      _caretPosition = _expression.length;
       _history.add(
         CalculationHistoryEntry(expression: displayExpression, result: _result),
       );
@@ -103,14 +132,52 @@ class CalculatorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void moveCaretToDisplayOffset(int displayOffset) {
+    if (_state == CalculatorState.error) return;
+    if (_state == CalculatorState.result) {
+      _state = CalculatorState.input;
+      _canCycleFraction = false;
+    }
+
+    var bestRawOffset = 0;
+    var bestDistance = 1 << 30;
+    for (var rawOffset = 0; rawOffset <= _expression.length; rawOffset++) {
+      final candidate = _displayOffsetForRawOffset(rawOffset);
+      final distance = (candidate - displayOffset).abs();
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestRawOffset = rawOffset;
+      }
+    }
+    _caretPosition = bestRawOffset;
+    notifyListeners();
+  }
+
   void backspace() {
     if (_state != CalculatorState.input) {
       clear();
       return;
     }
-    if (_expression.isEmpty) return;
+    if (_caretPosition == 0 || _expression.isEmpty) return;
 
-    _expression = _expression.substring(0, _expression.length - 1);
+    _expression =
+        '${_expression.substring(0, _caretPosition - 1)}'
+        '${_expression.substring(_caretPosition)}';
+    _caretPosition--;
+    _canCycleFraction = false;
+    notifyListeners();
+  }
+
+  void clearLeftOfCaret() {
+    if (_state != CalculatorState.input) {
+      clear();
+      return;
+    }
+    if (_caretPosition == 0) return;
+
+    _expression = _expression.substring(_caretPosition);
+    _caretPosition = 0;
+    _result = '0';
     _canCycleFraction = false;
     notifyListeners();
   }
@@ -122,34 +189,37 @@ class CalculatorController extends ChangeNotifier {
     _errorMessage = null;
     _state = CalculatorState.input;
     _canCycleFraction = false;
+    _caretPosition = 0;
     notifyListeners();
   }
 
   void _insertDigits(String digits) {
     _prepareForNumberInput();
-    if (_endsWithClosingValue()) _expression += '×';
-
-    final currentNumber = _currentNumber;
-    if (currentNumber == '0' && !digits.startsWith('0')) {
-      _expression = _expression.substring(0, _expression.length - 1);
+    if (_characterBeforeCaret == ')' || _characterBeforeCaret == '%') {
+      _insertAtCaret('×');
     }
+
     if (_expression.isEmpty && digits == '00') {
-      _expression = '0';
+      _insertAtCaret('0');
     } else {
-      _expression += digits;
+      _insertAtCaret(digits);
     }
     notifyListeners();
   }
 
   void _insertDecimalPoint() {
     _prepareForNumberInput();
-    if (_endsWithClosingValue()) _expression += '×';
-    if (_currentNumber.contains('.')) return;
+    if (_characterBeforeCaret == ')' || _characterBeforeCaret == '%') {
+      _insertAtCaret('×');
+    }
+    if (_numberAroundCaret.contains('.')) return;
 
-    if (_expression.isEmpty || _endsWithOperatorOrOpenParenthesis) {
-      _expression += '0.';
+    if (_caretPosition == 0 ||
+        _isOperator(_characterBeforeCaret) ||
+        _characterBeforeCaret == '(') {
+      _insertAtCaret('0.');
     } else {
-      _expression += '.';
+      _insertAtCaret('.');
     }
     notifyListeners();
   }
@@ -158,26 +228,26 @@ class CalculatorController extends ChangeNotifier {
     if (_state == CalculatorState.error) clear();
     if (_state == CalculatorState.result) {
       _expression = _rawResult;
+      _caretPosition = _expression.length;
       _state = CalculatorState.input;
     }
     if (_expression.isEmpty) {
-      if (operator == '−') _expression = operator;
+      if (operator == '−') _insertAtCaret(operator);
       notifyListeners();
       return;
     }
 
-    final last = _expression[_expression.length - 1];
-    if (_isOperator(last)) {
-      if (operator == '−' && last != '−') {
-        _expression += operator;
+    final previous = _characterBeforeCaret;
+    if (_isOperator(previous)) {
+      if (operator == '−' && previous != '−') {
+        _insertAtCaret(operator);
       } else {
-        _expression =
-            '${_expression.substring(0, _expression.length - 1)}$operator';
+        _replaceBeforeCaret(operator);
       }
-    } else if (last == '(') {
-      if (operator == '−') _expression += operator;
-    } else if (last != '.') {
-      _expression += operator;
+    } else if (previous == '(') {
+      if (operator == '−') _insertAtCaret(operator);
+    } else if (previous != '.') {
+      _insertAtCaret(operator);
     }
     _canCycleFraction = false;
     notifyListeners();
@@ -185,24 +255,26 @@ class CalculatorController extends ChangeNotifier {
 
   void _insertParenthesis() {
     _prepareForNumberInput();
-    final openCount = '('.allMatches(_expression).length;
-    final closeCount = ')'.allMatches(_expression).length;
+    final beforeCaret = _expression.substring(0, _caretPosition);
+    final openCount = '('.allMatches(beforeCaret).length;
+    final closeCount = ')'.allMatches(beforeCaret).length;
+    final previous = _characterBeforeCaret;
 
-    if (_expression.isEmpty || _endsWithOperatorOrOpenParenthesis) {
-      _expression += '(';
+    if (_caretPosition == 0 || _isOperator(previous) || previous == '(') {
+      _insertAtCaret('(');
     } else if (openCount > closeCount) {
-      _expression += ')';
+      _insertAtCaret(')');
     } else {
-      _expression += '×(';
+      _insertAtCaret('×(');
     }
     notifyListeners();
   }
 
   void _insertPercent() {
-    if (_state != CalculatorState.input || _expression.isEmpty) return;
-    final last = _expression[_expression.length - 1];
-    if (_isDigit(last) || last == ')') {
-      _expression += '%';
+    if (_state != CalculatorState.input || _caretPosition == 0) return;
+    final previous = _characterBeforeCaret;
+    if (_isDigit(previous) || previous == ')') {
+      _insertAtCaret('%');
       notifyListeners();
     }
   }
@@ -214,25 +286,62 @@ class CalculatorController extends ChangeNotifier {
     _canCycleFraction = false;
   }
 
-  bool get _endsWithOperatorOrOpenParenthesis {
-    if (_expression.isEmpty) return true;
-    final last = _expression[_expression.length - 1];
-    return _isOperator(last) || last == '(';
+  void _insertAtCaret(String value) {
+    _expression =
+        '${_expression.substring(0, _caretPosition)}'
+        '$value'
+        '${_expression.substring(_caretPosition)}';
+    _caretPosition += value.length;
   }
 
-  bool _endsWithClosingValue() {
-    if (_expression.isEmpty) return false;
-    final last = _expression[_expression.length - 1];
-    return last == ')' || last == '%';
+  void _replaceBeforeCaret(String value) {
+    _expression =
+        '${_expression.substring(0, _caretPosition - 1)}'
+        '$value'
+        '${_expression.substring(_caretPosition)}';
   }
 
-  String get _currentNumber {
-    final match = RegExp(r'[\d.]+$').firstMatch(_expression);
-    return match?.group(0) ?? '';
+  String get _characterBeforeCaret =>
+      _caretPosition == 0 ? '' : _expression[_caretPosition - 1];
+
+  String get _numberAroundCaret {
+    var start = _caretPosition;
+    var end = _caretPosition;
+    while (start > 0 && _isNumberCharacter(_expression[start - 1])) {
+      start--;
+    }
+    while (end < _expression.length && _isNumberCharacter(_expression[end])) {
+      end++;
+    }
+    return _expression.substring(start, end);
   }
 
-  bool _isDigit(String character) =>
-      character.codeUnitAt(0) >= 48 && character.codeUnitAt(0) <= 57;
+  int _displayOffsetForRawOffset(int targetRawOffset) {
+    final buffer = StringBuffer();
+    for (var index = 0; index < targetRawOffset; index++) {
+      final character = _expression[index];
+      if (_isOperator(character)) {
+        if (buffer.isNotEmpty && !buffer.toString().endsWith(' ')) {
+          buffer.write(' ');
+        }
+        buffer
+          ..write(character)
+          ..write(' ');
+      } else {
+        buffer.write(character);
+      }
+    }
+    return buffer.length;
+  }
+
+  bool _isNumberCharacter(String character) =>
+      _isDigit(character) || character == '.';
+
+  bool _isDigit(String character) {
+    if (character.isEmpty) return false;
+    final codeUnit = character.codeUnitAt(0);
+    return codeUnit >= 48 && codeUnit <= 57;
+  }
 
   bool _isOperator(String character) =>
       const {'+', '−', '×', '÷', '^'}.contains(character);

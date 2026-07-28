@@ -37,6 +37,45 @@ void main() {
       expect(controller.expression, '1');
     });
 
+    test('キャレット位置へ数字を挿入できる', () {
+      final controller = CalculatorController();
+      for (final key in ['1', '2', '+', '3']) {
+        controller.press(key);
+      }
+
+      controller.moveCaretToDisplayOffset(1);
+      controller.press('9');
+
+      expect(controller.expression, '192+3');
+      expect(controller.caretPosition, 2);
+    });
+
+    test('バックボタンはキャレット左側の1文字を削除する', () {
+      final controller = CalculatorController();
+      for (final key in ['1', '2', '3']) {
+        controller.press(key);
+      }
+
+      controller.moveCaretToDisplayOffset(2);
+      controller.backspace();
+
+      expect(controller.expression, '13');
+      expect(controller.caretPosition, 1);
+    });
+
+    test('長押し削除はキャレット左側をすべて削除する', () {
+      final controller = CalculatorController();
+      for (final key in ['1', '2', '+', '3', '4']) {
+        controller.press(key);
+      }
+
+      controller.moveCaretToDisplayOffset(5);
+      controller.clearLeftOfCaret();
+
+      expect(controller.expression, '34');
+      expect(controller.caretPosition, 0);
+    });
+
     test('クリアは式と結果を初期化する', () {
       final controller = CalculatorController();
       controller.press('9');
