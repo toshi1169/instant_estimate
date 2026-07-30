@@ -164,6 +164,6 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('calculatorCaret')), findsOneWidget);
-    expect(find.byKey(const Key('expressionTrailingTapArea')), findsOneWidget);
+    expect(find.byKey(const Key('expressionTrailingTapArea')), findsNothing);
   });
 }

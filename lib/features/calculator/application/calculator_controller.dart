@@ -277,6 +277,19 @@ class CalculatorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void moveCaretBeforeFraction(String marker) {
+    final markerIndex = _expression.indexOf(marker);
+    if (markerIndex < 0) return;
+    if (_state == CalculatorState.result) {
+      _state = CalculatorState.input;
+      _canCycleFraction = false;
+    }
+    _activeFractionMarker = null;
+    _activeFractionField = null;
+    _caretPosition = markerIndex;
+    notifyListeners();
+  }
+
   void pressFractionButton() {
     if (_state == CalculatorState.result) {
       // Result display cycling is connected in the next fraction phase.
@@ -422,6 +435,19 @@ class CalculatorController extends ChangeNotifier {
       return;
     }
     _prepareForNumberInput();
+    if (_isImmediatelyBeforeFractionOperand) {
+      final needsMultiplication =
+          _caretPosition < _expression.length &&
+          _isFractionMarker(_expression[_caretPosition]);
+      final insertion = needsMultiplication ? '$digits×' : digits;
+      _expression =
+          '${_expression.substring(0, _caretPosition)}'
+          '$insertion'
+          '${_expression.substring(_caretPosition)}';
+      _caretPosition += digits.length;
+      notifyListeners();
+      return;
+    }
     if (_characterBeforeCaret == ')' ||
         _characterBeforeCaret == '%' ||
         _isFractionMarker(_characterBeforeCaret)) {
@@ -586,6 +612,14 @@ class CalculatorController extends ChangeNotifier {
 
   String get _characterBeforeCaret =>
       _caretPosition == 0 ? '' : _expression[_caretPosition - 1];
+
+  bool get _isImmediatelyBeforeFractionOperand {
+    if (_caretPosition >= _expression.length) return false;
+    if (_isFractionMarker(_expression[_caretPosition])) return true;
+    return _expression[_caretPosition] == '×' &&
+        _caretPosition + 1 < _expression.length &&
+        _isFractionMarker(_expression[_caretPosition + 1]);
+  }
 
   String get _numberAroundCaret {
     var start = _caretPosition;

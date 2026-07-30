@@ -540,8 +540,7 @@ class _EditableExpressionLine extends StatelessWidget {
   const _EditableExpressionLine({required this.controller});
 
   final CalculatorController controller;
-  static const double _expressionFontSize = 26;
-  static const double _minimumExpressionScale = 0.55;
+  static const double _expressionFontSize = 42;
 
   @override
   Widget build(BuildContext context) {
@@ -579,61 +578,51 @@ class _EditableExpressionLine extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth * _minimumExpressionScale,
-                  ),
-                  child: Text.rich(
-                    key: const Key('expressionText'),
-                    TextSpan(
-                      style: style,
-                      children: [
-                        for (final segment in controller.displaySegments)
-                          switch (segment) {
-                            ExpressionTextSegment() => TextSpan(
-                              text: segment.text,
-                            ),
-                            ExpressionCaretSegment() => const WidgetSpan(
-                              alignment: PlaceholderAlignment.middle,
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 2),
-                                child: SizedBox(
-                                  key: Key('calculatorCaret'),
-                                  width: 2,
-                                  height: 29,
-                                  child: ColoredBox(color: AppColors.accent),
-                                ),
+                child: Text.rich(
+                  key: const Key('expressionText'),
+                  TextSpan(
+                    style: style,
+                    children: [
+                      for (final segment in controller.displaySegments)
+                        switch (segment) {
+                          ExpressionTextSegment() => TextSpan(
+                            text: segment.text,
+                          ),
+                          ExpressionCaretSegment() => const WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 2),
+                              child: SizedBox(
+                                key: Key('calculatorCaret'),
+                                width: 2,
+                                height: 46,
+                                child: ColoredBox(color: AppColors.accent),
                               ),
-                            ),
-                            ExpressionFractionSegment() => WidgetSpan(
-                              alignment: PlaceholderAlignment.middle,
-                              child: _InlineFraction(
-                                segment: segment,
-                                fontSize: _expressionFontSize,
-                                onFieldTap: (field) {
-                                  controller.activateFraction(
-                                    segment.marker,
-                                    field,
-                                  );
-                                },
-                              ),
-                            ),
-                          },
-                        WidgetSpan(
-                          alignment: PlaceholderAlignment.middle,
-                          child: _ExpressionTrailingTapArea(
-                            width: _expressionFontSize * 2,
-                            height: _expressionFontSize * 2.2,
-                            onTap: () => controller.moveCaretToDisplayOffset(
-                              formatted.text.length,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    textAlign: TextAlign.right,
+                          ExpressionFractionSegment() => WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: _InlineFraction(
+                              segment: segment,
+                              fontSize: _expressionFontSize,
+                              onWholeNumberTap: () {
+                                controller.moveCaretBeforeFraction(
+                                  segment.marker,
+                                );
+                              },
+                              onFieldTap: (field) {
+                                controller.activateFraction(
+                                  segment.marker,
+                                  field,
+                                );
+                              },
+                            ),
+                          ),
+                        },
+                    ],
                   ),
+                  maxLines: 1,
+                  textAlign: TextAlign.right,
                 ),
               ),
             ),
@@ -648,11 +637,13 @@ class _InlineFraction extends StatelessWidget {
   const _InlineFraction({
     required this.segment,
     required this.fontSize,
+    required this.onWholeNumberTap,
     required this.onFieldTap,
   });
 
   final ExpressionFractionSegment segment;
   final double fontSize;
+  final VoidCallback onWholeNumberTap;
   final ValueChanged<FractionField> onFieldTap;
 
   @override
@@ -673,9 +664,17 @@ class _InlineFraction extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (segment.wholeNumber.isNotEmpty) ...[
-            Text(
-              segment.wholeNumber,
-              style: TextStyle(color: textColor, fontSize: fontSize),
+            GestureDetector(
+              key: const Key('mixedFractionWholeNumber'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onWholeNumberTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  segment.wholeNumber,
+                  style: TextStyle(color: textColor, fontSize: fontSize),
+                ),
+              ),
             ),
             const SizedBox(width: 2),
           ],
@@ -779,28 +778,6 @@ class _FractionFieldDisplay extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ExpressionTrailingTapArea extends StatelessWidget {
-  const _ExpressionTrailingTapArea({
-    required this.width,
-    required this.height,
-    required this.onTap,
-  });
-
-  final double width;
-  final double height;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('expressionTrailingTapArea'),
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(width: width, height: height),
     );
   }
 }

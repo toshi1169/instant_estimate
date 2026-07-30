@@ -189,5 +189,24 @@ void main() {
 
       expect(controller.displayExpression, '□/5');
     });
+
+    test('帯分数の左側で数字を入力すると掛け算として扱う', () {
+      final controller = CalculatorController();
+      for (final key in ['2', '0', 'a/b', '5', 'a/b', '1', '0', 'a/b']) {
+        controller.press(key);
+      }
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+
+      controller.moveCaretBeforeFraction(fraction.marker);
+      for (final key in ['8', '5', '4']) {
+        controller.press(key);
+      }
+      controller.press('=');
+
+      expect(controller.displayExpression, '854 × 20 5/10');
+      expect(controller.result, '17,507');
+    });
   });
 }
