@@ -76,6 +76,23 @@ void main() {
       expect(controller.caretPosition, 0);
     });
 
+    test('クリップボードの計算式をキャレット位置へ貼り付ける', () {
+      final controller = CalculatorController();
+
+      expect(controller.pasteAtCaret('12 * 3'), isTrue);
+      controller.press('=');
+
+      expect(controller.expression, '12×3');
+      expect(controller.result, '36');
+    });
+
+    test('計算に使えない文字だけの場合は貼り付けない', () {
+      final controller = CalculatorController();
+
+      expect(controller.pasteAtCaret('見積書'), isFalse);
+      expect(controller.expression, isEmpty);
+    });
+
     test('クリアは式と結果を初期化する', () {
       final controller = CalculatorController();
       controller.press('9');

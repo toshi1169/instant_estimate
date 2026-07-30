@@ -78,4 +78,26 @@ void main() {
     expect(find.text('=  15'), findsOneWidget);
     expect(find.byKey(const Key('calculatorCaret')), findsNothing);
   });
+
+  testWidgets('計算スペースの長押しで編集メニューを表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final preferences = FakeOnboardingPreferences(hasSelected: true);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('calculationSpace')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('コピー'), findsOneWidget);
+    expect(find.text('カット'), findsOneWidget);
+    expect(find.text('ペースト'), findsOneWidget);
+    expect(find.text('消去'), findsOneWidget);
+    expect(find.text('見積へ送る'), findsOneWidget);
+  });
 }

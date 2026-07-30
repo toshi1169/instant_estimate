@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
@@ -61,6 +62,64 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     _controller.press(key.label);
   }
 
+  Future<void> _showCalculationMenu() async {
+    final action = await showModalBottomSheet<_CalculationMenuAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => const _CalculationMenuSheet(),
+    );
+    if (action == null || !mounted) return;
+
+    switch (action) {
+      case _CalculationMenuAction.copy:
+        await Clipboard.setData(ClipboardData(text: _controller.clipboardText));
+        _showMessage('コピーしました');
+      case _CalculationMenuAction.cut:
+        await Clipboard.setData(
+          ClipboardData(text: _controller.displayExpression),
+        );
+        _controller.clear();
+        _showMessage('カットしました');
+      case _CalculationMenuAction.paste:
+        final data = await Clipboard.getData(Clipboard.kTextPlain);
+        if (!mounted) return;
+        final pasted = _controller.pasteAtCaret(data?.text ?? '');
+        _showMessage(pasted ? 'ペーストしました' : '貼り付けできる計算式がありません');
+      case _CalculationMenuAction.clear:
+        _controller.clear();
+      case _CalculationMenuAction.sendToEstimate:
+        await _showEstimateTransferSheet();
+    }
+  }
+
+  Future<void> _showEstimateTransferSheet() async {
+    if (_controller.expression.isEmpty) {
+      _showMessage('見積へ送る計算式がありません');
+      return;
+    }
+
+    final request = await showModalBottomSheet<_EstimateTransferRequest>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _EstimateTransferSheet(controller: _controller),
+    );
+    if (request == null || !mounted) return;
+
+    _showMessage(
+      '「${request.content.label}」を「${request.destination.label}」へ送る準備をしました',
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -89,7 +148,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                     SizedBox(height: gap),
                     Expanded(
                       flex: 20,
-                      child: _ExpressionPanel(controller: _controller),
+                      child: _ExpressionPanel(
+                        controller: _controller,
+                        onLongPress: _showCalculationMenu,
+                      ),
                     ),
                     SizedBox(height: gap),
                     Expanded(
@@ -245,45 +307,229 @@ class _HistoryPanel extends StatelessWidget {
 }
 
 class _ExpressionPanel extends StatelessWidget {
-  const _ExpressionPanel({required this.controller});
+  const _ExpressionPanel({required this.controller, required this.onLongPress});
 
   final CalculatorController controller;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.brightness == Brightness.dark
-            ? Colors.black
-            : Colors.white,
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _EditableExpressionLine(controller: controller),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerRight,
-              child: Text(
-                controller.state == CalculatorState.error
-                    ? controller.errorMessage!
-                    : '=  ${controller.result}',
-                key: const Key('resultText'),
-                maxLines: 1,
-                style: theme.textTheme.displaySmall?.copyWith(
-                  color: controller.state == CalculatorState.error
-                      ? theme.colorScheme.error
-                      : AppColors.accent,
-                  fontSize: controller.state == CalculatorState.error ? 23 : 42,
-                  fontWeight: FontWeight.w500,
+    return GestureDetector(
+      key: const Key('calculationSpace'),
+      behavior: HitTestBehavior.opaque,
+      onLongPress: onLongPress,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.brightness == Brightness.dark
+              ? Colors.black
+              : Colors.white,
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _EditableExpressionLine(controller: controller),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  controller.state == CalculatorState.error
+                      ? controller.errorMessage!
+                      : '=  ${controller.result}',
+                  key: const Key('resultText'),
+                  maxLines: 1,
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    color: controller.state == CalculatorState.error
+                        ? theme.colorScheme.error
+                        : AppColors.accent,
+                    fontSize: controller.state == CalculatorState.error
+                        ? 23
+                        : 42,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _CalculationMenuAction { copy, cut, paste, clear, sendToEstimate }
+
+class _CalculationMenuSheet extends StatelessWidget {
+  const _CalculationMenuSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    const items = <(_CalculationMenuAction, IconData, String)>[
+      (_CalculationMenuAction.copy, Icons.copy_outlined, 'コピー'),
+      (_CalculationMenuAction.cut, Icons.content_cut, 'カット'),
+      (_CalculationMenuAction.paste, Icons.content_paste, 'ペースト'),
+      (_CalculationMenuAction.clear, Icons.delete_outline, '消去'),
+      (
+        _CalculationMenuAction.sendToEstimate,
+        Icons.receipt_long_outlined,
+        '見積へ送る',
+      ),
+    ];
+
+    return SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          for (final item in items)
+            ListTile(
+              leading: Icon(item.$2),
+              title: Text(item.$3),
+              onTap: () => Navigator.of(context).pop(item.$1),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _EstimateContent {
+  expression('式'),
+  result('解'),
+  expressionAndResult('式＋解');
+
+  const _EstimateContent(this.label);
+  final String label;
+}
+
+enum _EstimateDestination {
+  name('名称'),
+  specification('仕様'),
+  quantity('数量'),
+  description('摘要');
+
+  const _EstimateDestination(this.label);
+  final String label;
+}
+
+class _EstimateTransferRequest {
+  const _EstimateTransferRequest({
+    required this.content,
+    required this.destination,
+  });
+
+  final _EstimateContent content;
+  final _EstimateDestination destination;
+}
+
+class _EstimateTransferSheet extends StatefulWidget {
+  const _EstimateTransferSheet({required this.controller});
+
+  final CalculatorController controller;
+
+  @override
+  State<_EstimateTransferSheet> createState() => _EstimateTransferSheetState();
+}
+
+class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
+  _EstimateContent _content = _EstimateContent.expressionAndResult;
+  _EstimateDestination _destination = _EstimateDestination.description;
+
+  String get _preview {
+    return switch (_content) {
+      _EstimateContent.expression => widget.controller.estimateExpressionText,
+      _EstimateContent.result => widget.controller.estimateResultText,
+      _EstimateContent.expressionAndResult =>
+        '${widget.controller.estimateExpressionText} = '
+            '${widget.controller.estimateResultText}',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          20 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('見積へ送る', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 16),
+            const Text('送信内容'),
+            const SizedBox(height: 8),
+            SegmentedButton<_EstimateContent>(
+              segments: [
+                for (final content in _EstimateContent.values)
+                  ButtonSegment(value: content, label: Text(content.label)),
+              ],
+              selected: {_content},
+              onSelectionChanged: (selection) {
+                setState(() => _content = selection.first);
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text('送信先'),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<_EstimateDestination>(
+              initialValue: _destination,
+              items: [
+                for (final destination in _EstimateDestination.values)
+                  DropdownMenuItem(
+                    value: destination,
+                    child: Text(destination.label),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _destination = value);
+              },
+            ),
+            const SizedBox(height: 16),
+            Text('送信内容の確認', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 6),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(_preview),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('キャンセル'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(
+                        _EstimateTransferRequest(
+                          content: _content,
+                          destination: _destination,
+                        ),
+                      );
+                    },
+                    child: const Text('次へ'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

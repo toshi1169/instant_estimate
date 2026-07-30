@@ -43,6 +43,17 @@ class CalculatorController extends ChangeNotifier {
   bool get canCycleFraction => _canCycleFraction;
   int get caretPosition => _caretPosition;
   List<CalculationHistoryEntry> get history => List.unmodifiable(_history);
+  String get clipboardText {
+    if (_expression.isEmpty) return _result;
+    if (_state == CalculatorState.result) {
+      return '$displayExpression = $_result';
+    }
+    return displayExpression;
+  }
+
+  String get estimateExpressionText => displayExpression;
+  String get estimateResultText =>
+      _state == CalculatorState.error ? '' : _result;
 
   FormattedExpression get formattedExpression {
     final buffer = StringBuffer();
@@ -191,6 +202,25 @@ class CalculatorController extends ChangeNotifier {
     _canCycleFraction = false;
     _caretPosition = 0;
     notifyListeners();
+  }
+
+  bool pasteAtCaret(String text) {
+    final normalized = text
+        .replaceAll(',', '')
+        .replaceAll('*', '×')
+        .replaceAll('/', '÷')
+        .replaceAll('-', '−')
+        .replaceAll(RegExp(r'\s+'), '');
+    final sanitized = normalized.replaceAll(RegExp(r'[^0-9.+×÷−^%()]'), '');
+    if (sanitized.isEmpty) return false;
+
+    if (_state == CalculatorState.result || _state == CalculatorState.error) {
+      clear();
+    }
+    _insertAtCaret(sanitized);
+    _canCycleFraction = false;
+    notifyListeners();
+    return true;
   }
 
   void _insertDigits(String digits) {
