@@ -128,7 +128,7 @@ void main() {
     expect(find.text('=  0.5'), findsOneWidget);
   });
 
-  testWidgets('3桁以上の分数は幅を広げて右側へキャレットを移動できる', (tester) async {
+  testWidgets('7桁以上の分数は幅を広げて右側へキャレットを移動できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -147,12 +147,18 @@ void main() {
       '3',
       '4',
       '5',
+      '6',
+      '7',
+      '8',
       'a/b',
       '6',
       '7',
       '8',
       '9',
       '0',
+      '1',
+      '2',
+      '3',
       'a/b',
     ]) {
       final finder = key == 'a/b'

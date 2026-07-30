@@ -728,7 +728,7 @@ class _InlineFraction extends StatelessWidget {
       )..layout();
       if (painter.width > widest) widest = painter.width;
     }
-    return (widest + (reserveCaret ? 8 : 0) + 8).clamp(34.0, 240.0);
+    return (widest + (reserveCaret ? 12 : 0) + 8).clamp(34.0, double.infinity);
   }
 }
 
