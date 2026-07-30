@@ -52,11 +52,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   void _pressKey(_CalculatorKey key) {
-    if (const {
-      _KeyKind.menu,
-      _KeyKind.settings,
-      _KeyKind.fraction,
-    }.contains(key.kind)) {
+    if (const {_KeyKind.menu, _KeyKind.settings}.contains(key.kind)) {
       return;
     }
     _controller.press(key.label);
@@ -333,24 +329,26 @@ class _ExpressionPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _EditableExpressionLine(controller: controller),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  controller.state == CalculatorState.error
-                      ? controller.errorMessage!
-                      : '=  ${controller.result}',
-                  key: const Key('resultText'),
-                  maxLines: 1,
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    color: controller.state == CalculatorState.error
-                        ? theme.colorScheme.error
-                        : AppColors.accent,
-                    fontSize: controller.state == CalculatorState.error
-                        ? 23
-                        : 42,
-                    fontWeight: FontWeight.w500,
+              Expanded(child: _EditableExpressionLine(controller: controller)),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    controller.state == CalculatorState.error
+                        ? controller.errorMessage!
+                        : '=  ${controller.result}',
+                    key: const Key('resultText'),
+                    maxLines: 1,
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      color: controller.state == CalculatorState.error
+                          ? theme.colorScheme.error
+                          : AppColors.accent,
+                      fontSize: controller.state == CalculatorState.error
+                          ? 23
+                          : 42,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
@@ -548,57 +546,49 @@ class _EditableExpressionLine extends StatelessWidget {
     final theme = Theme.of(context);
     final formatted = controller.formattedExpression;
 
-    return SizedBox(
-      height: 38,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          var fontSize = 26.0;
-          late TextPainter painter;
-          TextStyle style;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        var fontSize = 26.0;
+        late TextPainter painter;
+        TextStyle style;
 
-          do {
-            style = theme.textTheme.headlineMedium!.copyWith(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w400,
-            );
-            painter = TextPainter(
-              text: TextSpan(text: formatted.text, style: style),
-              textDirection: TextDirection.ltr,
-              maxLines: 1,
-            )..layout();
-            fontSize--;
-          } while (painter.width > constraints.maxWidth - 8 && fontSize >= 14);
-
-          void moveCaret(TapDownDetails details) {
-            final startX = constraints.maxWidth - painter.width;
-            final localX = (details.localPosition.dx - startX).clamp(
-              0.0,
-              painter.width,
-            );
-            final position = painter.getPositionForOffset(Offset(localX, 0));
-            controller.moveCaretToDisplayOffset(position.offset);
-          }
-
-          final caretOffset = formatted.caretOffset.clamp(
-            0,
-            formatted.text.length,
+        do {
+          style = theme.textTheme.headlineMedium!.copyWith(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w400,
           );
-          final beforeCaret = formatted.text.substring(0, caretOffset);
-          final afterCaret = formatted.text.substring(caretOffset);
+          painter = TextPainter(
+            text: TextSpan(text: formatted.text, style: style),
+            textDirection: TextDirection.ltr,
+            maxLines: 1,
+          )..layout();
+          fontSize--;
+        } while (painter.width > constraints.maxWidth - 8 && fontSize >= 14);
 
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: moveCaret,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text.rich(
-                key: const Key('expressionText'),
-                TextSpan(
-                  style: style,
-                  children: [
-                    TextSpan(text: beforeCaret),
-                    if (controller.showCaret)
-                      const WidgetSpan(
+        void moveCaret(TapDownDetails details) {
+          final startX = constraints.maxWidth - painter.width;
+          final localX = (details.localPosition.dx - startX).clamp(
+            0.0,
+            painter.width,
+          );
+          final position = painter.getPositionForOffset(Offset(localX, 0));
+          controller.moveCaretToDisplayOffset(position.offset);
+        }
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: moveCaret,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Text.rich(
+              key: const Key('expressionText'),
+              TextSpan(
+                style: style,
+                children: [
+                  for (final segment in controller.displaySegments)
+                    switch (segment) {
+                      ExpressionTextSegment() => TextSpan(text: segment.text),
+                      ExpressionCaretSegment() => const WidgetSpan(
                         alignment: PlaceholderAlignment.middle,
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 2),
@@ -610,15 +600,130 @@ class _EditableExpressionLine extends StatelessWidget {
                           ),
                         ),
                       ),
-                    TextSpan(text: afterCaret),
-                  ],
+                      ExpressionFractionSegment() => WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: _InlineFraction(
+                          segment: segment,
+                          fontSize: fontSize,
+                          onFieldTap: (field) {
+                            controller.activateFraction(segment.marker, field);
+                          },
+                        ),
+                      ),
+                    },
+                ],
+              ),
+              maxLines: 1,
+              textAlign: TextAlign.right,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _InlineFraction extends StatelessWidget {
+  const _InlineFraction({
+    required this.segment,
+    required this.fontSize,
+    required this.onFieldTap,
+  });
+
+  final ExpressionFractionSegment segment;
+  final double fontSize;
+  final ValueChanged<FractionField> onFieldTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = Theme.of(context).colorScheme.onSurface;
+    final fractionFontSize = (fontSize * 0.64).clamp(11.0, 17.0);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (segment.wholeNumber.isNotEmpty) ...[
+            Text(
+              segment.wholeNumber,
+              style: TextStyle(color: textColor, fontSize: fontSize),
+            ),
+            const SizedBox(width: 2),
+          ],
+          SizedBox(
+            width: 34,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _FractionFieldDisplay(
+                  value: segment.numerator,
+                  active: segment.activeField == FractionField.numerator,
+                  fontSize: fractionFontSize,
+                  onTap: () => onFieldTap(FractionField.numerator),
                 ),
-                maxLines: 1,
-                textAlign: TextAlign.right,
+                Container(width: 32, height: 1.5, color: AppColors.accent),
+                _FractionFieldDisplay(
+                  value: segment.denominator,
+                  active: segment.activeField == FractionField.denominator,
+                  fontSize: fractionFontSize,
+                  onTap: () => onFieldTap(FractionField.denominator),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FractionFieldDisplay extends StatelessWidget {
+  const _FractionFieldDisplay({
+    required this.value,
+    required this.active,
+    required this.fontSize,
+    required this.onTap,
+  });
+
+  final String value;
+  final bool active;
+  final double fontSize;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = Theme.of(context).colorScheme.onSurface;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        height: 20,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              value.isEmpty ? '□' : value,
+              style: TextStyle(
+                color: value.isEmpty
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : textColor,
+                fontSize: fontSize,
+                height: 1,
               ),
             ),
-          );
-        },
+            if (active)
+              const Padding(
+                padding: EdgeInsets.only(left: 2),
+                child: SizedBox(
+                  width: 1.5,
+                  height: 17,
+                  child: ColoredBox(color: AppColors.accent),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

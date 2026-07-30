@@ -112,5 +112,82 @@ void main() {
 
       expect(controller.canCycleFraction, isTrue);
     });
+
+    test('a/bボタンで通常分数を入力して計算できる', () {
+      final controller = CalculatorController();
+      for (final key in ['a/b', '1', 'a/b', '2', 'a/b', '=']) {
+        controller.press(key);
+      }
+
+      expect(controller.displayExpression, '1/2');
+      expect(controller.result, '0.5');
+    });
+
+    test('直前の整数を帯分数として保持して計算できる', () {
+      final controller = CalculatorController();
+      for (final key in ['1', 'a/b', '1', 'a/b', '2', 'a/b', '=']) {
+        controller.press(key);
+      }
+
+      expect(controller.displayExpression, '1 1/2');
+      expect(controller.result, '1.5');
+    });
+
+    test('帯分数と通常分数を含む式を計算できる', () {
+      final controller = CalculatorController();
+      const keys = [
+        '1',
+        'a/b',
+        '1',
+        'a/b',
+        '2',
+        'a/b',
+        '×',
+        '()',
+        '2',
+        'a/b',
+        '2',
+        'a/b',
+        '3',
+        'a/b',
+        '+',
+        'a/b',
+        '3',
+        'a/b',
+        '4',
+        'a/b',
+        '()',
+        '÷',
+        '2',
+        '=',
+      ];
+      for (final key in keys) {
+        controller.press(key);
+      }
+
+      expect(controller.result, '2.5625');
+    });
+
+    test('空の分数枠はバックボタンで枠ごと削除する', () {
+      final controller = CalculatorController();
+      controller.press('a/b');
+      controller.press('←');
+
+      expect(controller.expression, isEmpty);
+      expect(controller.isEditingFraction, isFalse);
+    });
+
+    test('分数の分子と分母をタップ対象として切り替えられる', () {
+      final controller = CalculatorController();
+      controller.press('a/b');
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+
+      controller.activateFraction(fraction.marker, FractionField.denominator);
+      controller.press('5');
+
+      expect(controller.displayExpression, '□/5');
+    });
   });
 }

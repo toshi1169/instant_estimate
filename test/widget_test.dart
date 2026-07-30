@@ -100,4 +100,31 @@ void main() {
     expect(find.text('消去'), findsOneWidget);
     expect(find.text('見積へ送る'), findsOneWidget);
   });
+
+  testWidgets('a/bボタンから分数枠を入力して計算できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final preferences = FakeOnboardingPreferences(hasSelected: true);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('a/b'));
+    await tester.pump();
+    expect(find.text('□'), findsNWidgets(2));
+
+    for (final key in ['1', 'a/b', '2', 'a/b', '=']) {
+      final finder = key == 'a/b'
+          ? find.bySemanticsLabel('a/b')
+          : find.text(key);
+      await tester.tap(finder);
+      await tester.pump();
+    }
+
+    expect(find.text('=  0.5'), findsOneWidget);
+  });
 }
