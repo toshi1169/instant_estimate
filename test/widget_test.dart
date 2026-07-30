@@ -172,4 +172,101 @@ void main() {
     expect(find.byKey(const Key('calculatorCaret')), findsOneWidget);
     expect(find.byKey(const Key('expressionTrailingTapArea')), findsNothing);
   });
+
+  testWidgets('複数の10桁分数を含む長い式は全体を縮小して表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final preferences = FakeOnboardingPreferences(hasSelected: true);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
+
+    const keys = [
+      'a/b',
+      '1',
+      '1',
+      '1',
+      '1',
+      '1',
+      '1',
+      '1',
+      '1',
+      '1',
+      '1',
+      'a/b',
+      '2',
+      '2',
+      '2',
+      '2',
+      '2',
+      '2',
+      '2',
+      '2',
+      '2',
+      '2',
+      'a/b',
+      '×',
+      'a/b',
+      '3',
+      '3',
+      '3',
+      '3',
+      '3',
+      '3',
+      '3',
+      '3',
+      '3',
+      '3',
+      'a/b',
+      '4',
+      '4',
+      '4',
+      '4',
+      '4',
+      '4',
+      '4',
+      '4',
+      '4',
+      '4',
+      'a/b',
+    ];
+    for (final key in keys) {
+      final finder = key == 'a/b'
+          ? find.bySemanticsLabel('a/b')
+          : find.widgetWithText(FilledButton, key);
+      await tester.tap(finder);
+      await tester.pump();
+    }
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('分数の11桁目では2秒間入力上限を通知する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final preferences = FakeOnboardingPreferences(hasSelected: true);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('a/b'));
+    for (var index = 0; index < 11; index++) {
+      await tester.tap(find.widgetWithText(FilledButton, '1'));
+      await tester.pump();
+    }
+
+    expect(find.text('これ以上入力できません'), findsOneWidget);
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.text('これ以上入力できません'), findsNothing);
+  });
 }

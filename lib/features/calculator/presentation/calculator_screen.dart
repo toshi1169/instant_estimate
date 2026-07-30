@@ -55,7 +55,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     if (const {_KeyKind.menu, _KeyKind.settings}.contains(key.kind)) {
       return;
     }
-    _controller.press(key.label);
+    final notice = _controller.press(key.label);
+    if (notice != null) _showMessage(notice);
   }
 
   Future<void> _showCalculationMenu() async {
@@ -343,7 +344,9 @@ class _ExpressionPanel extends StatelessWidget {
                     style: theme.textTheme.displaySmall?.copyWith(
                       color: controller.state == CalculatorState.error
                           ? theme.colorScheme.error
-                          : AppColors.accent,
+                          : AppColors.accent.withValues(
+                              alpha: controller.isPreviewResult ? 0.55 : 1,
+                            ),
                       fontSize: controller.state == CalculatorState.error
                           ? 23
                           : 42,
@@ -578,51 +581,39 @@ class _EditableExpressionLine extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
-                child: Text.rich(
+                child: Row(
                   key: const Key('expressionText'),
-                  TextSpan(
-                    style: style,
-                    children: [
-                      for (final segment in controller.displaySegments)
-                        switch (segment) {
-                          ExpressionTextSegment() => TextSpan(
-                            text: segment.text,
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    for (final segment in controller.displaySegments)
+                      switch (segment) {
+                        ExpressionTextSegment() => Text(
+                          segment.text,
+                          style: style,
+                          maxLines: 1,
+                        ),
+                        ExpressionCaretSegment() => const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 2),
+                          child: SizedBox(
+                            key: Key('calculatorCaret'),
+                            width: 2,
+                            height: 46,
+                            child: ColoredBox(color: AppColors.accent),
                           ),
-                          ExpressionCaretSegment() => const WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 2),
-                              child: SizedBox(
-                                key: Key('calculatorCaret'),
-                                width: 2,
-                                height: 46,
-                                child: ColoredBox(color: AppColors.accent),
-                              ),
-                            ),
-                          ),
-                          ExpressionFractionSegment() => WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: _InlineFraction(
-                              segment: segment,
-                              fontSize: _expressionFontSize,
-                              onWholeNumberTap: () {
-                                controller.moveCaretBeforeFraction(
-                                  segment.marker,
-                                );
-                              },
-                              onFieldTap: (field) {
-                                controller.activateFraction(
-                                  segment.marker,
-                                  field,
-                                );
-                              },
-                            ),
-                          ),
-                        },
-                    ],
-                  ),
-                  maxLines: 1,
-                  textAlign: TextAlign.right,
+                        ),
+                        ExpressionFractionSegment() => _InlineFraction(
+                          segment: segment,
+                          fontSize: _expressionFontSize,
+                          onWholeNumberTap: () {
+                            controller.moveCaretBeforeFraction(segment.marker);
+                          },
+                          onFieldTap: (field) {
+                            controller.activateFraction(segment.marker, field);
+                          },
+                        ),
+                      },
+                  ],
                 ),
               ),
             ),

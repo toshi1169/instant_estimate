@@ -208,5 +208,46 @@ void main() {
       expect(controller.displayExpression, '854 × 20 5/10');
       expect(controller.result, '17,507');
     });
+
+    test('分子と分母は10桁まで入力でき11桁目を通知する', () {
+      final controller = CalculatorController();
+      controller.press('a/b');
+
+      String? notice;
+      for (var index = 0; index < 11; index++) {
+        notice = controller.press('1');
+      }
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+
+      expect(fraction.numerator, '1111111111');
+      expect(notice, 'これ以上入力できません');
+    });
+
+    test('1京を超える解は10のべき乗で表示する', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('10000000000000000×10');
+      controller.press('=');
+
+      expect(controller.result, '1 × 10¹⁷');
+    });
+
+    test('計算可能な入力途中では暫定解を表示する', () {
+      final controller = CalculatorController();
+      for (final key in ['1', '2', '+', '3']) {
+        controller.press(key);
+      }
+
+      expect(controller.result, '15');
+      expect(controller.state, CalculatorState.input);
+      expect(controller.isPreviewResult, isTrue);
+
+      controller.press('=');
+
+      expect(controller.result, '15');
+      expect(controller.state, CalculatorState.result);
+      expect(controller.isPreviewResult, isFalse);
+    });
   });
 }

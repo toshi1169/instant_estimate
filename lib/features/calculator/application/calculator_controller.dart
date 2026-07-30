@@ -65,6 +65,9 @@ class _EditableFraction {
 class CalculatorController extends ChangeNotifier {
   CalculatorController({this._engine = const CalculationEngine()});
 
+  static const int fractionDigitLimit = 10;
+  static const double standardNumberDisplayLimit = 10000000000000000;
+
   final CalculationEngine _engine;
   final List<CalculationHistoryEntry> _history = [];
 
@@ -74,6 +77,8 @@ class CalculatorController extends ChangeNotifier {
   String? _errorMessage;
   CalculatorState _state = CalculatorState.input;
   bool _canCycleFraction = false;
+  bool _isPreviewResult = false;
+  String? _pendingNotice;
   int _caretPosition = 0;
   final Map<String, _EditableFraction> _fractions = {};
   String? _activeFractionMarker;
@@ -86,6 +91,7 @@ class CalculatorController extends ChangeNotifier {
   CalculatorState get state => _state;
   bool get showCaret => _state == CalculatorState.input;
   bool get canCycleFraction => _canCycleFraction;
+  bool get isPreviewResult => _isPreviewResult;
   int get caretPosition => _caretPosition;
   bool get isEditingFraction => _activeFractionMarker != null;
   List<CalculationHistoryEntry> get history => List.unmodifiable(_history);
@@ -183,7 +189,8 @@ class CalculatorController extends ChangeNotifier {
     return segments;
   }
 
-  void press(String key) {
+  String? press(String key) {
+    _pendingNotice = null;
     switch (key) {
       case '=':
         calculate();
@@ -216,6 +223,8 @@ class CalculatorController extends ChangeNotifier {
       case '9':
         _insertDigits(key);
     }
+    if (_state == CalculatorState.input) _updatePreviewResult();
+    return _pendingNotice;
   }
 
   void calculate() {
@@ -227,6 +236,7 @@ class CalculatorController extends ChangeNotifier {
       _rawResult = _plainNumber(value);
       _result = _formatNumber(value);
       _state = CalculatorState.result;
+      _isPreviewResult = false;
       _errorMessage = null;
       _canCycleFraction = _findSimpleFraction(value);
       _caretPosition = _expression.length;
@@ -403,6 +413,7 @@ class CalculatorController extends ChangeNotifier {
     _errorMessage = null;
     _state = CalculatorState.input;
     _canCycleFraction = false;
+    _isPreviewResult = false;
     _caretPosition = 0;
     _fractions.clear();
     _activeFractionMarker = null;
@@ -425,6 +436,7 @@ class CalculatorController extends ChangeNotifier {
     }
     _insertAtCaret(sanitized);
     _canCycleFraction = false;
+    _updatePreviewResult();
     notifyListeners();
     return true;
   }
@@ -560,7 +572,21 @@ class CalculatorController extends ChangeNotifier {
     final target = _activeFractionField == FractionField.numerator
         ? fraction.numerator
         : fraction.denominator;
-    final value = target.isEmpty && digits == '00' ? '0' : '$target$digits';
+    final normalizedDigits = target.isEmpty && digits == '00' ? '0' : digits;
+    final available = fractionDigitLimit - target.length;
+    if (available <= 0) {
+      _pendingNotice = 'これ以上入力できません';
+      notifyListeners();
+      return;
+    }
+    final accepted = normalizedDigits.substring(
+      0,
+      normalizedDigits.length.clamp(0, available),
+    );
+    final value = '$target$accepted';
+    if (accepted.length < normalizedDigits.length) {
+      _pendingNotice = 'これ以上入力できません';
+    }
     if (_activeFractionField == FractionField.numerator) {
       fraction.numerator = value;
     } else {
@@ -706,6 +732,24 @@ class CalculatorController extends ChangeNotifier {
     _result = '';
     _state = CalculatorState.error;
     _canCycleFraction = false;
+    _isPreviewResult = false;
+  }
+
+  void _updatePreviewResult() {
+    if (_state != CalculatorState.input || _expression.isEmpty) {
+      _isPreviewResult = false;
+      return;
+    }
+    try {
+      final value = _engine.evaluate(_expandFractionsForCalculation());
+      _result = _formatNumber(value);
+      _rawResult = _plainNumber(value);
+      _isPreviewResult = true;
+    } catch (_) {
+      _result = '0';
+      _isPreviewResult = false;
+    }
+    notifyListeners();
   }
 
   String _plainNumber(double value) {
@@ -717,6 +761,9 @@ class CalculatorController extends ChangeNotifier {
   }
 
   String _formatNumber(double value) {
+    if (value.abs() > standardNumberDisplayLimit) {
+      return _formatScientificNumber(value);
+    }
     final plain = _plainNumber(value);
     final parts = plain.split('.');
     final sign = parts.first.startsWith('-') ? '-' : '';
@@ -726,6 +773,33 @@ class CalculatorController extends ChangeNotifier {
       (_) => ',',
     );
     return ['$sign$grouped', if (parts.length == 2) parts[1]].join('.');
+  }
+
+  String _formatScientificNumber(double value) {
+    final scientific = value.toStringAsExponential(9);
+    final parts = scientific.split('e');
+    final coefficient = parts.first
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+    final exponent = int.parse(parts.last);
+    return '$coefficient × 10${_superscript(exponent)}';
+  }
+
+  String _superscript(int value) {
+    const digits = {
+      '-': '⁻',
+      '0': '⁰',
+      '1': '¹',
+      '2': '²',
+      '3': '³',
+      '4': '⁴',
+      '5': '⁵',
+      '6': '⁶',
+      '7': '⁷',
+      '8': '⁸',
+      '9': '⁹',
+    };
+    return value.toString().split('').map((digit) => digits[digit]!).join();
   }
 
   bool _findSimpleFraction(double value) {
