@@ -127,4 +127,43 @@ void main() {
 
     expect(find.text('=  0.5'), findsOneWidget);
   });
+
+  testWidgets('3桁以上の分数は幅を広げて右側へキャレットを移動できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final preferences = FakeOnboardingPreferences(hasSelected: true);
+    await tester.pumpWidget(
+      InstantEstimateApp(onboardingPreferences: preferences),
+    );
+    await tester.pumpAndSettle();
+
+    for (final key in [
+      'a/b',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      'a/b',
+      '6',
+      '7',
+      '8',
+      '9',
+      '0',
+      'a/b',
+    ]) {
+      final finder = key == 'a/b'
+          ? find.bySemanticsLabel('a/b')
+          : find.text(key);
+      await tester.tap(finder);
+      await tester.pump();
+    }
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('calculatorCaret')), findsOneWidget);
+    expect(find.byKey(const Key('expressionTrailingTapArea')), findsOneWidget);
+  });
 }
