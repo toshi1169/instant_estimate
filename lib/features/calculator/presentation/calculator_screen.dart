@@ -335,29 +335,114 @@ class _ExpressionPanel extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
-                  child: Text(
-                    controller.state == CalculatorState.error
-                        ? controller.errorMessage!
-                        : '=  ${controller.result}',
-                    key: const Key('resultText'),
-                    maxLines: 1,
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      color: controller.state == CalculatorState.error
-                          ? theme.colorScheme.error
-                          : AppColors.accent.withValues(
-                              alpha: controller.isPreviewResult ? 0.55 : 1,
-                            ),
-                      fontSize: controller.state == CalculatorState.error
-                          ? 23
-                          : 42,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  child: _ResultLine(controller: controller),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ResultLine extends StatelessWidget {
+  const _ResultLine({required this.controller});
+
+  final CalculatorController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (controller.state == CalculatorState.error) {
+      return Text(
+        controller.errorMessage!,
+        key: const Key('resultText'),
+        maxLines: 1,
+        style: theme.textTheme.displaySmall?.copyWith(
+          color: theme.colorScheme.error,
+          fontSize: 23,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+    }
+
+    final resultStyle = theme.textTheme.displaySmall?.copyWith(
+      color: AppColors.accent.withValues(
+        alpha: controller.isPreviewResult ? 0.55 : 1,
+      ),
+      fontSize: 42,
+      height: 1,
+      fontWeight: FontWeight.w500,
+    );
+    if (controller.resultDisplayMode == ResultDisplayMode.decimal) {
+      return Text(
+        '=  ${controller.result}',
+        key: const Key('resultText'),
+        maxLines: 1,
+        style: resultStyle,
+      );
+    }
+
+    final signedNumerator = controller.resultFractionNumerator!;
+    final denominator = controller.resultFractionDenominator!;
+    var numeratorText = signedNumerator.toString().replaceFirst('-', '−');
+    String? wholeNumberText;
+    if (controller.resultDisplayMode == ResultDisplayMode.mixedFraction) {
+      final absoluteNumerator = signedNumerator.abs();
+      final wholeNumber = absoluteNumerator ~/ denominator;
+      final remainder = absoluteNumerator % denominator;
+      if (wholeNumber > 0) {
+        wholeNumberText = '${signedNumerator < 0 ? '−' : ''}$wholeNumber';
+        numeratorText = remainder.toString();
+      } else {
+        numeratorText = '${signedNumerator < 0 ? '−' : ''}$remainder';
+      }
+    }
+
+    return Row(
+      key: const Key('resultText'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text('=', style: resultStyle),
+        const SizedBox(width: 18),
+        if (wholeNumberText != null) ...[
+          Text(wholeNumberText, style: resultStyle),
+          const SizedBox(width: 6),
+        ],
+        _StackedResultFraction(
+          numerator: numeratorText,
+          denominator: denominator.toString(),
+          style: resultStyle!,
+        ),
+      ],
+    );
+  }
+}
+
+class _StackedResultFraction extends StatelessWidget {
+  const _StackedResultFraction({
+    required this.numerator,
+    required this.denominator,
+    required this.style,
+  });
+
+  final String numerator;
+  final String denominator;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicWidth(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(numerator, textAlign: TextAlign.center, style: style),
+          Container(height: 2, color: AppColors.accent),
+          Text(denominator, textAlign: TextAlign.center, style: style),
+        ],
       ),
     );
   }

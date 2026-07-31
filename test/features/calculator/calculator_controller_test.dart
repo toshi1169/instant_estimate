@@ -113,6 +113,38 @@ void main() {
       expect(controller.canCycleFraction, isTrue);
     });
 
+    test('結果を仮分数・帯分数・小数の順に切り替える', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('2−1÷2');
+      controller.press('=');
+
+      expect(controller.result, '1.5');
+      expect(controller.history.single.result, '1.5');
+
+      controller.press('=');
+      expect(controller.result, '3/2');
+      expect(controller.resultDisplayMode, ResultDisplayMode.improperFraction);
+
+      controller.press('a/b');
+      expect(controller.result, '1 1/2');
+      expect(controller.resultDisplayMode, ResultDisplayMode.mixedFraction);
+
+      controller.press('=');
+      expect(controller.result, '1.5');
+      expect(controller.resultDisplayMode, ResultDisplayMode.decimal);
+      expect(controller.history, hasLength(1));
+      expect(controller.history.single.result, '1.5');
+    });
+
+    test('分数化できない解では案内を返す', () {
+      final controller = CalculatorController();
+      controller.press('2');
+      controller.press('=');
+
+      expect(controller.press('a/b'), '分数に変換できません');
+      expect(controller.result, '2');
+    });
+
     test('a/bボタンで通常分数を入力して計算できる', () {
       final controller = CalculatorController();
       for (final key in ['a/b', '1', 'a/b', '2', 'a/b', '=']) {

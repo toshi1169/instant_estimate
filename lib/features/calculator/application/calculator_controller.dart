@@ -4,6 +4,8 @@ import '../domain/calculation_engine.dart';
 
 enum CalculatorState { input, result, error }
 
+enum ResultDisplayMode { decimal, improperFraction, mixedFraction }
+
 class CalculationHistoryEntry {
   const CalculationHistoryEntry({
     required this.expression,
@@ -66,6 +68,13 @@ class _EditableFraction {
   bool get isComplete => numerator.isNotEmpty && denominator.isNotEmpty;
 }
 
+class _ResultFraction {
+  const _ResultFraction({required this.numerator, required this.denominator});
+
+  final int numerator;
+  final int denominator;
+}
+
 class CalculatorController extends ChangeNotifier {
   CalculatorController({this._engine = const CalculationEngine()});
 
@@ -82,6 +91,8 @@ class CalculatorController extends ChangeNotifier {
   CalculatorState _state = CalculatorState.input;
   bool _canCycleFraction = false;
   bool _isPreviewResult = false;
+  ResultDisplayMode _resultDisplayMode = ResultDisplayMode.decimal;
+  _ResultFraction? _resultFraction;
   String? _pendingNotice;
   int _caretPosition = 0;
   final Map<String, _EditableFraction> _fractions = {};
@@ -97,6 +108,9 @@ class CalculatorController extends ChangeNotifier {
   bool get showCaret => _state == CalculatorState.input;
   bool get canCycleFraction => _canCycleFraction;
   bool get isPreviewResult => _isPreviewResult;
+  ResultDisplayMode get resultDisplayMode => _resultDisplayMode;
+  int? get resultFractionNumerator => _resultFraction?.numerator;
+  int? get resultFractionDenominator => _resultFraction?.denominator;
   int get caretPosition => _caretPosition;
   bool get isEditingFraction => _activeFractionMarker != null;
   List<CalculationHistoryEntry> get history => List.unmodifiable(_history);
@@ -249,7 +263,10 @@ class CalculatorController extends ChangeNotifier {
 
   void calculate() {
     if (_expression.isEmpty || _state == CalculatorState.error) return;
-    if (_state == CalculatorState.result) return;
+    if (_state == CalculatorState.result) {
+      _cycleResultDisplay();
+      return;
+    }
 
     try {
       final value = _engine.evaluate(_expandFractionsForCalculation());
@@ -258,7 +275,9 @@ class CalculatorController extends ChangeNotifier {
       _state = CalculatorState.result;
       _isPreviewResult = false;
       _errorMessage = null;
-      _canCycleFraction = _findSimpleFraction(value);
+      _resultFraction = _findSimpleFraction(value);
+      _canCycleFraction = _resultFraction != null;
+      _resultDisplayMode = ResultDisplayMode.decimal;
       _caretPosition = _expression.length;
       _activeFractionMarker = null;
       _activeFractionField = null;
@@ -361,7 +380,7 @@ class CalculatorController extends ChangeNotifier {
 
   void pressFractionButton() {
     if (_state == CalculatorState.result) {
-      // Result display cycling is connected in the next fraction phase.
+      _cycleResultDisplay();
       return;
     }
     if (_state == CalculatorState.error) clear();
@@ -481,6 +500,8 @@ class CalculatorController extends ChangeNotifier {
     _state = CalculatorState.input;
     _canCycleFraction = false;
     _isPreviewResult = false;
+    _resultDisplayMode = ResultDisplayMode.decimal;
+    _resultFraction = null;
     _caretPosition = 0;
     _fractions.clear();
     _activeFractionMarker = null;
@@ -569,6 +590,8 @@ class CalculatorController extends ChangeNotifier {
       _expression = _rawResult;
       _caretPosition = _expression.length;
       _state = CalculatorState.input;
+      _resultDisplayMode = ResultDisplayMode.decimal;
+      _resultFraction = null;
     }
     if (_expression.isEmpty) {
       if (operator == '−') _insertAtCaret(operator);
@@ -831,6 +854,8 @@ class CalculatorController extends ChangeNotifier {
     _state = CalculatorState.error;
     _canCycleFraction = false;
     _isPreviewResult = false;
+    _resultDisplayMode = ResultDisplayMode.decimal;
+    _resultFraction = null;
   }
 
   void _updatePreviewResult() {
@@ -900,15 +925,50 @@ class CalculatorController extends ChangeNotifier {
     return value.toString().split('').map((digit) => digits[digit]!).join();
   }
 
-  bool _findSimpleFraction(double value) {
+  void _cycleResultDisplay() {
+    final fraction = _resultFraction;
+    if (fraction == null) {
+      _pendingNotice = '分数に変換できません';
+      notifyListeners();
+      return;
+    }
+
+    switch (_resultDisplayMode) {
+      case ResultDisplayMode.decimal:
+        _resultDisplayMode = ResultDisplayMode.improperFraction;
+        _result = '${fraction.numerator}/${fraction.denominator}';
+      case ResultDisplayMode.improperFraction:
+        _resultDisplayMode = ResultDisplayMode.mixedFraction;
+        _result = _mixedFractionText(fraction);
+      case ResultDisplayMode.mixedFraction:
+        _resultDisplayMode = ResultDisplayMode.decimal;
+        _result = _formatNumber(double.parse(_rawResult));
+    }
+    notifyListeners();
+  }
+
+  String _mixedFractionText(_ResultFraction fraction) {
+    final absoluteNumerator = fraction.numerator.abs();
+    final wholeNumber = absoluteNumerator ~/ fraction.denominator;
+    final remainder = absoluteNumerator % fraction.denominator;
+    final sign = fraction.numerator < 0 ? '−' : '';
+    if (wholeNumber == 0) return '$sign$remainder/${fraction.denominator}';
+    return '$sign$wholeNumber $remainder/${fraction.denominator}';
+  }
+
+  _ResultFraction? _findSimpleFraction(double value) {
+    if (!value.isFinite || value == value.truncateToDouble()) return null;
     final absoluteValue = value.abs();
     for (var denominator = 1; denominator <= 999; denominator++) {
       final numerator = (absoluteValue * denominator).round();
       if (numerator > 999) continue;
-      if ((absoluteValue - numerator / denominator).abs() < 1e-10) {
-        return true;
+      if ((absoluteValue - numerator / denominator).abs() < 1e-6) {
+        return _ResultFraction(
+          numerator: value < 0 ? -numerator : numerator,
+          denominator: denominator,
+        );
       }
     }
-    return false;
+    return null;
   }
 }

@@ -352,4 +352,29 @@ void main() {
     await tapCharacter('3333', 1);
     expect(controller.caretPosition, anyOf(13, 14));
   });
+
+  testWidgets('計算結果を横棒付きの仮分数と帯分数へ切り替えられる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('2−1÷2');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    controller.press('=');
+    await tester.pump();
+    expect(controller.resultDisplayMode, ResultDisplayMode.improperFraction);
+    expect(find.byKey(const Key('resultText')), findsOneWidget);
+
+    controller.press('a/b');
+    await tester.pump();
+    expect(controller.resultDisplayMode, ResultDisplayMode.mixedFraction);
+    expect(find.byKey(const Key('resultText')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
