@@ -9,6 +9,7 @@ import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
 import '../../settings/presentation/settings_screen.dart';
 import 'calculator_history_screen.dart';
+import 'calculator_side_menu.dart';
 
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({
@@ -56,6 +57,7 @@ class CalculatorScreen extends StatefulWidget {
 }
 
 class _CalculatorScreenState extends State<CalculatorScreen> {
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   late final CalculatorController _controller =
       widget.controller ??
       CalculatorController(historyStore: widget.historyStore);
@@ -74,7 +76,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   void _pressKey(_CalculatorKey key) {
-    if (key.kind == _KeyKind.menu) return;
+    if (key.kind == _KeyKind.menu) {
+      _scaffoldKey.currentState?.openDrawer();
+      return;
+    }
     if (key.kind == _KeyKind.settings) {
       unawaited(_openSettings());
       return;
@@ -92,6 +97,25 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         ),
       ),
     );
+  }
+
+  void _selectSideMenu(CalculatorSideMenuDestination destination) {
+    Navigator.of(context).pop();
+
+    if (destination == CalculatorSideMenuDestination.settings) {
+      unawaited(_openSettings());
+      return;
+    }
+
+    final label = switch (destination) {
+      CalculatorSideMenuDestination.settings => '設定',
+      CalculatorSideMenuDestination.help => 'ヘルプ',
+      CalculatorSideMenuDestination.prime => 'プライム',
+      CalculatorSideMenuDestination.ultimate => 'アルティメット',
+      CalculatorSideMenuDestination.constructionCalculations => '建築・土木系計算',
+      CalculatorSideMenuDestination.instantEstimate => 'インスタント見積',
+    };
+    _showMessage('$labelは今後の工程で追加します');
   }
 
   Future<void> _showCalculationMenu() async {
@@ -223,6 +247,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) => Scaffold(
+        key: _scaffoldKey,
+        drawer: CalculatorSideMenu(onSelected: _selectSideMenu),
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {

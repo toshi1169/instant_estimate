@@ -96,6 +96,37 @@ void main() {
     expect(find.bySemanticsLabel('a/b'), findsOneWidget);
   });
 
+  testWidgets('メニューボタンからサイドメニューを開き設定へ移動できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
+    expect(find.text('ヘルプ'), findsOneWidget);
+    expect(find.text('プライム（広告非表示）'), findsOneWidget);
+    expect(find.text('アルティメット'), findsOneWidget);
+    expect(find.text('建築・土木系計算'), findsOneWidget);
+    expect(find.text('インスタント見積'), findsWidgets);
+    expect(find.byKey(const Key('sideMenuAdArea')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sideMenuSettings')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('設定'), findsOneWidget);
+    expect(find.text('端末設定に合わせる'), findsOneWidget);
+  });
+
   testWidgets('業種を保存すると電卓へ移動する', (tester) async {
     final preferences = FakeOnboardingPreferences(hasSelected: false);
     await tester.pumpWidget(
