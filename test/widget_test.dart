@@ -447,4 +447,57 @@ void main() {
     );
     expect(preview.data, '1 + 2 = 3');
   });
+
+  testWidgets('履歴スペース長押しで全体画面と分数3形式を確認できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('2-1÷2');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    await tester.longPress(find.byKey(const Key('historyPanel')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('計算履歴'), findsOneWidget);
+    expect(find.byKey(const Key('historySearchField')), findsOneWidget);
+    expect(find.text('小数'), findsOneWidget);
+    expect(find.text('仮分数'), findsOneWidget);
+    expect(find.text('帯分数'), findsOneWidget);
+    expect(find.text('1.5'), findsOneWidget);
+    expect(find.text('3/2'), findsOneWidget);
+    expect(find.text('1 1/2'), findsOneWidget);
+  });
+
+  testWidgets('履歴全体画面で式と解を検索できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('1+2');
+    controller.press('=');
+    controller.pasteAtCaret('4+5');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    await tester.longPress(find.byKey(const Key('historyPanel')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('historySearchField')),
+      '1 + 2',
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('fullHistoryExpression0')), findsOneWidget);
+    expect(find.text('4 + 5'), findsNothing);
+  });
 }

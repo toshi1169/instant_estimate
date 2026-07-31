@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
+import 'calculator_history_screen.dart';
 
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({this.controller, super.key});
@@ -117,7 +118,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
-  Future<void> _showHistoryMenu(CalculationHistoryEntry entry) async {
+  Future<void> _showHistoryMenu(
+    CalculationHistoryEntry entry, {
+    bool returnToCalculatorOnEdit = false,
+  }) async {
     final action = await showModalBottomSheet<_HistoryMenuAction>(
       context: context,
       showDragHandle: true,
@@ -143,6 +147,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         );
       case _HistoryMenuAction.edit:
         _controller.editHistoryEntry(entry);
+        if (returnToCalculatorOnEdit && mounted) {
+          Navigator.of(context).pop();
+        }
         _showMessage('計算式を編集欄へ戻しました');
       case _HistoryMenuAction.delete:
         _controller.deleteHistoryEntry(entry);
@@ -155,6 +162,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           resultText: entry.result,
         );
     }
+  }
+
+  Future<void> _openFullHistory() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CalculatorHistoryScreen(
+          controller: _controller,
+          onMenuPressed: (entry) =>
+              _showHistoryMenu(entry, returnToCalculatorOnEdit: true),
+        ),
+      ),
+    );
   }
 
   void _showMessage(String message) {
@@ -190,6 +209,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         key: const Key('historyPanel'),
                         history: _controller.history,
                         onMenuPressed: _showHistoryMenu,
+                        onLongPress: _openFullHistory,
                       ),
                     ),
                     SizedBox(height: gap),
@@ -299,69 +319,75 @@ class _HistoryPanel extends StatelessWidget {
   const _HistoryPanel({
     required this.history,
     required this.onMenuPressed,
+    required this.onLongPress,
     super.key,
   });
 
   final List<CalculationHistoryEntry> history;
   final ValueChanged<CalculationHistoryEntry> onMenuPressed;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.brightness == Brightness.dark
-            ? AppColors.darkHistory
-            : AppColors.lightHistory,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListView.builder(
-        reverse: true,
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        itemCount: history.length,
-        itemBuilder: (context, reversedIndex) {
-          final index = history.length - 1 - reversedIndex;
-          final item = history[index];
-          return SizedBox(
-            height: 24,
-            child: Row(
-              children: [
-                GestureDetector(
-                  key: Key('historyMenuButton$index'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onMenuPressed(item),
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Icon(
-                      Icons.more_vert,
-                      size: 17,
-                      color: theme.colorScheme.onSurfaceVariant,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onLongPress: onLongPress,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.brightness == Brightness.dark
+              ? AppColors.darkHistory
+              : AppColors.lightHistory,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: ListView.builder(
+          reverse: true,
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          itemCount: history.length,
+          itemBuilder: (context, reversedIndex) {
+            final index = history.length - 1 - reversedIndex;
+            final item = history[index];
+            return SizedBox(
+              height: 24,
+              child: Row(
+                children: [
+                  GestureDetector(
+                    key: Key('historyMenuButton$index'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onMenuPressed(item),
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 17,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 3),
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(text: '${item.expression} = '),
-                        TextSpan(
-                          text: item.result,
-                          style: const TextStyle(color: AppColors.accent),
-                        ),
-                      ],
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(text: '${item.expression} = '),
+                          TextSpan(
+                            text: item.result,
+                            style: const TextStyle(color: AppColors.accent),
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyLarge?.copyWith(fontSize: 15),
                     ),
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(fontSize: 15),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
