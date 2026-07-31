@@ -588,10 +588,10 @@ class _EditableExpressionLine extends StatelessWidget {
                   children: [
                     for (final segment in controller.displaySegments)
                       switch (segment) {
-                        ExpressionTextSegment() => Text(
-                          segment.text,
+                        ExpressionTextSegment() => _EditableExpressionText(
+                          segment: segment,
                           style: style,
-                          maxLines: 1,
+                          onRawOffsetTap: controller.moveCaretToRawOffset,
                         ),
                         ExpressionCaretSegment() => const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 2),
@@ -627,6 +627,45 @@ class _EditableExpressionLine extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _EditableExpressionText extends StatelessWidget {
+  const _EditableExpressionText({
+    required this.segment,
+    required this.style,
+    required this.onRawOffsetTap,
+  });
+
+  final ExpressionTextSegment segment;
+  final TextStyle style;
+  final ValueChanged<int> onRawOffsetTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final painter = TextPainter(
+      text: TextSpan(text: segment.text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (details) {
+        final localX = details.localPosition.dx.clamp(0.0, painter.width);
+        final textOffset = painter
+            .getPositionForOffset(Offset(localX, 0))
+            .offset
+            .clamp(0, segment.text.length);
+        onRawOffsetTap(segment.rawOffsets[textOffset]);
+      },
+      child: Padding(
+        // A small vertical expansion makes short digits and operators easier
+        // to hit without changing their visual spacing.
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(segment.text, style: style, maxLines: 1),
+      ),
     );
   }
 }

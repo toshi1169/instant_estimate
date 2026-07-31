@@ -293,4 +293,63 @@ void main() {
     await tester.pump();
     expect(controller.caretPosition, 0);
   });
+
+  testWidgets('長い式でも分数前後の数字と演算子へキャレットを移動できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('66×55×');
+    for (final key in ['a/b', '1', 'a/b', '1', 'a/b']) {
+      controller.press(key);
+    }
+    controller.pasteAtCaret('×222×3333');
+
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    Future<void> tapCharacter(
+      String containedText,
+      int offsetWithinContainedText,
+    ) async {
+      final finder = find.textContaining(containedText);
+      final text = tester.widget<Text>(finder).data!;
+      final characterIndex =
+          text.indexOf(containedText) + offsetWithinContainedText;
+      final rect = tester.getRect(finder);
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: const TextStyle(fontSize: 42)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final left = painter.getOffsetForCaret(
+        TextPosition(offset: characterIndex),
+        Rect.zero,
+      );
+      final right = painter.getOffsetForCaret(
+        TextPosition(offset: characterIndex + 1),
+        Rect.zero,
+      );
+      final localCenter = (left.dx + right.dx) / 2;
+      await tester.tapAt(
+        Offset(
+          rect.left + localCenter * rect.width / painter.width,
+          rect.center.dy,
+        ),
+      );
+      await tester.pump();
+    }
+
+    await tapCharacter('66', 0);
+    expect(controller.caretPosition, anyOf(0, 1));
+
+    await tapCharacter('222', -2);
+    expect(controller.caretPosition, anyOf(7, 8));
+    await tapCharacter('222', 1);
+    expect(controller.caretPosition, anyOf(9, 10));
+    await tapCharacter('3333', 1);
+    expect(controller.caretPosition, anyOf(13, 14));
+  });
 }

@@ -28,8 +28,10 @@ sealed class ExpressionDisplaySegment {
 }
 
 class ExpressionTextSegment extends ExpressionDisplaySegment {
-  const ExpressionTextSegment(this.text);
+  const ExpressionTextSegment({required this.text, required this.rawOffsets});
+
   final String text;
+  final List<int> rawOffsets;
 }
 
 class ExpressionCaretSegment extends ExpressionDisplaySegment {
@@ -146,11 +148,24 @@ class CalculatorController extends ChangeNotifier {
   List<ExpressionDisplaySegment> get displaySegments {
     final segments = <ExpressionDisplaySegment>[];
     final textBuffer = StringBuffer();
+    final textRawOffsets = <int>[];
+
+    void appendText(String text, int rawStart, int rawEnd) {
+      if (textRawOffsets.isEmpty) textRawOffsets.add(rawStart);
+      textBuffer.write(text);
+      textRawOffsets.add(rawEnd);
+    }
 
     void flushText() {
       if (textBuffer.isEmpty) return;
-      segments.add(ExpressionTextSegment(textBuffer.toString()));
+      segments.add(
+        ExpressionTextSegment(
+          text: textBuffer.toString(),
+          rawOffsets: List.unmodifiable(textRawOffsets),
+        ),
+      );
       textBuffer.clear();
+      textRawOffsets.clear();
     }
 
     for (var index = 0; index <= _expression.length; index++) {
@@ -182,13 +197,12 @@ class CalculatorController extends ChangeNotifier {
         );
       } else if (_isOperator(character)) {
         if (textBuffer.isNotEmpty && !textBuffer.toString().endsWith(' ')) {
-          textBuffer.write(' ');
+          appendText(' ', index, index);
         }
-        textBuffer
-          ..write(character)
-          ..write(' ');
+        appendText(character, index, index + 1);
+        appendText(' ', index + 1, index + 1);
       } else {
-        textBuffer.write(character);
+        appendText(character, index, index + 1);
       }
     }
     flushText();
@@ -279,6 +293,19 @@ class CalculatorController extends ChangeNotifier {
       }
     }
     _caretPosition = bestRawOffset;
+    _activeFractionMarker = null;
+    _activeFractionField = null;
+    _activeFractionCaretOffset = 0;
+    notifyListeners();
+  }
+
+  void moveCaretToRawOffset(int rawOffset) {
+    if (_state == CalculatorState.error) return;
+    if (_state == CalculatorState.result) {
+      _state = CalculatorState.input;
+      _canCycleFraction = false;
+    }
+    _caretPosition = rawOffset.clamp(0, _expression.length);
     _activeFractionMarker = null;
     _activeFractionField = null;
     _activeFractionCaretOffset = 0;
