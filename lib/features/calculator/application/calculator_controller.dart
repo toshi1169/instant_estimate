@@ -357,6 +357,10 @@ class CalculatorController extends ChangeNotifier {
       return '角度・三角関数の設定後に追加します';
     }
 
+    if (label == '1/x') {
+      return _insertReciprocalFunction();
+    }
+
     final insertion = switch (label) {
       'π' || 'e' || 'φ' => label,
       'log' => 'log(',
@@ -367,7 +371,6 @@ class CalculatorController extends ChangeNotifier {
       '|x|' => 'abs(',
       'x²' => '^2',
       'x³' => '^3',
-      '1/x' => '1÷(',
       '10ˣ' => '10^(',
       'eˣ' => 'e^(',
       'x!' => '!',
@@ -399,6 +402,27 @@ class CalculatorController extends ChangeNotifier {
     return null;
   }
 
+  String? _insertReciprocalFunction() {
+    if (_state == CalculatorState.result || _state == CalculatorState.error) {
+      clear();
+    }
+    if (_hasOperandBeforeCaret) _insertAtCaret('×');
+
+    final marker = String.fromCharCode(0xE000 + _nextFractionId++);
+    _fractions[marker] = _EditableFraction()..numerator = '1';
+    _insertAtCaret(marker);
+    _activeFractionMarker = marker;
+    _activeFractionField = FractionField.denominator;
+    _activeFractionCaretOffset = 0;
+    _caretPosition = _expression.indexOf(marker);
+    _state = CalculatorState.input;
+    _canCycleFraction = false;
+    _result = '0';
+    _isPreviewResult = false;
+    notifyListeners();
+    return null;
+  }
+
   void calculate() {
     if (_expression.isEmpty || _state == CalculatorState.error) return;
     if (_state == CalculatorState.result) {
@@ -407,7 +431,7 @@ class CalculatorController extends ChangeNotifier {
     }
 
     try {
-      final value = _engine.evaluate(_expandFractionsForCalculation());
+      final value = _engine.evaluate(_expressionForCalculation());
       _rawResult = _plainNumber(value);
       _result = _formatNumber(value);
       _state = CalculatorState.result;
@@ -592,6 +616,18 @@ class CalculatorController extends ChangeNotifier {
       return;
     }
     if (_caretPosition == 0 || _expression.isEmpty) return;
+
+    final functionToken = _functionTokenBeforeCaret();
+    if (functionToken != null) {
+      _expression =
+          '${_expression.substring(0, _caretPosition - functionToken.length)}'
+          '${_expression.substring(_caretPosition)}';
+      _caretPosition -= functionToken.length;
+      _canCycleFraction = false;
+      _updatePreviewResult();
+      notifyListeners();
+      return;
+    }
 
     final removedCharacter = _expression[_caretPosition - 1];
     _expression =
@@ -1100,6 +1136,40 @@ class CalculatorController extends ChangeNotifier {
     return buffer.toString();
   }
 
+  String _expressionForCalculation() {
+    final expression = _expandFractionsForCalculation();
+    var openParentheses = 0;
+    for (final character in expression.split('')) {
+      if (character == '(') {
+        openParentheses++;
+      } else if (character == ')') {
+        if (openParentheses == 0) return expression;
+        openParentheses--;
+      }
+    }
+    return '$expression${List.filled(openParentheses, ')').join()}';
+  }
+
+  String? _functionTokenBeforeCaret() {
+    final beforeCaret = _expression.substring(0, _caretPosition);
+    for (final token in const [
+      'log₂(',
+      'abs(',
+      'log(',
+      '10^(',
+      '³√(',
+      'ln(',
+      'e^(',
+      '√(',
+      '^2',
+      '^3',
+      '!',
+    ]) {
+      if (beforeCaret.endsWith(token)) return token;
+    }
+    return null;
+  }
+
   void _setError(String message) {
     _errorMessage = message;
     _result = '';
@@ -1116,7 +1186,7 @@ class CalculatorController extends ChangeNotifier {
       return;
     }
     try {
-      final value = _engine.evaluate(_expandFractionsForCalculation());
+      final value = _engine.evaluate(_expressionForCalculation());
       _result = _formatNumber(value);
       _rawResult = _plainNumber(value);
       _isPreviewResult = true;

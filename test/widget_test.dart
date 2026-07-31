@@ -181,12 +181,35 @@ void main() {
     await tester.tap(find.text('√'));
     await tester.pumpAndSettle();
 
-    for (final key in ['9', '()', '=']) {
+    for (final key in ['9', '=']) {
       await tester.tap(find.text(key));
       await tester.pump();
     }
 
     expect(find.text('=  3'), findsOneWidget);
+  });
+
+  testWidgets('関数一覧の逆数を横棒付き分数として計算できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.bySemanticsLabel('メニュー'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1/x'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('4'));
+    await tester.pump();
+
+    expect(find.text('=  0.25'), findsOneWidget);
   });
 
   testWidgets('業種を保存すると電卓へ移動する', (tester) async {

@@ -65,6 +65,59 @@ void main() {
       expect(controller.expression, isEmpty);
     });
 
+    test('バックボタン1回で関数トークン全体を削除する', () {
+      final controller = CalculatorController();
+
+      controller.insertFunction('log');
+      expect(controller.expression, 'log(');
+      controller.press('←');
+      expect(controller.expression, isEmpty);
+
+      controller.press('4');
+      controller.insertFunction('x²');
+      expect(controller.expression, '4^2');
+      controller.press('←');
+      expect(controller.expression, '4');
+    });
+
+    test('関数の閉じカッコなしで暫定解と確定解を計算する', () {
+      final controller = CalculatorController();
+
+      controller.insertFunction('√');
+      controller.press('4');
+
+      expect(controller.expression, '√(4');
+      expect(controller.result, '2');
+      expect(controller.isPreviewResult, isTrue);
+
+      controller.press('=');
+      expect(controller.result, '2');
+      expect(controller.state, CalculatorState.result);
+    });
+
+    test('逆数は横棒付き分数として入力する', () {
+      final controller = CalculatorController();
+
+      expect(controller.insertFunction('1/x'), isNull);
+      var fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.numerator, '1');
+      expect(fraction.denominator, isEmpty);
+      expect(fraction.activeField, FractionField.denominator);
+
+      controller.press('4');
+      fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.denominator, '4');
+      expect(controller.result, '0.25');
+      expect(controller.isPreviewResult, isTrue);
+
+      controller.press('=');
+      expect(controller.result, '0.25');
+    });
+
     test('3桁以下の解には先頭カンマを表示しない', () {
       final controller = CalculatorController();
       controller.pasteAtCaret('7.5×44');
