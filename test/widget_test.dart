@@ -128,7 +128,7 @@ void main() {
     expect(find.text('=  0.5'), findsOneWidget);
   });
 
-  testWidgets('7桁以上の分数は幅を広げて右側へキャレットを移動できる', (tester) async {
+  testWidgets('10桁分数は入力中と右側キャレットでエラーを出さない', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -140,34 +140,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    for (final key in [
-      'a/b',
-      '1',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-      '7',
-      '8',
-      'a/b',
-      '6',
-      '7',
-      '8',
-      '9',
-      '0',
-      '1',
-      '2',
-      '3',
-      'a/b',
-    ]) {
-      final finder = key == 'a/b'
-          ? find.bySemanticsLabel('a/b')
-          : find.text(key);
-      await tester.tap(finder);
+    await tester.tap(find.bySemanticsLabel('a/b'));
+    for (final key in '1234567890'.split('')) {
+      await tester.tap(find.widgetWithText(FilledButton, key));
       await tester.pump();
     }
+    expect(tester.takeException(), isNull);
 
+    await tester.tap(find.bySemanticsLabel('a/b'));
+    for (final key in '0987654321'.split('')) {
+      await tester.tap(find.widgetWithText(FilledButton, key));
+      await tester.pump();
+    }
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.bySemanticsLabel('a/b'));
+    await tester.pump();
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('calculatorCaret')), findsOneWidget);
     expect(find.byKey(const Key('expressionTrailingTapArea')), findsNothing);
