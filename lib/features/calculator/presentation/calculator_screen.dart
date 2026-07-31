@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
@@ -89,8 +90,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
   }
 
-  Future<void> _showEstimateTransferSheet() async {
-    if (_controller.expression.isEmpty) {
+  Future<void> _showEstimateTransferSheet({
+    String? expressionText,
+    String? resultText,
+  }) async {
+    final expression = expressionText ?? _controller.estimateExpressionText;
+    final result = resultText ?? _controller.estimateResultText;
+    if (expression.isEmpty) {
       _showMessage('見積へ送る計算式がありません');
       return;
     }
@@ -99,7 +105,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => _EstimateTransferSheet(controller: _controller),
+      builder: (context) => _EstimateTransferSheet(
+        expressionText: expression,
+        resultText: result,
+      ),
     );
     if (request == null || !mounted) return;
 
@@ -122,12 +131,29 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           ClipboardData(text: '${entry.expression} = ${entry.result}'),
         );
         _showMessage('履歴をコピーしました');
+      case _HistoryMenuAction.share:
+        final box = context.findRenderObject() as RenderBox?;
+        await SharePlus.instance.share(
+          ShareParams(
+            text: '${entry.expression} = ${entry.result}',
+            sharePositionOrigin: box == null
+                ? null
+                : box.localToGlobal(Offset.zero) & box.size,
+          ),
+        );
       case _HistoryMenuAction.edit:
         _controller.editHistoryEntry(entry);
         _showMessage('計算式を編集欄へ戻しました');
       case _HistoryMenuAction.delete:
         _controller.deleteHistoryEntry(entry);
         _showMessage('履歴を削除しました');
+      case _HistoryMenuAction.star:
+        _showMessage('スターはアルティメット版で利用できます');
+      case _HistoryMenuAction.sendToEstimate:
+        await _showEstimateTransferSheet(
+          expressionText: entry.expression,
+          resultText: entry.result,
+        );
     }
   }
 
@@ -341,7 +367,7 @@ class _HistoryPanel extends StatelessWidget {
   }
 }
 
-enum _HistoryMenuAction { copy, edit, delete }
+enum _HistoryMenuAction { copy, share, edit, delete, star, sendToEstimate }
 
 class _HistoryMenuSheet extends StatelessWidget {
   const _HistoryMenuSheet();
@@ -350,8 +376,11 @@ class _HistoryMenuSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     const items = <(_HistoryMenuAction, IconData, String)>[
       (_HistoryMenuAction.copy, Icons.copy_outlined, 'コピー'),
+      (_HistoryMenuAction.share, Icons.share_outlined, '共有'),
       (_HistoryMenuAction.edit, Icons.edit_outlined, '編集'),
       (_HistoryMenuAction.delete, Icons.delete_outline, '削除'),
+      (_HistoryMenuAction.star, Icons.star_border, 'スター'),
+      (_HistoryMenuAction.sendToEstimate, Icons.receipt_long_outlined, '見積へ送る'),
     ];
     return SafeArea(
       child: ListView(
@@ -579,9 +608,13 @@ class _EstimateTransferRequest {
 }
 
 class _EstimateTransferSheet extends StatefulWidget {
-  const _EstimateTransferSheet({required this.controller});
+  const _EstimateTransferSheet({
+    required this.expressionText,
+    required this.resultText,
+  });
 
-  final CalculatorController controller;
+  final String expressionText;
+  final String resultText;
 
   @override
   State<_EstimateTransferSheet> createState() => _EstimateTransferSheetState();
@@ -593,11 +626,10 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
 
   String get _preview {
     return switch (_content) {
-      _EstimateContent.expression => widget.controller.estimateExpressionText,
-      _EstimateContent.result => widget.controller.estimateResultText,
+      _EstimateContent.expression => widget.expressionText,
+      _EstimateContent.result => widget.resultText,
       _EstimateContent.expressionAndResult =>
-        '${widget.controller.estimateExpressionText} = '
-            '${widget.controller.estimateResultText}',
+        '${widget.expressionText} = ${widget.resultText}',
     };
   }
 
@@ -655,7 +687,10 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text(_preview),
+                child: Text(
+                  _preview,
+                  key: const Key('estimateTransferPreview'),
+                ),
               ),
             ),
             const SizedBox(height: 20),

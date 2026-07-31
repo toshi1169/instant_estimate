@@ -395,7 +395,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('コピー'), findsOneWidget);
+    expect(find.text('共有'), findsOneWidget);
     expect(find.text('編集'), findsOneWidget);
     expect(find.text('削除'), findsOneWidget);
+    expect(find.text('スター'), findsOneWidget);
+    expect(find.text('見積へ送る'), findsOneWidget);
+  });
+
+  testWidgets('無料版の履歴スターでは利用制限を案内する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('1+2');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('スター'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('スターはアルティメット版で利用できます'), findsOneWidget);
+  });
+
+  testWidgets('履歴から見積へ送る共通画面を開ける', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('1+2');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('見積へ送る'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('送信内容'), findsOneWidget);
+    final preview = tester.widget<Text>(
+      find.byKey(const Key('estimateTransferPreview')),
+    );
+    expect(preview.data, '1 + 2 = 3');
   });
 }
