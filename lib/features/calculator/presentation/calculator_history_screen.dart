@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
 
+enum _HistorySortOrder { ascending, descending }
+
 class CalculatorHistoryScreen extends StatefulWidget {
   const CalculatorHistoryScreen({
     required this.controller,
@@ -21,6 +23,7 @@ class CalculatorHistoryScreen extends StatefulWidget {
 class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
   final _searchController = TextEditingController();
   String _query = '';
+  _HistorySortOrder _sortOrder = _HistorySortOrder.descending;
 
   @override
   void dispose() {
@@ -32,10 +35,12 @@ class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
     List<CalculationHistoryEntry> history,
   ) {
     final query = _query.trim().toLowerCase();
-    final newestFirst = history.reversed;
-    if (query.isEmpty) return newestFirst.toList(growable: false);
+    final orderedHistory = _sortOrder == _HistorySortOrder.descending
+        ? history.reversed
+        : history;
+    if (query.isEmpty) return orderedHistory.toList(growable: false);
 
-    return newestFirst
+    return orderedHistory
         .where((entry) {
           return <String?>[
             entry.expression,
@@ -58,12 +63,51 @@ class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
         final history = _filteredHistory(widget.controller.history);
         return Scaffold(
           appBar: AppBar(
-            title: const Text('計算履歴'),
+            titleSpacing: 0,
+            title: Row(
+              children: [
+                SizedBox(
+                  width: 46,
+                  child: Text(
+                    '${widget.controller.history.length}件',
+                    key: const Key('historyCount'),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+                const Expanded(
+                  child: Text('計算履歴', textAlign: TextAlign.center),
+                ),
+              ],
+            ),
             actions: [
-              Center(
+              PopupMenuButton<_HistorySortOrder>(
+                key: const Key('historySortMenu'),
+                initialValue: _sortOrder,
+                tooltip: '履歴の並び順',
+                onSelected: (value) => setState(() => _sortOrder = value),
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _HistorySortOrder.ascending,
+                    child: Text('昇順'),
+                  ),
+                  PopupMenuItem(
+                    value: _HistorySortOrder.descending,
+                    child: Text('降順'),
+                  ),
+                ],
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: Text('${widget.controller.history.length}件'),
+                  padding: const EdgeInsets.only(left: 8, right: 12),
+                  child: Row(
+                    children: [
+                      Text(
+                        _sortOrder == _HistorySortOrder.descending
+                            ? '降順'
+                            : '昇順',
+                        key: const Key('historySortLabel'),
+                      ),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
+                  ),
                 ),
               ),
             ],

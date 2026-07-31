@@ -500,4 +500,42 @@ void main() {
     expect(find.byKey(const Key('fullHistoryExpression0')), findsOneWidget);
     expect(find.text('4 + 5'), findsNothing);
   });
+
+  testWidgets('履歴全体画面を昇順と降順へ切り替えられる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('1+2');
+    controller.press('=');
+    controller.pasteAtCaret('4+5');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    await tester.longPress(find.byKey(const Key('historyPanel')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('historyCount')), findsOneWidget);
+    expect(find.text('2件'), findsOneWidget);
+    expect(find.text('降順'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('fullHistoryExpression0'))).data,
+      '4 + 5',
+    );
+
+    await tester.tap(find.byKey(const Key('historySortMenu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('昇順'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('historySortLabel')), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('fullHistoryExpression0'))).data,
+      '1 + 2',
+    );
+  });
 }
