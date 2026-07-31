@@ -10,10 +10,16 @@ class CalculationHistoryEntry {
   const CalculationHistoryEntry({
     required this.expression,
     required this.result,
+    required this.decimalResult,
+    this.improperFractionResult,
+    this.mixedFractionResult,
   });
 
   final String expression;
   final String result;
+  final String decimalResult;
+  final String? improperFractionResult;
+  final String? mixedFractionResult;
 }
 
 class FormattedExpression {
@@ -283,7 +289,17 @@ class CalculatorController extends ChangeNotifier {
       _activeFractionField = null;
       _activeFractionCaretOffset = 0;
       _history.add(
-        CalculationHistoryEntry(expression: displayExpression, result: _result),
+        CalculationHistoryEntry(
+          expression: displayExpression,
+          result: _result,
+          decimalResult: _result,
+          improperFractionResult: _resultFraction == null
+              ? null
+              : '${_resultFraction!.numerator}/${_resultFraction!.denominator}',
+          mixedFractionResult: _resultFraction == null
+              ? null
+              : _mixedFractionText(_resultFraction!),
+        ),
       );
       if (_history.length > 50) _history.removeAt(0);
     } on CalculationException catch (error) {
@@ -931,7 +947,7 @@ class CalculatorController extends ChangeNotifier {
     final sign = parts.first.startsWith('-') ? '-' : '';
     final digits = parts.first.replaceFirst('-', '');
     final grouped = digits.replaceAllMapped(
-      RegExp(r'(?=(\d{3})+(?!\d))'),
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
       (_) => ',',
     );
     return ['$sign$grouped', if (parts.length == 2) parts[1]].join('.');

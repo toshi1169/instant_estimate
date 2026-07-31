@@ -28,6 +28,22 @@ void main() {
       expect(controller.history, hasLength(2));
     });
 
+    test('3桁以下の解には先頭カンマを表示しない', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('7.5×44');
+      controller.press('=');
+
+      expect(controller.result, '330');
+    });
+
+    test('4桁以上の解だけ正しい位置へ3桁区切りを表示する', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('7.5×440');
+      controller.press('=');
+
+      expect(controller.result, '3,300');
+    });
+
     test('バックボタンは入力中の末尾を削除する', () {
       final controller = CalculatorController();
       controller.press('1');
@@ -120,6 +136,9 @@ void main() {
 
       expect(controller.result, '1.5');
       expect(controller.history.single.result, '1.5');
+      expect(controller.history.single.decimalResult, '1.5');
+      expect(controller.history.single.improperFractionResult, '3/2');
+      expect(controller.history.single.mixedFractionResult, '1 1/2');
 
       controller.press('=');
       expect(controller.result, '3/2');
