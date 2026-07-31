@@ -587,11 +587,7 @@ class CalculatorController extends ChangeNotifier {
     if (_activeFractionMarker != null) return;
     if (_state == CalculatorState.error) clear();
     if (_state == CalculatorState.result) {
-      _expression = _rawResult;
-      _caretPosition = _expression.length;
-      _state = CalculatorState.input;
-      _resultDisplayMode = ResultDisplayMode.decimal;
-      _resultFraction = null;
+      _startExpressionFromDisplayedResult();
     }
     if (_expression.isEmpty) {
       if (operator == '−') _insertAtCaret(operator);
@@ -613,6 +609,47 @@ class CalculatorController extends ChangeNotifier {
     }
     _canCycleFraction = false;
     notifyListeners();
+  }
+
+  void _startExpressionFromDisplayedResult() {
+    final fraction = _resultFraction;
+    if (_resultDisplayMode == ResultDisplayMode.decimal || fraction == null) {
+      _expression = _rawResult;
+      _caretPosition = _expression.length;
+    } else {
+      _fractions.clear();
+      final marker = String.fromCharCode(0xE000 + _nextFractionId++);
+      if (_resultDisplayMode == ResultDisplayMode.improperFraction) {
+        _fractions[marker] = _EditableFraction()
+          ..numerator = fraction.numerator.toString()
+          ..denominator = fraction.denominator.toString();
+      } else {
+        final absoluteNumerator = fraction.numerator.abs();
+        final wholeNumber = absoluteNumerator ~/ fraction.denominator;
+        final remainder = absoluteNumerator % fraction.denominator;
+        final signedWholeNumber = fraction.numerator < 0
+            ? -wholeNumber
+            : wholeNumber;
+        _fractions[marker] =
+            _EditableFraction(
+                wholeNumber: wholeNumber == 0
+                    ? ''
+                    : signedWholeNumber.toString(),
+              )
+              ..numerator = wholeNumber == 0 && fraction.numerator < 0
+                  ? '-$remainder'
+                  : remainder.toString()
+              ..denominator = fraction.denominator.toString();
+      }
+      _expression = marker;
+      _caretPosition = 1;
+    }
+    _state = CalculatorState.input;
+    _resultDisplayMode = ResultDisplayMode.decimal;
+    _resultFraction = null;
+    _activeFractionMarker = null;
+    _activeFractionField = null;
+    _activeFractionCaretOffset = 0;
   }
 
   void _insertParenthesis() {
@@ -842,7 +879,9 @@ class CalculatorController extends ChangeNotifier {
       final whole = int.tryParse(fraction.wholeNumber) ?? 0;
       final numerator = int.parse(fraction.numerator);
       final denominator = int.parse(fraction.denominator);
-      final improperNumerator = whole * denominator + numerator;
+      final improperNumerator = whole < 0
+          ? whole * denominator - numerator.abs()
+          : whole * denominator + numerator;
       buffer.write('($improperNumerator÷$denominator)');
     }
     return buffer.toString();

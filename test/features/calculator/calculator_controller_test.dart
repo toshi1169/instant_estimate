@@ -145,6 +145,50 @@ void main() {
       expect(controller.result, '2');
     });
 
+    test('仮分数表示から四則演算を続けても分数を式へ維持する', () {
+      for (final operator in ['+', '−', '×', '÷']) {
+        final controller = CalculatorController();
+        controller.pasteAtCaret('2−1÷2');
+        controller.press('=');
+        controller.press('=');
+
+        controller.press(operator);
+
+        expect(controller.displayExpression, '3/2 $operator');
+        expect(controller.state, CalculatorState.input);
+      }
+    });
+
+    test('帯分数表示から演算を続けても帯分数を式へ維持する', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('2−1÷2');
+      controller.press('=');
+      controller.press('=');
+      controller.press('=');
+
+      controller.press('+');
+      controller.press('1');
+      controller.press('=');
+
+      expect(controller.displayExpression, '1 1/2 + 1');
+      expect(controller.result, '2.5');
+    });
+
+    test('負の帯分数表示からも正しい値で計算を続けられる', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('1÷2−2');
+      controller.press('=');
+      controller.press('=');
+      controller.press('=');
+
+      controller.press('+');
+      controller.press('1');
+      controller.press('=');
+
+      expect(controller.displayExpression, '-1 1/2 + 1');
+      expect(controller.result, '-0.5');
+    });
+
     test('a/bボタンで通常分数を入力して計算できる', () {
       final controller = CalculatorController();
       for (final key in ['a/b', '1', 'a/b', '2', 'a/b', '=']) {
