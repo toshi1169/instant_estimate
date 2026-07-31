@@ -7,13 +7,22 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
+import '../../settings/presentation/settings_screen.dart';
 import 'calculator_history_screen.dart';
 
 class CalculatorScreen extends StatefulWidget {
-  const CalculatorScreen({this.controller, this.historyStore, super.key});
+  const CalculatorScreen({
+    this.controller,
+    this.historyStore,
+    this.themeMode = ThemeMode.system,
+    this.onThemeModeChanged,
+    super.key,
+  });
 
   final CalculatorController? controller;
   final CalculationHistoryStore? historyStore;
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode>? onThemeModeChanged;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -65,11 +74,24 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   void _pressKey(_CalculatorKey key) {
-    if (const {_KeyKind.menu, _KeyKind.settings}.contains(key.kind)) {
+    if (key.kind == _KeyKind.menu) return;
+    if (key.kind == _KeyKind.settings) {
+      unawaited(_openSettings());
       return;
     }
     final notice = _controller.press(key.label);
     if (notice != null) _showMessage(notice);
+  }
+
+  Future<void> _openSettings() {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SettingsScreen(
+          themeMode: widget.themeMode,
+          onThemeModeChanged: widget.onThemeModeChanged ?? (themeMode) {},
+        ),
+      ),
+    );
   }
 
   Future<void> _showCalculationMenu() async {

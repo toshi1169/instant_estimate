@@ -70,5 +70,34 @@ import UIKit
         result(FlutterMethodNotImplemented)
       }
     }
+
+    let settingsChannel = FlutterMethodChannel(
+      name: "jp.instant_estimate/app_settings",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    settingsChannel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "loadThemeMode":
+        result(UserDefaults.standard.string(forKey: "themeMode") ?? "system")
+      case "saveThemeMode":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let themeMode = arguments["themeMode"] as? String
+        else {
+          result(
+            FlutterError(
+              code: "INVALID_ARGUMENT",
+              message: "Theme mode is required.",
+              details: nil
+            )
+          )
+          return
+        }
+        UserDefaults.standard.set(themeMode, forKey: "themeMode")
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }

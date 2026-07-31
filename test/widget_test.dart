@@ -4,6 +4,7 @@ import 'package:instant_estimate/app/app.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
+import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
   FakeOnboardingPreferences({required this.hasSelected});
@@ -21,7 +22,58 @@ class FakeOnboardingPreferences implements OnboardingPreferences {
   }
 }
 
+class FakeAppSettingsStore implements AppSettingsStore {
+  FakeAppSettingsStore({this.themeMode = ThemeMode.system});
+
+  ThemeMode themeMode;
+
+  @override
+  Future<ThemeMode> loadThemeMode() async => themeMode;
+
+  @override
+  Future<void> saveThemeMode(ThemeMode themeMode) async {
+    this.themeMode = themeMode;
+  }
+}
+
 void main() {
+  testWidgets('保存済みテーマを復元し設定画面から変更できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final settingsStore = FakeAppSettingsStore(themeMode: ThemeMode.dark);
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.dark,
+    );
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    expect(find.text('設定'), findsOneWidget);
+    expect(find.text('端末設定に合わせる'), findsOneWidget);
+    expect(find.text('ライト'), findsOneWidget);
+    expect(find.text('ダーク'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('themeModeLight')));
+    await tester.pumpAndSettle();
+
+    expect(settingsStore.themeMode, ThemeMode.light);
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.light,
+    );
+  });
+
   testWidgets('初回起動では業種選択を表示する', (tester) async {
     final preferences = FakeOnboardingPreferences(hasSelected: false);
     await tester.pumpWidget(

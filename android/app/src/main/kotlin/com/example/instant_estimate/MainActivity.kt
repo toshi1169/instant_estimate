@@ -7,6 +7,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val channelName = "jp.instant_estimate/onboarding_preferences"
     private val historyChannelName = "jp.instant_estimate/calculator_history"
+    private val settingsChannelName = "jp.instant_estimate/app_settings"
     private val preferencesName = "instant_estimate_preferences"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -47,6 +48,28 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGUMENT", "History is required.", null)
                     } else {
                         preferences.edit().putString("calculatorHistory", history).apply()
+                        result.success(null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            settingsChannelName,
+        ).setMethodCallHandler { call, result ->
+            val preferences = getSharedPreferences(preferencesName, MODE_PRIVATE)
+            when (call.method) {
+                "loadThemeMode" -> result.success(
+                    preferences.getString("themeMode", "system"),
+                )
+                "saveThemeMode" -> {
+                    val themeMode = call.argument<String>("themeMode")
+                    if (themeMode == null) {
+                        result.error("INVALID_ARGUMENT", "Theme mode is required.", null)
+                    } else {
+                        preferences.edit().putString("themeMode", themeMode).apply()
                         result.success(null)
                     }
                 }
