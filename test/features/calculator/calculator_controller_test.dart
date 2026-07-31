@@ -44,6 +44,27 @@ void main() {
       expect(controller.history, hasLength(2));
     });
 
+    test('関数一覧から定数・平方根・階乗を入力して計算できる', () {
+      final controller = CalculatorController();
+
+      expect(controller.insertFunction('√'), isNull);
+      controller.press('9');
+      controller.press('()');
+      controller.press('+');
+      controller.press('3');
+      expect(controller.insertFunction('x!'), isNull);
+      controller.press('=');
+
+      expect(controller.result, '9');
+    });
+
+    test('三角関数は角度設定確定まで入力しない', () {
+      final controller = CalculatorController();
+
+      expect(controller.insertFunction('sin'), '角度・三角関数の設定後に追加します');
+      expect(controller.expression, isEmpty);
+    });
+
     test('3桁以下の解には先頭カンマを表示しない', () {
       final controller = CalculatorController();
       controller.pasteAtCaret('7.5×44');

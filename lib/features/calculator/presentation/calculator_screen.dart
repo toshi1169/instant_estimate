@@ -106,7 +106,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       builder: (_) => const FunctionListDialog(),
     );
     if (function != null && mounted) {
-      _showMessage('「$function」の計算機能は今後の工程で追加します');
+      final notice = _controller.insertFunction(function);
+      if (notice != null) _showMessage(notice);
     }
   }
 

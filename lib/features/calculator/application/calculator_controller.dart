@@ -334,6 +334,71 @@ class CalculatorController extends ChangeNotifier {
     return _pendingNotice;
   }
 
+  String? insertFunction(String label) {
+    _pendingNotice = null;
+    if (_activeFractionMarker != null) {
+      return '分数の入力を完了してから関数を選択してください';
+    }
+
+    if (const {
+      'sin',
+      'cos',
+      'tan',
+      'sin⁻¹',
+      'cos⁻¹',
+      'tan⁻¹',
+      'sinh',
+      'cosh',
+      'tanh',
+      'sinh⁻¹',
+      'cosh⁻¹',
+      'tanh⁻¹',
+    }.contains(label)) {
+      return '角度・三角関数の設定後に追加します';
+    }
+
+    final insertion = switch (label) {
+      'π' || 'e' || 'φ' => label,
+      'log' => 'log(',
+      'ln' => 'ln(',
+      'log₂' => 'log₂(',
+      '√' => '√(',
+      '³√' => '³√(',
+      '|x|' => 'abs(',
+      'x²' => '^2',
+      'x³' => '^3',
+      '1/x' => '1÷(',
+      '10ˣ' => '10^(',
+      'eˣ' => 'e^(',
+      'x!' => '!',
+      _ => null,
+    };
+    if (insertion == null) return 'この関数はまだ利用できません';
+
+    final needsLeftOperand = const {'x²', 'x³', 'x!'}.contains(label);
+    if (_state == CalculatorState.result && needsLeftOperand) {
+      _startExpressionFromDisplayedResult();
+    } else if (_state == CalculatorState.result ||
+        _state == CalculatorState.error) {
+      clear();
+    }
+
+    if (needsLeftOperand && !_hasOperandBeforeCaret) {
+      return '先に数値を入力してください';
+    }
+
+    final startsNewOperand = !needsLeftOperand;
+    if (startsNewOperand && _hasOperandBeforeCaret) {
+      _insertAtCaret('×');
+    }
+    _insertAtCaret(insertion);
+    _state = CalculatorState.input;
+    _canCycleFraction = false;
+    _updatePreviewResult();
+    notifyListeners();
+    return null;
+  }
+
   void calculate() {
     if (_expression.isEmpty || _state == CalculatorState.error) return;
     if (_state == CalculatorState.result) {
@@ -983,6 +1048,19 @@ class CalculatorController extends ChangeNotifier {
 
   bool _isOperator(String character) =>
       const {'+', '−', '×', '÷', '^'}.contains(character);
+
+  bool get _hasOperandBeforeCaret {
+    if (_caretPosition == 0) return false;
+    final previous = _characterBeforeCaret;
+    return _isDigit(previous) ||
+        previous == ')' ||
+        previous == '%' ||
+        previous == '!' ||
+        previous == 'π' ||
+        previous == 'φ' ||
+        previous == 'e' ||
+        _isFractionMarker(previous);
+  }
 
   bool _isFractionMarker(String character) =>
       character.isNotEmpty && _fractions.containsKey(character);

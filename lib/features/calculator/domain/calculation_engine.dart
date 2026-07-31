@@ -92,10 +92,15 @@ class _ExpressionParser {
 
   double _parsePostfix() {
     var value = _parsePrimary();
-    while (_consume('%')) {
-      value /= 100;
+    while (true) {
+      if (_consume('%')) {
+        value /= 100;
+      } else if (_consume('!')) {
+        value = _factorial(value);
+      } else {
+        return value;
+      }
     }
-    return value;
   }
 
   double _parsePrimary() {
@@ -105,6 +110,22 @@ class _ExpressionParser {
         throw const CalculationException('計算できません');
       }
       return value;
+    }
+
+    if (_consumeText('π')) return math.pi;
+    if (_consumeText('φ')) return (1 + math.sqrt(5)) / 2;
+    if (_consumeText('e')) return math.e;
+
+    final function = _readFunctionName();
+    if (function != null) {
+      if (!_consume('(')) {
+        throw const CalculationException('計算できません');
+      }
+      final argument = _parseExpression();
+      if (!_consume(')')) {
+        throw const CalculationException('計算できません');
+      }
+      return _applyFunction(function, argument);
     }
 
     final start = _position;
@@ -138,6 +159,49 @@ class _ExpressionParser {
     }
     _position++;
     return true;
+  }
+
+  bool _consumeText(String text) {
+    if (!_source.startsWith(text, _position)) return false;
+    _position += text.length;
+    return true;
+  }
+
+  String? _readFunctionName() {
+    for (final name in const ['log₂', 'log', 'ln', '³√', '√', 'abs']) {
+      if (_consumeText(name)) return name;
+    }
+    return null;
+  }
+
+  double _applyFunction(String function, double argument) {
+    final value = switch (function) {
+      'log' => argument > 0 ? math.log(argument) / math.ln10 : double.nan,
+      'ln' => argument > 0 ? math.log(argument) : double.nan,
+      'log₂' => argument > 0 ? math.log(argument) / math.ln2 : double.nan,
+      '√' => argument >= 0 ? math.sqrt(argument) : double.nan,
+      '³√' =>
+        argument < 0
+            ? -math.pow(-argument, 1 / 3).toDouble()
+            : math.pow(argument, 1 / 3).toDouble(),
+      'abs' => argument.abs(),
+      _ => double.nan,
+    };
+    if (!value.isFinite) {
+      throw const CalculationException('計算できません');
+    }
+    return value;
+  }
+
+  double _factorial(double value) {
+    if (value < 0 || value != value.truncateToDouble() || value > 170) {
+      throw const CalculationException('計算できません');
+    }
+    var result = 1.0;
+    for (var number = 2; number <= value; number++) {
+      result *= number;
+    }
+    return result;
   }
 
   bool _isDigit(String character) {
