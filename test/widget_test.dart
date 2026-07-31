@@ -110,6 +110,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
@@ -125,6 +126,41 @@ void main() {
 
     expect(find.text('設定'), findsOneWidget);
     expect(find.text('端末設定に合わせる'), findsOneWidget);
+  });
+
+  testWidgets('メニューボタンの長押しで3列9行の関数一覧を開ける', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.bySemanticsLabel('メニュー'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('functionListDialog')), findsOneWidget);
+    expect(find.byKey(const Key('functionListGrid')), findsOneWidget);
+    expect(find.byKey(const Key('functionButton0')), findsOneWidget);
+    expect(find.byKey(const Key('functionButton26')), findsOneWidget);
+    expect(find.text('π'), findsOneWidget);
+    expect(find.text('sinh⁻¹'), findsOneWidget);
+    expect(find.text('x!'), findsOneWidget);
+    expect(find.text('キャンセル'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('cancelFunctionList')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('functionListDialog')), findsOneWidget);
   });
 
   testWidgets('業種を保存すると電卓へ移動する', (tester) async {

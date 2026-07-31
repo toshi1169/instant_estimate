@@ -10,6 +10,7 @@ import '../data/calculation_history_store.dart';
 import '../../settings/presentation/settings_screen.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
+import 'function_list_dialog.dart';
 
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({
@@ -97,6 +98,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openFunctionList() async {
+    final function = await showDialog<String>(
+      context: context,
+      builder: (_) => const FunctionListDialog(),
+    );
+    if (function != null && mounted) {
+      _showMessage('「$function」の計算機能は今後の工程で追加します');
+    }
   }
 
   void _selectSideMenu(CalculatorSideMenuDestination destination) {
@@ -287,6 +298,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         canCycleFraction: _controller.canCycleFraction,
                         onPressed: _pressKey,
                         onBackLongPressed: _controller.clearLeftOfCaret,
+                        onMenuFunctionsRequested: () =>
+                            unawaited(_openFunctionList()),
                       ),
                     ),
                   ],
@@ -1159,12 +1172,14 @@ class _Keypad extends StatelessWidget {
     required this.canCycleFraction,
     required this.onPressed,
     required this.onBackLongPressed,
+    required this.onMenuFunctionsRequested,
   });
 
   final double gap;
   final bool canCycleFraction;
   final ValueChanged<_CalculatorKey> onPressed;
   final VoidCallback onBackLongPressed;
+  final VoidCallback onMenuFunctionsRequested;
 
   @override
   Widget build(BuildContext context) {
@@ -1184,7 +1199,14 @@ class _Keypad extends StatelessWidget {
           useFractionToggleColor:
               keyData.kind == _KeyKind.fractionToggle && canCycleFraction,
           onPressed: () => onPressed(keyData),
-          onLongPressed: keyData.label == '←' ? onBackLongPressed : null,
+          onDoublePressed: keyData.kind == _KeyKind.menu
+              ? onMenuFunctionsRequested
+              : null,
+          onLongPressed: switch (keyData.kind) {
+            _KeyKind.menu => onMenuFunctionsRequested,
+            _ when keyData.label == '←' => onBackLongPressed,
+            _ => null,
+          },
         );
       },
     );
@@ -1197,12 +1219,14 @@ class _KeyButton extends StatelessWidget {
     required this.useFractionToggleColor,
     required this.onPressed,
     this.onLongPressed,
+    this.onDoublePressed,
   });
 
   final _CalculatorKey keyData;
   final bool useFractionToggleColor;
   final VoidCallback onPressed;
   final VoidCallback? onLongPressed;
+  final VoidCallback? onDoublePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -1222,6 +1246,37 @@ class _KeyButton extends StatelessWidget {
         ? Colors.white
         : theme.colorScheme.onSurface;
 
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(6),
+      side: keyData.kind == _KeyKind.menu
+          ? const BorderSide(color: AppColors.accent, width: 2)
+          : BorderSide(
+              color: isDark
+                  ? AppColors.darkKeyBorder
+                  : AppColors.lightKeyBorder,
+            ),
+    );
+
+    if (keyData.kind == _KeyKind.menu) {
+      return Semantics(
+        button: true,
+        label: keyData.semanticLabel,
+        excludeSemantics: true,
+        child: Material(
+          color: backgroundColor,
+          shape: shape,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            onDoubleTap: onDoublePressed,
+            onLongPress: onLongPressed,
+            customBorder: shape,
+            child: Center(child: _KeyContent(keyData: keyData)),
+          ),
+        ),
+      );
+    }
+
     return Semantics(
       button: true,
       label: keyData.semanticLabel,
@@ -1232,16 +1287,7 @@ class _KeyButton extends StatelessWidget {
           padding: EdgeInsets.zero,
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-            side: keyData.kind == _KeyKind.menu
-                ? const BorderSide(color: AppColors.accent, width: 2)
-                : BorderSide(
-                    color: isDark
-                        ? AppColors.darkKeyBorder
-                        : AppColors.lightKeyBorder,
-                  ),
-          ),
+          shape: shape,
         ),
         child: _KeyContent(keyData: keyData),
       ),
