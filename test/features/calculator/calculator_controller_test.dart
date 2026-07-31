@@ -44,6 +44,51 @@ void main() {
       expect(controller.result, '3,300');
     });
 
+    test('履歴の式を編集欄へ戻しても元履歴を残す', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('12×3');
+      controller.press('=');
+      final entry = controller.history.single;
+
+      controller.editHistoryEntry(entry);
+
+      expect(controller.displayExpression, '12 × 3');
+      expect(controller.result, '36');
+      expect(controller.state, CalculatorState.input);
+      expect(controller.history, hasLength(1));
+    });
+
+    test('分数を含む履歴を横棒付き分数として編集欄へ戻す', () {
+      final controller = CalculatorController();
+      for (final key in ['2', '0', 'a/b', '1', 'a/b', '2', 'a/b', '=']) {
+        controller.press(key);
+      }
+      final entry = controller.history.single;
+
+      controller.editHistoryEntry(entry);
+
+      expect(controller.displayExpression, '20 1/2');
+      expect(
+        controller.displaySegments.whereType<ExpressionFractionSegment>(),
+        hasLength(1),
+      );
+      expect(controller.history, hasLength(1));
+    });
+
+    test('指定した履歴だけ削除する', () {
+      final controller = CalculatorController();
+      for (final expression in ['1+1', '2+2']) {
+        controller.pasteAtCaret(expression);
+        controller.press('=');
+        controller.clear();
+      }
+
+      controller.deleteHistoryEntry(controller.history.first);
+
+      expect(controller.history, hasLength(1));
+      expect(controller.history.single.expression, '2 + 2');
+    });
+
     test('バックボタンは入力中の末尾を削除する', () {
       final controller = CalculatorController();
       controller.press('1');

@@ -108,6 +108,29 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
+  Future<void> _showHistoryMenu(CalculationHistoryEntry entry) async {
+    final action = await showModalBottomSheet<_HistoryMenuAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => const _HistoryMenuSheet(),
+    );
+    if (action == null || !mounted) return;
+
+    switch (action) {
+      case _HistoryMenuAction.copy:
+        await Clipboard.setData(
+          ClipboardData(text: '${entry.expression} = ${entry.result}'),
+        );
+        _showMessage('履歴をコピーしました');
+      case _HistoryMenuAction.edit:
+        _controller.editHistoryEntry(entry);
+        _showMessage('計算式を編集欄へ戻しました');
+      case _HistoryMenuAction.delete:
+        _controller.deleteHistoryEntry(entry);
+        _showMessage('履歴を削除しました');
+    }
+  }
+
   void _showMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -140,6 +163,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                       child: _HistoryPanel(
                         key: const Key('historyPanel'),
                         history: _controller.history,
+                        onMenuPressed: _showHistoryMenu,
                       ),
                     ),
                     SizedBox(height: gap),
@@ -246,9 +270,14 @@ class _AdBanner extends StatelessWidget {
 }
 
 class _HistoryPanel extends StatelessWidget {
-  const _HistoryPanel({required this.history, super.key});
+  const _HistoryPanel({
+    required this.history,
+    required this.onMenuPressed,
+    super.key,
+  });
 
   final List<CalculationHistoryEntry> history;
+  final ValueChanged<CalculationHistoryEntry> onMenuPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -271,12 +300,21 @@ class _HistoryPanel extends StatelessWidget {
             height: 24,
             child: Row(
               children: [
-                Icon(
-                  Icons.more_vert,
-                  size: 17,
-                  color: theme.colorScheme.onSurfaceVariant,
+                GestureDetector(
+                  key: Key('historyMenuButton$index'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onMenuPressed(item),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Icon(
+                      Icons.more_vert,
+                      size: 17,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 3),
                 Expanded(
                   child: Text.rich(
                     TextSpan(
@@ -298,6 +336,34 @@ class _HistoryPanel extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+enum _HistoryMenuAction { copy, edit, delete }
+
+class _HistoryMenuSheet extends StatelessWidget {
+  const _HistoryMenuSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    const items = <(_HistoryMenuAction, IconData, String)>[
+      (_HistoryMenuAction.copy, Icons.copy_outlined, 'コピー'),
+      (_HistoryMenuAction.edit, Icons.edit_outlined, '編集'),
+      (_HistoryMenuAction.delete, Icons.delete_outline, '削除'),
+    ];
+    return SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          for (final item in items)
+            ListTile(
+              leading: Icon(item.$2),
+              title: Text(item.$3),
+              onTap: () => Navigator.of(context).pop(item.$1),
+            ),
+        ],
       ),
     );
   }

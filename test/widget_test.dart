@@ -377,4 +377,25 @@ void main() {
     expect(find.byKey(const Key('resultText')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('履歴の縦3点からコピー・編集・削除を選べる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('1+2');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('コピー'), findsOneWidget);
+    expect(find.text('編集'), findsOneWidget);
+    expect(find.text('削除'), findsOneWidget);
+  });
 }

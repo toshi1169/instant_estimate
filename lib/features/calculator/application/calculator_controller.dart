@@ -526,6 +526,53 @@ class CalculatorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void editHistoryEntry(CalculationHistoryEntry entry) {
+    _expression = '';
+    _fractions.clear();
+    _activeFractionMarker = null;
+    _activeFractionField = null;
+    _activeFractionCaretOffset = 0;
+
+    final fractionPattern = RegExp(r'(-?\d+)\s+(\d+)\/(\d+)|(-?\d+)\/(\d+)');
+    var sourceOffset = 0;
+    for (final match in fractionPattern.allMatches(entry.expression)) {
+      _expression += _normalizeHistoryExpression(
+        entry.expression.substring(sourceOffset, match.start),
+      );
+      final marker = String.fromCharCode(0xE000 + _nextFractionId++);
+      final isMixedFraction = match.group(1) != null;
+      _fractions[marker] =
+          _EditableFraction(wholeNumber: isMixedFraction ? match.group(1)! : '')
+            ..numerator = isMixedFraction ? match.group(2)! : match.group(4)!
+            ..denominator = isMixedFraction ? match.group(3)! : match.group(5)!;
+      _expression += marker;
+      sourceOffset = match.end;
+    }
+    _expression += _normalizeHistoryExpression(
+      entry.expression.substring(sourceOffset),
+    );
+
+    _result = '0';
+    _rawResult = '0';
+    _errorMessage = null;
+    _state = CalculatorState.input;
+    _canCycleFraction = false;
+    _isPreviewResult = false;
+    _resultDisplayMode = ResultDisplayMode.decimal;
+    _resultFraction = null;
+    _caretPosition = _expression.length;
+    _updatePreviewResult();
+    notifyListeners();
+  }
+
+  void deleteHistoryEntry(CalculationHistoryEntry entry) {
+    if (_history.remove(entry)) notifyListeners();
+  }
+
+  String _normalizeHistoryExpression(String value) {
+    return value.replaceAll(',', '').replaceAll(RegExp(r'\s+'), '');
+  }
+
   bool pasteAtCaret(String text) {
     final normalized = text
         .replaceAll(',', '')
