@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
+import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
+import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
@@ -256,5 +258,39 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
     expect(find.text('これ以上入力できません'), findsNothing);
+  });
+
+  testWidgets('帯分数の各欄と左右へキャレットを移動できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    for (final key in ['2', '0', 'a/b', '1', '2', 'a/b', '3', '4']) {
+      controller.press(key);
+    }
+    final fraction = controller.displaySegments
+        .whereType<ExpressionFractionSegment>()
+        .single;
+
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    for (final field in FractionField.values) {
+      controller.activateFraction(fraction.marker, field, caretOffset: 1);
+      await tester.pump();
+      expect(find.byKey(const Key('fractionFieldCaret')), findsOneWidget);
+    }
+
+    await tester.tap(find.byKey(const Key('fractionAfterTapArea')));
+    await tester.pump();
+    expect(controller.isEditingFraction, isFalse);
+    expect(find.byKey(const Key('calculatorCaret')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('fractionBeforeTapArea')));
+    await tester.pump();
+    expect(controller.caretPosition, 0);
   });
 }

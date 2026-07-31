@@ -249,5 +249,49 @@ void main() {
       expect(controller.state, CalculatorState.result);
       expect(controller.isPreviewResult, isFalse);
     });
+
+    test('分子と分母の指定した桁へ数字を挿入できる', () {
+      final controller = CalculatorController();
+      for (final key in ['a/b', '1', '2', '3', 'a/b', '4', '5', '6']) {
+        controller.press(key);
+      }
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+
+      controller.activateFraction(
+        fraction.marker,
+        FractionField.numerator,
+        caretOffset: 1,
+      );
+      controller.press('9');
+      controller.activateFraction(
+        fraction.marker,
+        FractionField.denominator,
+        caretOffset: 2,
+      );
+      controller.press('8');
+
+      expect(controller.displayExpression, '1923/4586');
+    });
+
+    test('帯分数の整数部分の指定した桁へ数字を挿入できる', () {
+      final controller = CalculatorController();
+      for (final key in ['2', '0', 'a/b', '1', 'a/b', '2']) {
+        controller.press(key);
+      }
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+
+      controller.activateFraction(
+        fraction.marker,
+        FractionField.wholeNumber,
+        caretOffset: 1,
+      );
+      controller.press('9');
+
+      expect(controller.displayExpression, '290 1/2');
+    });
   });
 }

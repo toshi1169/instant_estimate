@@ -21,7 +21,7 @@ class FormattedExpression {
   final int caretOffset;
 }
 
-enum FractionField { numerator, denominator }
+enum FractionField { wholeNumber, numerator, denominator }
 
 sealed class ExpressionDisplaySegment {
   const ExpressionDisplaySegment();
@@ -43,6 +43,7 @@ class ExpressionFractionSegment extends ExpressionDisplaySegment {
     required this.numerator,
     required this.denominator,
     required this.activeField,
+    required this.activeCaretOffset,
   });
 
   final String marker;
@@ -50,12 +51,13 @@ class ExpressionFractionSegment extends ExpressionDisplaySegment {
   final String numerator;
   final String denominator;
   final FractionField? activeField;
+  final int? activeCaretOffset;
 }
 
 class _EditableFraction {
   _EditableFraction({this.wholeNumber = ''});
 
-  final String wholeNumber;
+  String wholeNumber;
   String numerator = '';
   String denominator = '';
 
@@ -83,6 +85,7 @@ class CalculatorController extends ChangeNotifier {
   final Map<String, _EditableFraction> _fractions = {};
   String? _activeFractionMarker;
   FractionField? _activeFractionField;
+  int _activeFractionCaretOffset = 0;
   int _nextFractionId = 0;
 
   String get expression => _expression;
@@ -172,6 +175,9 @@ class CalculatorController extends ChangeNotifier {
             activeField: _activeFractionMarker == character
                 ? _activeFractionField
                 : null,
+            activeCaretOffset: _activeFractionMarker == character
+                ? _activeFractionCaretOffset
+                : null,
           ),
         );
       } else if (_isOperator(character)) {
@@ -242,6 +248,7 @@ class CalculatorController extends ChangeNotifier {
       _caretPosition = _expression.length;
       _activeFractionMarker = null;
       _activeFractionField = null;
+      _activeFractionCaretOffset = 0;
       _history.add(
         CalculationHistoryEntry(expression: displayExpression, result: _result),
       );
@@ -274,15 +281,25 @@ class CalculatorController extends ChangeNotifier {
     _caretPosition = bestRawOffset;
     _activeFractionMarker = null;
     _activeFractionField = null;
+    _activeFractionCaretOffset = 0;
     notifyListeners();
   }
 
-  void activateFraction(String marker, FractionField field) {
+  void activateFraction(
+    String marker,
+    FractionField field, {
+    int? caretOffset,
+  }) {
     if (!_fractions.containsKey(marker)) return;
     _state = CalculatorState.input;
     _canCycleFraction = false;
     _activeFractionMarker = marker;
     _activeFractionField = field;
+    final value = _fractionFieldValue(_fractions[marker]!, field);
+    _activeFractionCaretOffset = (caretOffset ?? value.length).clamp(
+      0,
+      value.length,
+    );
     _caretPosition = _expression.indexOf(marker);
     notifyListeners();
   }
@@ -296,7 +313,22 @@ class CalculatorController extends ChangeNotifier {
     }
     _activeFractionMarker = null;
     _activeFractionField = null;
+    _activeFractionCaretOffset = 0;
     _caretPosition = markerIndex;
+    notifyListeners();
+  }
+
+  void moveCaretAfterFraction(String marker) {
+    final markerIndex = _expression.indexOf(marker);
+    if (markerIndex < 0) return;
+    if (_state == CalculatorState.result) {
+      _state = CalculatorState.input;
+      _canCycleFraction = false;
+    }
+    _activeFractionMarker = null;
+    _activeFractionField = null;
+    _activeFractionCaretOffset = 0;
+    _caretPosition = markerIndex + 1;
     notifyListeners();
   }
 
@@ -310,11 +342,16 @@ class CalculatorController extends ChangeNotifier {
     final activeMarker = _activeFractionMarker;
     if (activeMarker != null) {
       final fraction = _fractions[activeMarker]!;
-      if (_activeFractionField == FractionField.numerator) {
+      if (_activeFractionField == FractionField.wholeNumber) {
+        _activeFractionField = FractionField.numerator;
+        _activeFractionCaretOffset = fraction.numerator.length;
+      } else if (_activeFractionField == FractionField.numerator) {
         _activeFractionField = FractionField.denominator;
+        _activeFractionCaretOffset = fraction.denominator.length;
       } else if (fraction.denominator.isNotEmpty) {
         _activeFractionMarker = null;
         _activeFractionField = null;
+        _activeFractionCaretOffset = 0;
         _caretPosition = _expression.indexOf(activeMarker) + 1;
       }
       notifyListeners();
@@ -344,6 +381,7 @@ class CalculatorController extends ChangeNotifier {
     _insertAtCaret(marker);
     _activeFractionMarker = marker;
     _activeFractionField = FractionField.numerator;
+    _activeFractionCaretOffset = 0;
     _caretPosition = _expression.indexOf(marker);
     notifyListeners();
   }
@@ -382,6 +420,7 @@ class CalculatorController extends ChangeNotifier {
       _expression = _expression.substring(markerIndex + 1);
       _activeFractionMarker = null;
       _activeFractionField = null;
+      _activeFractionCaretOffset = 0;
       _caretPosition = 0;
       _result = '0';
       notifyListeners();
@@ -401,6 +440,7 @@ class CalculatorController extends ChangeNotifier {
     _caretPosition = 0;
     _activeFractionMarker = null;
     _activeFractionField = null;
+    _activeFractionCaretOffset = 0;
     _result = '0';
     _canCycleFraction = false;
     notifyListeners();
@@ -418,6 +458,7 @@ class CalculatorController extends ChangeNotifier {
     _fractions.clear();
     _activeFractionMarker = null;
     _activeFractionField = null;
+    _activeFractionCaretOffset = 0;
     notifyListeners();
   }
 
@@ -569,9 +610,8 @@ class CalculatorController extends ChangeNotifier {
 
   void _insertFractionDigits(String digits) {
     final fraction = _fractions[_activeFractionMarker]!;
-    final target = _activeFractionField == FractionField.numerator
-        ? fraction.numerator
-        : fraction.denominator;
+    final field = _activeFractionField!;
+    final target = _fractionFieldValue(fraction, field);
     final normalizedDigits = target.isEmpty && digits == '00' ? '0' : digits;
     final available = fractionDigitLimit - target.length;
     if (available <= 0) {
@@ -583,39 +623,46 @@ class CalculatorController extends ChangeNotifier {
       0,
       normalizedDigits.length.clamp(0, available),
     );
-    final value = '$target$accepted';
+    final offset = _activeFractionCaretOffset.clamp(0, target.length);
+    final value =
+        '${target.substring(0, offset)}'
+        '$accepted'
+        '${target.substring(offset)}';
+    _activeFractionCaretOffset = offset + accepted.length;
     if (accepted.length < normalizedDigits.length) {
       _pendingNotice = 'これ以上入力できません';
     }
-    if (_activeFractionField == FractionField.numerator) {
-      fraction.numerator = value;
-    } else {
-      fraction.denominator = value;
-    }
+    _setFractionFieldValue(fraction, field, value);
     notifyListeners();
   }
 
   void _backspaceFraction() {
     final marker = _activeFractionMarker!;
     final fraction = _fractions[marker]!;
-    if (_activeFractionField == FractionField.denominator) {
-      if (fraction.denominator.isNotEmpty) {
-        fraction.denominator = fraction.denominator.substring(
-          0,
-          fraction.denominator.length - 1,
-        );
-      } else {
-        _activeFractionField = FractionField.numerator;
-      }
+    final field = _activeFractionField!;
+    final value = _fractionFieldValue(fraction, field);
+    if (_activeFractionCaretOffset > 0) {
+      final offset = _activeFractionCaretOffset.clamp(0, value.length);
+      final updated =
+          '${value.substring(0, offset - 1)}${value.substring(offset)}';
+      _setFractionFieldValue(fraction, field, updated);
+      _activeFractionCaretOffset = offset - 1;
       notifyListeners();
       return;
     }
 
-    if (fraction.numerator.isNotEmpty) {
-      fraction.numerator = fraction.numerator.substring(
-        0,
-        fraction.numerator.length - 1,
-      );
+    if (field == FractionField.denominator) {
+      _activeFractionField = FractionField.numerator;
+      _activeFractionCaretOffset = fraction.numerator.length;
+    } else if (field == FractionField.numerator &&
+        fraction.wholeNumber.isNotEmpty) {
+      _activeFractionField = FractionField.wholeNumber;
+      _activeFractionCaretOffset = fraction.wholeNumber.length;
+    } else if (field == FractionField.wholeNumber) {
+      _activeFractionMarker = null;
+      _activeFractionField = null;
+      _activeFractionCaretOffset = 0;
+      _caretPosition = _expression.indexOf(marker);
     } else {
       final index = _expression.indexOf(marker);
       _expression =
@@ -624,9 +671,33 @@ class CalculatorController extends ChangeNotifier {
       _fractions.remove(marker);
       _activeFractionMarker = null;
       _activeFractionField = null;
+      _activeFractionCaretOffset = 0;
       _caretPosition = index;
     }
     notifyListeners();
+  }
+
+  String _fractionFieldValue(_EditableFraction fraction, FractionField field) {
+    return switch (field) {
+      FractionField.wholeNumber => fraction.wholeNumber,
+      FractionField.numerator => fraction.numerator,
+      FractionField.denominator => fraction.denominator,
+    };
+  }
+
+  void _setFractionFieldValue(
+    _EditableFraction fraction,
+    FractionField field,
+    String value,
+  ) {
+    switch (field) {
+      case FractionField.wholeNumber:
+        fraction.wholeNumber = value;
+      case FractionField.numerator:
+        fraction.numerator = value;
+      case FractionField.denominator:
+        fraction.denominator = value;
+    }
   }
 
   void _replaceBeforeCaret(String value) {

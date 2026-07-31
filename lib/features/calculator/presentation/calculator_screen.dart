@@ -605,11 +605,18 @@ class _EditableExpressionLine extends StatelessWidget {
                         ExpressionFractionSegment() => _InlineFraction(
                           segment: segment,
                           fontSize: _expressionFontSize,
-                          onWholeNumberTap: () {
+                          onBeforeFractionTap: () {
                             controller.moveCaretBeforeFraction(segment.marker);
                           },
-                          onFieldTap: (field) {
-                            controller.activateFraction(segment.marker, field);
+                          onAfterFractionTap: () {
+                            controller.moveCaretAfterFraction(segment.marker);
+                          },
+                          onFieldTap: (field, caretOffset) {
+                            controller.activateFraction(
+                              segment.marker,
+                              field,
+                              caretOffset: caretOffset,
+                            );
                           },
                         ),
                       },
@@ -628,19 +635,32 @@ class _InlineFraction extends StatelessWidget {
   const _InlineFraction({
     required this.segment,
     required this.fontSize,
-    required this.onWholeNumberTap,
+    required this.onBeforeFractionTap,
+    required this.onAfterFractionTap,
     required this.onFieldTap,
   });
 
   final ExpressionFractionSegment segment;
   final double fontSize;
-  final VoidCallback onWholeNumberTap;
-  final ValueChanged<FractionField> onFieldTap;
+  final VoidCallback onBeforeFractionTap;
+  final VoidCallback onAfterFractionTap;
+  final void Function(FractionField field, int caretOffset) onFieldTap;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).colorScheme.onSurface;
     final fractionFontSize = fontSize;
+    final fractionWidth = _fractionFieldWidth(
+      context,
+      segment.numerator.length >= segment.denominator.length
+          ? segment.numerator
+          : segment.denominator,
+      fractionFontSize,
+    );
+    final wholeNumberWidth = _fractionFieldWidth(
+      context,
+      segment.wholeNumber,
+      fontSize,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -648,48 +668,89 @@ class _InlineFraction extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          GestureDetector(
+            key: const Key('fractionBeforeTapArea'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onBeforeFractionTap,
+            child: SizedBox(width: 14, height: fontSize * 2.1),
+          ),
           if (segment.wholeNumber.isNotEmpty) ...[
-            GestureDetector(
-              key: const Key('mixedFractionWholeNumber'),
-              behavior: HitTestBehavior.opaque,
-              onTap: onWholeNumberTap,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  segment.wholeNumber,
-                  style: TextStyle(color: textColor, fontSize: fontSize),
-                ),
+            SizedBox(
+              width: wholeNumberWidth,
+              child: _FractionFieldDisplay(
+                key: const Key('mixedFractionWholeNumber'),
+                value: segment.wholeNumber,
+                active: segment.activeField == FractionField.wholeNumber,
+                caretOffset: segment.activeField == FractionField.wholeNumber
+                    ? segment.activeCaretOffset
+                    : null,
+                fontSize: fontSize,
+                onTap: (offset) {
+                  onFieldTap(FractionField.wholeNumber, offset);
+                },
               ),
             ),
             const SizedBox(width: 2),
           ],
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 34),
-            child: IntrinsicWidth(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _FractionFieldDisplay(
-                    value: segment.numerator,
-                    active: segment.activeField == FractionField.numerator,
-                    fontSize: fractionFontSize,
-                    onTap: () => onFieldTap(FractionField.numerator),
-                  ),
-                  Container(height: 1.5, color: AppColors.accent),
-                  _FractionFieldDisplay(
-                    value: segment.denominator,
-                    active: segment.activeField == FractionField.denominator,
-                    fontSize: fractionFontSize,
-                    onTap: () => onFieldTap(FractionField.denominator),
-                  ),
-                ],
-              ),
+          SizedBox(
+            width: fractionWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _FractionFieldDisplay(
+                  value: segment.numerator,
+                  active: segment.activeField == FractionField.numerator,
+                  caretOffset: segment.activeField == FractionField.numerator
+                      ? segment.activeCaretOffset
+                      : null,
+                  fontSize: fractionFontSize,
+                  onTap: (offset) {
+                    onFieldTap(FractionField.numerator, offset);
+                  },
+                ),
+                Container(height: 1.5, color: AppColors.accent),
+                _FractionFieldDisplay(
+                  value: segment.denominator,
+                  active: segment.activeField == FractionField.denominator,
+                  caretOffset: segment.activeField == FractionField.denominator
+                      ? segment.activeCaretOffset
+                      : null,
+                  fontSize: fractionFontSize,
+                  onTap: (offset) {
+                    onFieldTap(FractionField.denominator, offset);
+                  },
+                ),
+              ],
             ),
+          ),
+          GestureDetector(
+            key: const Key('fractionAfterTapArea'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onAfterFractionTap,
+            child: SizedBox(width: 24, height: fontSize * 2.1),
           ),
         ],
       ),
     );
+  }
+
+  double _fractionFieldWidth(
+    BuildContext context,
+    String value,
+    double fieldFontSize,
+  ) {
+    final style = DefaultTextStyle.of(
+      context,
+    ).style.merge(TextStyle(fontSize: fieldFontSize, height: 1));
+    final painter = TextPainter(
+      text: TextSpan(text: value.isEmpty ? '□' : value, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+
+    // The extra width covers both the caret and comfortable digit tap targets.
+    return (painter.width + 32).clamp(34, double.infinity);
   }
 }
 
@@ -697,50 +758,87 @@ class _FractionFieldDisplay extends StatelessWidget {
   const _FractionFieldDisplay({
     required this.value,
     required this.active,
+    required this.caretOffset,
     required this.fontSize,
     required this.onTap,
+    super.key,
   });
 
   final String value;
   final bool active;
+  final int? caretOffset;
   final double fontSize;
-  final VoidCallback onTap;
+  final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
     final textColor = Theme.of(context).colorScheme.onSurface;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: fontSize * 1.05,
-        padding: const EdgeInsets.symmetric(horizontal: 5),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              value.isEmpty ? '□' : value,
-              style: TextStyle(
-                color: value.isEmpty
-                    ? Theme.of(context).colorScheme.onSurfaceVariant
-                    : textColor,
-                fontSize: fontSize,
-                height: 1,
-              ),
+    final textStyle = TextStyle(
+      color: textColor,
+      fontSize: fontSize,
+      height: 1,
+    );
+    final placeholderStyle = textStyle.copyWith(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+    final offset = (caretOffset ?? value.length).clamp(0, value.length);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: value.isEmpty ? '□' : value,
+            style: value.isEmpty ? placeholderStyle : textStyle,
+          ),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+        )..layout();
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapUp: (details) {
+            if (value.isEmpty) {
+              onTap(0);
+              return;
+            }
+            final startX = (constraints.maxWidth - painter.width) / 2;
+            final localX = (details.localPosition.dx - startX).clamp(
+              0.0,
+              painter.width,
+            );
+            final position = painter.getPositionForOffset(Offset(localX, 0));
+            onTap(position.offset.clamp(0, value.length));
+          },
+          child: Container(
+            height: fontSize * 1.05,
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: active
+                  ? [
+                      Text(value.substring(0, offset), style: textStyle),
+                      const SizedBox(
+                        key: Key('fractionFieldCaret'),
+                        width: 1.5,
+                        height: 32,
+                        child: ColoredBox(color: AppColors.accent),
+                      ),
+                      if (value.isEmpty)
+                        Text('□', style: placeholderStyle)
+                      else
+                        Text(value.substring(offset), style: textStyle),
+                    ]
+                  : [
+                      Text(
+                        value.isEmpty ? '□' : value,
+                        style: value.isEmpty ? placeholderStyle : textStyle,
+                      ),
+                    ],
             ),
-            if (active)
-              const Padding(
-                padding: EdgeInsets.only(left: 2),
-                child: SizedBox(
-                  width: 1.5,
-                  height: 26,
-                  child: ColoredBox(color: AppColors.accent),
-                ),
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
