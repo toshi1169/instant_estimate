@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../data/calculation_history_store.dart';
 import '../domain/calculation_engine.dart';
 
 enum CalculatorState { input, result, error }
@@ -11,6 +14,7 @@ class CalculationHistoryEntry {
     required this.expression,
     required this.result,
     required this.decimalResult,
+    required this.createdAt,
     this.improperFractionResult,
     this.mixedFractionResult,
   });
@@ -18,6 +22,7 @@ class CalculationHistoryEntry {
   final String expression;
   final String result;
   final String decimalResult;
+  final DateTime createdAt;
   final String? improperFractionResult;
   final String? mixedFractionResult;
 }
@@ -82,13 +87,20 @@ class _ResultFraction {
 }
 
 class CalculatorController extends ChangeNotifier {
-  CalculatorController({this._engine = const CalculationEngine()});
+  CalculatorController({
+    this.historyStore,
+    this._engine = const CalculationEngine(),
+  });
 
   static const int fractionDigitLimit = 10;
   static const double standardNumberDisplayLimit = 10000000000000000;
 
   final CalculationEngine _engine;
+  final CalculationHistoryStore? historyStore;
   final List<CalculationHistoryEntry> _history = [];
+  Future<void> _pendingHistorySave = Future.value();
+  bool _historyLoaded = false;
+  bool _historyLoadComplete = false;
 
   String _expression = '';
   String _result = '0';
@@ -131,6 +143,61 @@ class CalculatorController extends ChangeNotifier {
   String get estimateExpressionText => displayExpression;
   String get estimateResultText =>
       _state == CalculatorState.error ? '' : _result;
+
+  Future<void> loadHistory() async {
+    if (_historyLoaded || historyStore == null) return;
+    _historyLoaded = true;
+    final entriesCreatedWhileLoading = List.of(_history);
+    try {
+      final stored = await historyStore!.load();
+      final limitedStored = stored.length > 50
+          ? stored.sublist(stored.length - 50)
+          : stored;
+      _history
+        ..clear()
+        ..addAll(
+          limitedStored.map(
+            (entry) => CalculationHistoryEntry(
+              expression: entry.expression,
+              result: entry.result,
+              decimalResult: entry.decimalResult,
+              improperFractionResult: entry.improperFractionResult,
+              mixedFractionResult: entry.mixedFractionResult,
+              createdAt: entry.createdAt,
+            ),
+          ),
+        )
+        ..addAll(entriesCreatedWhileLoading);
+      while (_history.length > 50) {
+        _history.removeAt(0);
+      }
+    } finally {
+      _historyLoadComplete = true;
+    }
+    if (entriesCreatedWhileLoading.isNotEmpty) _saveHistory();
+    notifyListeners();
+  }
+
+  void _saveHistory() {
+    final store = historyStore;
+    if (store == null || !_historyLoadComplete) return;
+    final snapshot = _history
+        .map(
+          (entry) => StoredCalculationHistoryEntry(
+            expression: entry.expression,
+            result: entry.result,
+            decimalResult: entry.decimalResult,
+            improperFractionResult: entry.improperFractionResult,
+            mixedFractionResult: entry.mixedFractionResult,
+            createdAt: entry.createdAt,
+          ),
+        )
+        .toList(growable: false);
+    _pendingHistorySave = _pendingHistorySave
+        .then((_) => store.save(snapshot))
+        .catchError((Object _) {});
+    unawaited(_pendingHistorySave);
+  }
 
   FormattedExpression get formattedExpression {
     final buffer = StringBuffer();
@@ -299,9 +366,11 @@ class CalculatorController extends ChangeNotifier {
           mixedFractionResult: _resultFraction == null
               ? null
               : _mixedFractionText(_resultFraction!),
+          createdAt: DateTime.now(),
         ),
       );
       if (_history.length > 50) _history.removeAt(0);
+      _saveHistory();
     } on CalculationException catch (error) {
       _setError(error.message);
     } catch (_) {
@@ -566,7 +635,10 @@ class CalculatorController extends ChangeNotifier {
   }
 
   void deleteHistoryEntry(CalculationHistoryEntry entry) {
-    if (_history.remove(entry)) notifyListeners();
+    if (_history.remove(entry)) {
+      _saveHistory();
+      notifyListeners();
+    }
   }
 
   String _normalizeHistoryExpression(String value) {

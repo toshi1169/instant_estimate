@@ -226,10 +226,24 @@ class _HistoryCard extends StatelessWidget {
             _ResultRow(label: '小数', value: entry.decimalResult),
             for (final row in fractionRows)
               _ResultRow(label: row.$1, value: row.$2!),
+            Padding(
+              padding: const EdgeInsets.only(top: 8, right: 10),
+              child: Text(
+                _formatDateTime(entry.createdAt),
+                textAlign: TextAlign.right,
+                style: theme.textTheme.labelSmall,
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  String _formatDateTime(DateTime value) {
+    String twoDigits(int number) => number.toString().padLeft(2, '0');
+    return '${value.year}/${twoDigits(value.month)}/${twoDigits(value.day)} '
+        '${twoDigits(value.hour)}:${twoDigits(value.minute)}';
   }
 }
 

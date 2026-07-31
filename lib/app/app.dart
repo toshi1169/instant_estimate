@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
 import '../features/calculator/presentation/calculator_screen.dart';
+import '../features/calculator/data/calculation_history_store.dart';
 import '../features/onboarding/data/onboarding_preferences.dart';
 import '../features/onboarding/presentation/occupation_selection_screen.dart';
 
 class InstantEstimateApp extends StatelessWidget {
-  const InstantEstimateApp({required this.onboardingPreferences, super.key});
+  const InstantEstimateApp({
+    required this.onboardingPreferences,
+    this.calculationHistoryStore,
+    super.key,
+  });
 
   final OnboardingPreferences onboardingPreferences;
+  final CalculationHistoryStore? calculationHistoryStore;
 
   @override
   Widget build(BuildContext context) {
@@ -18,15 +24,22 @@ class InstantEstimateApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      home: _StartupGate(onboardingPreferences: onboardingPreferences),
+      home: _StartupGate(
+        onboardingPreferences: onboardingPreferences,
+        calculationHistoryStore: calculationHistoryStore,
+      ),
     );
   }
 }
 
 class _StartupGate extends StatefulWidget {
-  const _StartupGate({required this.onboardingPreferences});
+  const _StartupGate({
+    required this.onboardingPreferences,
+    required this.calculationHistoryStore,
+  });
 
   final OnboardingPreferences onboardingPreferences;
+  final CalculationHistoryStore? calculationHistoryStore;
 
   @override
   State<_StartupGate> createState() => _StartupGateState();
@@ -46,7 +59,7 @@ class _StartupGateState extends State<_StartupGate> {
         }
 
         if (snapshot.data!) {
-          return const CalculatorScreen();
+          return CalculatorScreen(historyStore: widget.calculationHistoryStore);
         }
 
         return OccupationSelectionScreen(
@@ -54,7 +67,11 @@ class _StartupGateState extends State<_StartupGate> {
             await widget.onboardingPreferences.saveOccupation(occupation);
             if (!context.mounted) return;
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute<void>(builder: (_) => const CalculatorScreen()),
+              MaterialPageRoute<void>(
+                builder: (_) => CalculatorScreen(
+                  historyStore: widget.calculationHistoryStore,
+                ),
+              ),
             );
           },
         );

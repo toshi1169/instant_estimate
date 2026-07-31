@@ -1,5 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
+import 'package:instant_estimate/features/calculator/data/calculation_history_store.dart';
+
+class FakeCalculationHistoryStore implements CalculationHistoryStore {
+  FakeCalculationHistoryStore([List<StoredCalculationHistoryEntry>? entries])
+    : entries = List.of(entries ?? const []);
+
+  List<StoredCalculationHistoryEntry> entries;
+
+  @override
+  Future<List<StoredCalculationHistoryEntry>> load() async => List.of(entries);
+
+  @override
+  Future<void> save(List<StoredCalculationHistoryEntry> entries) async {
+    this.entries = List.of(entries);
+  }
+}
 
 void main() {
   group('CalculatorController', () {
@@ -432,6 +448,59 @@ void main() {
       controller.press('9');
 
       expect(controller.displayExpression, '290 1/2');
+    });
+
+    test('計算履歴を端末保存用ストアへ保存する', () async {
+      final store = FakeCalculationHistoryStore();
+      final controller = CalculatorController(historyStore: store);
+      await controller.loadHistory();
+
+      controller.pasteAtCaret('1+2');
+      controller.press('=');
+      await pumpEventQueue();
+
+      expect(store.entries, hasLength(1));
+      expect(store.entries.single.expression, '1 + 2');
+      expect(store.entries.single.result, '3');
+    });
+
+    test('保存済み履歴と計算日時を新しい電卓へ復元する', () async {
+      final createdAt = DateTime(2026, 7, 31, 11, 30);
+      final store = FakeCalculationHistoryStore([
+        StoredCalculationHistoryEntry(
+          expression: '2 − 1 ÷ 2',
+          result: '1.5',
+          decimalResult: '1.5',
+          improperFractionResult: '3/2',
+          mixedFractionResult: '1 1/2',
+          createdAt: createdAt,
+        ),
+      ]);
+      final controller = CalculatorController(historyStore: store);
+
+      await controller.loadHistory();
+
+      expect(controller.history, hasLength(1));
+      expect(controller.history.single.improperFractionResult, '3/2');
+      expect(controller.history.single.createdAt, createdAt);
+    });
+
+    test('履歴削除を端末保存用ストアへ反映する', () async {
+      final store = FakeCalculationHistoryStore([
+        StoredCalculationHistoryEntry(
+          expression: '1 + 2',
+          result: '3',
+          decimalResult: '3',
+          createdAt: DateTime(2026, 7, 31),
+        ),
+      ]);
+      final controller = CalculatorController(historyStore: store);
+      await controller.loadHistory();
+
+      controller.deleteHistoryEntry(controller.history.single);
+      await pumpEventQueue();
+
+      expect(store.entries, isEmpty);
     });
   });
 }

@@ -1,15 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
+import '../data/calculation_history_store.dart';
 import 'calculator_history_screen.dart';
 
 class CalculatorScreen extends StatefulWidget {
-  const CalculatorScreen({this.controller, super.key});
+  const CalculatorScreen({this.controller, this.historyStore, super.key});
 
   final CalculatorController? controller;
+  final CalculationHistoryStore? historyStore;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -44,8 +48,15 @@ class CalculatorScreen extends StatefulWidget {
 
 class _CalculatorScreenState extends State<CalculatorScreen> {
   late final CalculatorController _controller =
-      widget.controller ?? CalculatorController();
+      widget.controller ??
+      CalculatorController(historyStore: widget.historyStore);
   late final bool _ownsController = widget.controller == null;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_controller.loadHistory());
+  }
 
   @override
   void dispose() {

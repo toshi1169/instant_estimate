@@ -41,5 +41,34 @@ import UIKit
         result(FlutterMethodNotImplemented)
       }
     }
+
+    let historyChannel = FlutterMethodChannel(
+      name: "jp.instant_estimate/calculator_history",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    historyChannel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "loadHistory":
+        result(UserDefaults.standard.string(forKey: "calculatorHistory"))
+      case "saveHistory":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let history = arguments["history"] as? String
+        else {
+          result(
+            FlutterError(
+              code: "INVALID_ARGUMENT",
+              message: "History is required.",
+              details: nil
+            )
+          )
+          return
+        }
+        UserDefaults.standard.set(history, forKey: "calculatorHistory")
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }
