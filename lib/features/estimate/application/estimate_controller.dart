@@ -5,6 +5,7 @@ import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
+import '../domain/estimate_item_group.dart';
 import '../domain/estimate_workspace.dart';
 
 class EstimateController extends ChangeNotifier {
@@ -24,6 +25,19 @@ class EstimateController extends ChangeNotifier {
   bool get isLoaded => _loaded;
   double get totalAmount =>
       _items.fold(0, (total, item) => total + (item.amount ?? 0));
+  List<EstimateItemGroup> get groups {
+    final grouped = <String, List<EstimateItem>>{};
+    for (final item in _items) {
+      grouped.putIfAbsent(item.trade.trim(), () => []).add(item);
+    }
+    return [
+      for (final entry in grouped.entries)
+        EstimateItemGroup(
+          trade: entry.key,
+          items: List.unmodifiable(entry.value),
+        ),
+    ];
+  }
 
   Future<void> load() async {
     if (_loaded) return;

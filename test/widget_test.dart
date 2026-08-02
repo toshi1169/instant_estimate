@@ -824,6 +824,7 @@ void main() {
     await estimateController.load();
     await estimateController.add(
       const EstimateItemDraft(
+        trade: '土工事',
         name: '根切り',
         quantity: 2,
         unit: 'm³',
@@ -835,6 +836,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('土工事'), findsOneWidget);
+    expect(find.byKey(const Key('estimateGroupSubtotal0')), findsOneWidget);
+    expect(find.text('¥ 8,000'), findsNWidgets(2));
+
     await tester.tap(find.byKey(const Key('estimateItemMenu0')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('編集'));
@@ -844,11 +849,16 @@ void main() {
       find.byKey(const Key('estimateUnitPriceField')),
       '5000',
     );
+    await tester.ensureVisible(find.byKey(const Key('estimateTradeField')));
+    await tester.enterText(find.byKey(const Key('estimateTradeField')), '型枠工事');
     await tester.ensureVisible(find.byKey(const Key('saveEstimateChanges')));
     await tester.tap(find.byKey(const Key('saveEstimateChanges')));
     await tester.pumpAndSettle();
 
     expect(find.text('合計  ¥ 10,000'), findsOneWidget);
+    expect(find.text('型枠工事'), findsOneWidget);
+    expect(find.text('土工事'), findsNothing);
+    expect(find.text('¥ 10,000'), findsNWidgets(2));
     expect(store.items.single.unitPrice, 5000);
 
     await tester.tap(find.byKey(const Key('estimateItemMenu0')));
@@ -862,6 +872,49 @@ void main() {
     expect(find.byKey(const Key('emptyEstimateItems')), findsOneWidget);
     expect(find.text('合計  ¥ 0'), findsOneWidget);
     expect(store.items, isEmpty);
+  });
+
+  testWidgets('見積明細を工種ごとに表示して工種小計と見積合計を確認できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = EstimateController();
+    await controller.load();
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        quantity: 2,
+        unitPrice: 4000,
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '埋戻し',
+        quantity: 1,
+        unitPrice: 3000,
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(name: '諸経費', quantity: 1, unitPrice: 500),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('土工事'), findsOneWidget);
+    expect(find.text('工種未設定'), findsOneWidget);
+    expect(find.byKey(const Key('estimateGroup0')), findsOneWidget);
+    expect(find.byKey(const Key('estimateGroup1')), findsOneWidget);
+    expect(find.text('工種小計'), findsNWidgets(2));
+    expect(find.text('¥ 11,000'), findsOneWidget);
+    expect(find.text('¥ 500'), findsNWidgets(2));
+    expect(find.text('合計  ¥ 11,500'), findsOneWidget);
   });
 
   testWidgets('見積基本情報を編集し明細を残したまま端末保存できる', (tester) async {

@@ -151,4 +151,46 @@ void main() {
       throwsStateError,
     );
   });
+
+  test('明細を工種ごとにまとめて小計を計算できる', () async {
+    final controller = EstimateController();
+    await controller.load();
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        quantity: 2,
+        unitPrice: 4000,
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '埋戻し',
+        quantity: 1,
+        unitPrice: 3000,
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '型枠工事',
+        name: '基礎型枠',
+        quantity: 5,
+        unitPrice: 6000,
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(name: '諸経費', quantity: 1, unitPrice: 500),
+    );
+
+    expect(controller.groups, hasLength(3));
+    expect(controller.groups[0].displayName, '土工事');
+    expect(controller.groups[0].items, hasLength(2));
+    expect(controller.groups[0].subtotal, 11000);
+    expect(controller.groups[1].displayName, '型枠工事');
+    expect(controller.groups[1].subtotal, 30000);
+    expect(controller.groups[2].displayName, '工種未設定');
+    expect(controller.groups[2].subtotal, 500);
+    expect(controller.totalAmount, 41500);
+  });
 }

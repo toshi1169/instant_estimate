@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../application/estimate_controller.dart';
 import '../domain/estimate_item.dart';
+import '../domain/estimate_item_group.dart';
 import '../domain/estimate_info.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_item_editor_screen.dart';
@@ -68,17 +69,20 @@ class EstimateItemsScreen extends StatelessWidget {
                       : ListView.separated(
                           key: const Key('estimateItemsList'),
                           padding: const EdgeInsets.all(12),
-                          itemCount: controller.items.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) => _EstimateItemCard(
-                            item: controller.items[index],
-                            index: index,
-                            onAction: (action) => _handleAction(
-                              context,
-                              controller.items[index],
-                              action,
-                            ),
-                          ),
+                          itemCount: controller.groups.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, groupIndex) =>
+                              _EstimateGroupSection(
+                                group: controller.groups[groupIndex],
+                                groupIndex: groupIndex,
+                                itemIndex: (item) =>
+                                    controller.items.indexWhere(
+                                      (candidate) => candidate.id == item.id,
+                                    ),
+                                onAction: (item, action) =>
+                                    _handleAction(context, item, action),
+                              ),
                         ),
                 ),
               ],
@@ -241,6 +245,9 @@ class _EstimateItemCard extends StatelessWidget {
     final title = item.name.isEmpty ? '名称未入力' : item.name;
     return Card(
       key: Key('estimateItem$index'),
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: const RoundedRectangleBorder(),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -254,7 +261,6 @@ class _EstimateItemCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                if (item.trade.isNotEmpty) Text(item.trade),
                 PopupMenuButton<_EstimateItemAction>(
                   key: Key('estimateItemMenu$index'),
                   onSelected: onAction,
@@ -299,6 +305,83 @@ class _EstimateItemCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _EstimateGroupSection extends StatelessWidget {
+  const _EstimateGroupSection({
+    required this.group,
+    required this.groupIndex,
+    required this.itemIndex,
+    required this.onAction,
+  });
+
+  final EstimateItemGroup group;
+  final int groupIndex;
+  final int Function(EstimateItem item) itemIndex;
+  final void Function(EstimateItem item, _EstimateItemAction action) onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      key: Key('estimateGroup$groupIndex'),
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ColoredBox(
+            color: colorScheme.primaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      group.displayName,
+                      key: Key('estimateGroupName$groupIndex'),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text('${group.items.length}件'),
+                ],
+              ),
+            ),
+          ),
+          for (var index = 0; index < group.items.length; index++) ...[
+            if (index > 0) const Divider(height: 1, indent: 12, endIndent: 12),
+            _EstimateItemCard(
+              item: group.items[index],
+              index: itemIndex(group.items[index]),
+              onAction: (action) => onAction(group.items[index], action),
+            ),
+          ],
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '工種小計',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Text(
+                  '¥ ${_money(group.subtotal)}',
+                  key: Key('estimateGroupSubtotal$groupIndex'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
