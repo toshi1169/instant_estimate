@@ -1,18 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_document.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 
 class _MemoryEstimateItemStore implements EstimateItemStore {
-  List<EstimateItem> items = [];
+  EstimateDocument document = EstimateDocument(
+    info: EstimateInfo.initial(DateTime(2026, 8, 2)),
+    items: const [],
+  );
+
+  List<EstimateItem> get items => document.items;
 
   @override
-  Future<List<EstimateItem>> load() async => List.of(items);
+  Future<EstimateDocument> load() async => document;
 
   @override
-  Future<void> save(List<EstimateItem> items) async {
-    this.items = List.of(items);
+  Future<void> save(EstimateDocument document) async {
+    this.document = EstimateDocument(
+      info: document.info,
+      items: List.of(document.items),
+    );
   }
 }
 
@@ -41,15 +51,32 @@ void main() {
     expect(restored.items.single.calculationBasis, '5 × 1 × 0.5 = 2.5');
     expect(restored.totalAmount, 10000);
 
-    await restored.update(
-      restored.items.single.id,
-      restored.items.single.toDraft().copyWith(unitPrice: 5000),
+    await restored.updateInfo(
+      restored.info.copyWith(
+        estimateName: '○○邸 外構工事',
+        siteName: '○○邸',
+        clientName: '○○様',
+        estimateNumber: '2026-001',
+        notes: '概算',
+      ),
     );
-    expect(restored.totalAmount, 12500);
+    expect(store.document.info.estimateName, '○○邸 外構工事');
+
+    final infoRestored = EstimateController(store: store);
+    await infoRestored.load();
+    expect(infoRestored.info.siteName, '○○邸');
+    expect(infoRestored.items.single.name, '根切り');
+
+    await infoRestored.update(
+      infoRestored.items.single.id,
+      infoRestored.items.single.toDraft().copyWith(unitPrice: 5000),
+    );
+    expect(infoRestored.totalAmount, 12500);
     expect(store.items.single.unitPrice, 5000);
 
-    await restored.delete(restored.items.single.id);
-    expect(restored.items, isEmpty);
+    await infoRestored.delete(infoRestored.items.single.id);
+    expect(infoRestored.items, isEmpty);
     expect(store.items, isEmpty);
+    expect(store.document.info.estimateName, '○○邸 外構工事');
   });
 }

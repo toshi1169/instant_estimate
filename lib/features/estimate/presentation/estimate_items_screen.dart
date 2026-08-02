@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../application/estimate_controller.dart';
 import '../domain/estimate_item.dart';
+import '../domain/estimate_info.dart';
+import 'estimate_info_editor_screen.dart';
 import 'estimate_item_editor_screen.dart';
 
 enum _EstimateItemAction { edit, delete }
@@ -14,7 +16,20 @@ class EstimateItemsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('名称未設定の見積')),
+      appBar: AppBar(
+        title: ListenableBuilder(
+          listenable: controller,
+          builder: (_, _) => Text(controller.info.displayName),
+        ),
+        actions: [
+          IconButton(
+            key: const Key('editEstimateInfo'),
+            tooltip: '見積基本情報',
+            onPressed: () => _editInfo(context),
+            icon: const Icon(Icons.edit_note_outlined),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,
@@ -24,6 +39,8 @@ class EstimateItemsScreen extends StatelessWidget {
             }
             return Column(
               children: [
+                if (_hasSupplementaryInfo(controller.info))
+                  _EstimateInfoSummary(info: controller.info),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
                   child: Row(
@@ -72,6 +89,29 @@ class EstimateItemsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _editInfo(BuildContext context) async {
+    final info = await Navigator.of(context).push<EstimateInfo>(
+      MaterialPageRoute(
+        builder: (_) => EstimateInfoEditorScreen(initialInfo: controller.info),
+      ),
+    );
+    if (info == null || !context.mounted) return;
+    try {
+      await controller.updateInfo(info);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('見積基本情報を保存しました')));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('見積基本情報を保存できませんでした')));
+      }
+    }
+  }
+
   Future<void> _handleAction(
     BuildContext context,
     EstimateItem item,
@@ -85,6 +125,7 @@ class EstimateItemsScreen extends StatelessWidget {
                 builder: (_) => EstimateItemEditorScreen(
                   initialDraft: item.toDraft(),
                   isEditing: true,
+                  estimateTitle: controller.info.displayName,
                 ),
               ),
             );
@@ -141,6 +182,48 @@ class EstimateItemsScreen extends StatelessWidget {
     }
   }
 }
+
+class _EstimateInfoSummary extends StatelessWidget {
+  const _EstimateInfoSummary({required this.info});
+
+  final EstimateInfo info;
+
+  @override
+  Widget build(BuildContext context) {
+    final details = <String>[
+      if (info.siteName.isNotEmpty) '現場：${info.siteName}',
+      if (info.clientName.isNotEmpty) '宛名：${info.clientName}',
+      if (info.estimateNumber.isNotEmpty) 'No. ${info.estimateNumber}',
+      '作成日：${_date(info.createdDate)}',
+    ];
+    return Card(
+      key: const Key('estimateInfoSummary'),
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(details.join('　')),
+            if (info.notes.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('備考：${info.notes}'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+bool _hasSupplementaryInfo(EstimateInfo info) =>
+    info.siteName.isNotEmpty ||
+    info.clientName.isNotEmpty ||
+    info.estimateNumber.isNotEmpty ||
+    info.notes.isNotEmpty;
+
+String _date(DateTime date) =>
+    '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
 
 class _EstimateItemCard extends StatelessWidget {
   const _EstimateItemCard({

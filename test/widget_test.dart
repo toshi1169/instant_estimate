@@ -9,6 +9,8 @@ import 'package:instant_estimate/features/onboarding/data/onboarding_preferences
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_document.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
@@ -45,14 +47,22 @@ class FakeAppSettingsStore implements AppSettingsStore {
 }
 
 class FakeEstimateItemStore implements EstimateItemStore {
-  List<EstimateItem> items = [];
+  EstimateDocument document = EstimateDocument(
+    info: EstimateInfo.initial(DateTime(2026, 8, 2)),
+    items: const [],
+  );
+
+  List<EstimateItem> get items => document.items;
 
   @override
-  Future<List<EstimateItem>> load() async => List.of(items);
+  Future<EstimateDocument> load() async => document;
 
   @override
-  Future<void> save(List<EstimateItem> items) async {
-    this.items = List.of(items);
+  Future<void> save(EstimateDocument document) async {
+    this.document = EstimateDocument(
+      info: document.info,
+      items: List.of(document.items),
+    );
   }
 }
 
@@ -835,6 +845,53 @@ void main() {
     expect(find.byKey(const Key('emptyEstimateItems')), findsOneWidget);
     expect(find.text('合計  ¥ 0'), findsOneWidget);
     expect(store.items, isEmpty);
+  });
+
+  testWidgets('見積基本情報を編集し明細を残したまま端末保存できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = FakeEstimateItemStore();
+    final estimateController = EstimateController(store: store);
+    await estimateController.load();
+    await estimateController.add(
+      const EstimateItemDraft(name: '根切り', quantity: 2, unit: 'm³'),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: estimateController)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('editEstimateInfo')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('estimateInfoEditor')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('estimateInfoNameField')),
+      '○○邸 外構工事',
+    );
+    await tester.enterText(
+      find.byKey(const Key('estimateInfoSiteField')),
+      '○○邸',
+    );
+    await tester.enterText(
+      find.byKey(const Key('estimateInfoClientField')),
+      '○○様',
+    );
+    await tester.enterText(
+      find.byKey(const Key('estimateInfoNumberField')),
+      '2026-001',
+    );
+    await tester.ensureVisible(find.byKey(const Key('saveEstimateInfo')));
+    await tester.tap(find.byKey(const Key('saveEstimateInfo')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('○○邸 外構工事'), findsOneWidget);
+    expect(find.textContaining('現場：○○邸'), findsOneWidget);
+    expect(store.document.info.clientName, '○○様');
+    expect(store.document.info.estimateNumber, '2026-001');
+    expect(store.items.single.name, '根切り');
   });
 
   testWidgets('履歴スペース長押しで全体画面と分数3形式を確認できる', (tester) async {

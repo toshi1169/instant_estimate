@@ -282,7 +282,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     final editorResult = await Navigator.of(context)
         .push<EstimateItemEditorResult>(
           MaterialPageRoute(
-            builder: (_) => EstimateItemEditorScreen(initialDraft: draft),
+            builder: (_) => EstimateItemEditorScreen(
+              initialDraft: draft,
+              estimateTitle: _estimateController.info.displayName,
+            ),
           ),
         );
     if (editorResult == null || !mounted) return;

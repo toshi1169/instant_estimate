@@ -1,17 +1,22 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/estimate_item_store.dart';
+import '../domain/estimate_document.dart';
+import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
 
 class EstimateController extends ChangeNotifier {
-  EstimateController({this.store});
+  EstimateController({this.store, DateTime? now})
+    : _info = EstimateInfo.initial(now ?? DateTime.now());
 
   final EstimateItemStore? store;
   final List<EstimateItem> _items = [];
+  EstimateInfo _info;
   bool _loaded = false;
 
   List<EstimateItem> get items => List.unmodifiable(_items);
+  EstimateInfo get info => _info;
   bool get isLoaded => _loaded;
   double get totalAmount =>
       _items.fold(0, (total, item) => total + (item.amount ?? 0));
@@ -24,9 +29,11 @@ class EstimateController extends ChangeNotifier {
       return;
     }
     try {
+      final document = await store!.load();
+      _info = document.info;
       _items
         ..clear()
-        ..addAll(await store!.load());
+        ..addAll(document.items);
     } catch (_) {
       _loaded = false;
       rethrow;
@@ -42,7 +49,7 @@ class EstimateController extends ChangeNotifier {
       createdAt: now,
     );
     final updated = [..._items, item];
-    await store?.save(updated);
+    await _save(updated);
     _items
       ..clear()
       ..addAll(updated);
@@ -60,7 +67,7 @@ class EstimateController extends ChangeNotifier {
       createdAt: current.createdAt,
     );
     final updated = List<EstimateItem>.of(_items)..[index] = updatedItem;
-    await store?.save(updated);
+    await _save(updated);
     _items
       ..clear()
       ..addAll(updated);
@@ -71,10 +78,21 @@ class EstimateController extends ChangeNotifier {
   Future<void> delete(String id) async {
     final updated = _items.where((item) => item.id != id).toList();
     if (updated.length == _items.length) return;
-    await store?.save(updated);
+    await _save(updated);
     _items
       ..clear()
       ..addAll(updated);
     notifyListeners();
+  }
+
+  Future<void> updateInfo(EstimateInfo info) async {
+    await store?.save(EstimateDocument(info: info, items: _items));
+    _info = info;
+    notifyListeners();
+  }
+
+  Future<void> _save(List<EstimateItem> items) {
+    return store?.save(EstimateDocument(info: _info, items: items)) ??
+        Future<void>.value();
   }
 }

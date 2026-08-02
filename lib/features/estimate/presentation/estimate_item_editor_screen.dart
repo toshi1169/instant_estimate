@@ -16,11 +16,13 @@ class EstimateItemEditorScreen extends StatefulWidget {
   const EstimateItemEditorScreen({
     required this.initialDraft,
     this.isEditing = false,
+    this.estimateTitle = '名称未設定の見積',
     super.key,
   });
 
   final EstimateItemDraft initialDraft;
   final bool isEditing;
+  final String estimateTitle;
 
   @override
   State<EstimateItemEditorScreen> createState() =>
@@ -107,7 +109,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.description_outlined),
                   title: const Text('追加先'),
-                  subtitle: const Text('名称未設定の見積'),
+                  subtitle: Text(widget.estimateTitle),
                   trailing: TextButton(
                     onPressed: null,
                     child: const Text('変更'),
