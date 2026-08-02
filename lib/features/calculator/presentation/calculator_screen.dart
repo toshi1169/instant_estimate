@@ -10,6 +10,8 @@ import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../estimate/domain/estimate_item_draft.dart';
+import '../../estimate/presentation/estimate_item_editor_screen.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
 import 'function_list_dialog.dart';
@@ -195,9 +197,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Future<void> _showEstimateTransferSheet({
     String? expressionText,
     String? resultText,
+    double? quantityValue,
   }) async {
     final expression = expressionText ?? _controller.estimateExpressionText;
     final result = resultText ?? _controller.estimateResultText;
+    final quantity = quantityValue ?? _controller.estimateQuantityValue;
     if (expression.isEmpty) {
       _showMessage('見積へ送る計算式がありません');
       return;
@@ -214,8 +218,39 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
     if (request == null || !mounted) return;
 
+    final transferText = switch (request.content) {
+      _EstimateContent.expression => expression,
+      _EstimateContent.result => result,
+      _EstimateContent.expressionAndResult => '$expression = $result',
+    };
+    final draft = EstimateItemDraft(
+      name: request.destination == _EstimateDestination.name
+          ? transferText
+          : '',
+      specification: request.destination == _EstimateDestination.specification
+          ? transferText
+          : '',
+      quantity: request.destination == _EstimateDestination.quantity
+          ? quantity
+          : null,
+      description: request.destination == _EstimateDestination.description
+          ? transferText
+          : '',
+      calculationBasis: '$expression = $result',
+      originalQuantity: quantity,
+    );
+    final editorResult = await Navigator.of(context)
+        .push<EstimateItemEditorResult>(
+          MaterialPageRoute(
+            builder: (_) => EstimateItemEditorScreen(initialDraft: draft),
+          ),
+        );
+    if (editorResult == null || !mounted) return;
+
     _showMessage(
-      '「${request.content.label}」を「${request.destination.label}」へ送る準備をしました',
+      editorResult.action == EstimateItemEditorAction.openEstimate
+          ? '入力内容を確認しました。見積一覧への保存は次工程で接続します'
+          : '入力内容を確認しました。元の計算画面へ戻りました',
     );
   }
 
@@ -263,6 +298,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         await _showEstimateTransferSheet(
           expressionText: entry.expression,
           resultText: entry.result,
+          quantityValue: _parseEstimateNumber(entry.decimalResult),
         );
     }
   }
@@ -702,6 +738,11 @@ class _StackedResultFraction extends StatelessWidget {
   }
 }
 
+double? _parseEstimateNumber(String value) {
+  final parsed = double.tryParse(value.replaceAll(',', '').trim());
+  return parsed != null && parsed.isFinite ? parsed : null;
+}
+
 enum _CalculationMenuAction { copy, cut, paste, clear, sendToEstimate }
 
 class _CalculationMenuSheet extends StatelessWidget {
@@ -811,6 +852,7 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
             const Text('送信内容'),
             const SizedBox(height: 8),
             SegmentedButton<_EstimateContent>(
+              key: const Key('estimateContentSelector'),
               segments: [
                 for (final content in _EstimateContent.values)
                   ButtonSegment(value: content, label: Text(content.label)),
@@ -824,6 +866,7 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
             const Text('送信先'),
             const SizedBox(height: 8),
             DropdownButtonFormField<_EstimateDestination>(
+              key: const Key('estimateDestinationSelector'),
               initialValue: _destination,
               items: [
                 for (final destination in _EstimateDestination.values)
@@ -864,6 +907,7 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton(
+                    key: const Key('estimateTransferNext'),
                     onPressed: () {
                       Navigator.of(context).pop(
                         _EstimateTransferRequest(

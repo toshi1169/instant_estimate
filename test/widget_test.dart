@@ -680,6 +680,46 @@ void main() {
     expect(preview.data, '1 + 2 = 3');
   });
 
+  testWidgets('電卓の解を見積数量へ送り単価から金額を計算できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('12×2');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('見積へ送る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateDestinationSelector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('数量').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateTransferNext')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('estimateItemEditor')), findsOneWidget);
+    expect(find.text('名称未設定の見積'), findsOneWidget);
+    final quantity = tester.widget<TextFormField>(
+      find.byKey(const Key('estimateQuantityField')),
+    );
+    expect(quantity.controller?.text, '24');
+
+    await tester.ensureVisible(find.byKey(const Key('estimateUnitPriceField')));
+    await tester.enterText(
+      find.byKey(const Key('estimateUnitPriceField')),
+      '100',
+    );
+    await tester.pump();
+    expect(find.text('¥ 2,400'), findsOneWidget);
+  });
+
   testWidgets('履歴スペース長押しで全体画面と分数3形式を確認できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

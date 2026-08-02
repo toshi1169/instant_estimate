@@ -190,6 +190,11 @@ class CalculatorController extends ChangeNotifier {
   String get estimateExpressionText => displayExpression;
   String get estimateResultText =>
       _state == CalculatorState.error ? '' : _result;
+  double? get estimateQuantityValue {
+    if (_state == CalculatorState.error) return null;
+    final value = double.tryParse(_rawResult);
+    return value != null && value.isFinite ? value : null;
+  }
 
   Future<void> loadHistory() async {
     if (_historyLoaded || historyStore == null) return;
