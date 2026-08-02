@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/angle_unit.dart';
+
 enum AppThemeSelection { system, light, gray, dark }
 
 enum CalculatorRoundingMode { halfUp, ceiling, floor }
@@ -11,6 +13,7 @@ class AppSettings {
     this.theme = AppThemeSelection.light,
     this.decimalPlaces = 2,
     this.roundingMode = CalculatorRoundingMode.halfUp,
+    this.angleUnit = AngleUnit.degrees,
     this.historySortOrder = HistorySortOrder.ascending,
     this.confirmHistoryDeletion = true,
   });
@@ -18,6 +21,7 @@ class AppSettings {
   final AppThemeSelection theme;
   final int decimalPlaces;
   final CalculatorRoundingMode roundingMode;
+  final AngleUnit angleUnit;
   final HistorySortOrder historySortOrder;
   final bool confirmHistoryDeletion;
 
@@ -31,6 +35,7 @@ class AppSettings {
     AppThemeSelection? theme,
     int? decimalPlaces,
     CalculatorRoundingMode? roundingMode,
+    AngleUnit? angleUnit,
     HistorySortOrder? historySortOrder,
     bool? confirmHistoryDeletion,
   }) {
@@ -38,6 +43,7 @@ class AppSettings {
       theme: theme ?? this.theme,
       decimalPlaces: decimalPlaces ?? this.decimalPlaces,
       roundingMode: roundingMode ?? this.roundingMode,
+      angleUnit: angleUnit ?? this.angleUnit,
       historySortOrder: historySortOrder ?? this.historySortOrder,
       confirmHistoryDeletion:
           confirmHistoryDeletion ?? this.confirmHistoryDeletion,
@@ -48,6 +54,7 @@ class AppSettings {
     'theme': theme.name,
     'decimalPlaces': decimalPlaces,
     'roundingMode': roundingMode.name,
+    'angleUnit': angleUnit.name,
     'historySortOrder': historySortOrder.name,
     'confirmHistoryDeletion': confirmHistoryDeletion,
   };
@@ -69,6 +76,11 @@ class AppSettings {
         CalculatorRoundingMode.values,
         json['roundingMode'],
         CalculatorRoundingMode.halfUp,
+      ),
+      angleUnit: enumValue(
+        AngleUnit.values,
+        json['angleUnit'],
+        AngleUnit.degrees,
       ),
       historySortOrder: enumValue(
         HistorySortOrder.values,

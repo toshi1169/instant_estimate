@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/domain/angle_unit.dart';
 import '../data/calculation_history_store.dart';
 import '../domain/calculation_engine.dart';
 import '../../settings/domain/app_settings.dart';
@@ -94,6 +95,7 @@ class CalculatorController extends ChangeNotifier {
     this._engine = const CalculationEngine(),
     this._decimalPlaces = 12,
     this._roundingMode = CalculatorRoundingMode.halfUp,
+    this._angleUnit = AngleUnit.degrees,
   });
 
   static const int fractionDigitLimit = 10;
@@ -107,6 +109,7 @@ class CalculatorController extends ChangeNotifier {
   bool _historyLoadComplete = false;
   int _decimalPlaces;
   CalculatorRoundingMode _roundingMode;
+  AngleUnit _angleUnit;
 
   String _expression = '';
   String _result = '0';
@@ -142,9 +145,33 @@ class CalculatorController extends ChangeNotifier {
   void updateDisplaySettings({
     required int decimalPlaces,
     required CalculatorRoundingMode roundingMode,
+    AngleUnit? angleUnit,
   }) {
+    final angleChanged = angleUnit != null && angleUnit != _angleUnit;
     _decimalPlaces = decimalPlaces.clamp(1, 12);
     _roundingMode = roundingMode;
+    _angleUnit = angleUnit ?? _angleUnit;
+    if (angleChanged && _expression.isNotEmpty) {
+      if (_state == CalculatorState.input) {
+        _updatePreviewResult();
+        return;
+      }
+      if (_state == CalculatorState.result) {
+        try {
+          final value = _engine.evaluate(
+            _expressionForCalculation(),
+            angleUnit: _angleUnit,
+          );
+          _rawResult = _rawNumber(value);
+          _result = _formatNumber(value);
+          _resultFraction = _findSimpleFraction(value);
+          _canCycleFraction = _resultFraction != null;
+          _resultDisplayMode = ResultDisplayMode.decimal;
+        } catch (_) {
+          // 既に確定済みの表示は、再計算できない場合も維持する。
+        }
+      }
+    }
     if (_state != CalculatorState.error && _rawResult.isNotEmpty) {
       final value = double.tryParse(_rawResult);
       if (value != null && value.isFinite) _result = _formatNumber(value);
@@ -360,23 +387,6 @@ class CalculatorController extends ChangeNotifier {
       return '分数の入力を完了してから関数を選択してください';
     }
 
-    if (const {
-      'sin',
-      'cos',
-      'tan',
-      'sin⁻¹',
-      'cos⁻¹',
-      'tan⁻¹',
-      'sinh',
-      'cosh',
-      'tanh',
-      'sinh⁻¹',
-      'cosh⁻¹',
-      'tanh⁻¹',
-    }.contains(label)) {
-      return '角度・三角関数の設定後に追加します';
-    }
-
     if (label == '1/x') {
       return _insertReciprocalFunction();
     }
@@ -394,6 +404,18 @@ class CalculatorController extends ChangeNotifier {
       '10ˣ' => '10^(',
       'eˣ' => 'e^(',
       'x!' => '!',
+      'sin' ||
+      'cos' ||
+      'tan' ||
+      'sin⁻¹' ||
+      'cos⁻¹' ||
+      'tan⁻¹' ||
+      'sinh' ||
+      'cosh' ||
+      'tanh' ||
+      'sinh⁻¹' ||
+      'cosh⁻¹' ||
+      'tanh⁻¹' => '$label(',
       _ => null,
     };
     if (insertion == null) return 'この関数はまだ利用できません';
@@ -451,7 +473,10 @@ class CalculatorController extends ChangeNotifier {
     }
 
     try {
-      final value = _engine.evaluate(_expressionForCalculation());
+      final value = _engine.evaluate(
+        _expressionForCalculation(),
+        angleUnit: _angleUnit,
+      );
       _rawResult = _rawNumber(value);
       _result = _formatNumber(value);
       _state = CalculatorState.result;
@@ -1180,6 +1205,18 @@ class CalculatorController extends ChangeNotifier {
   String? _functionTokenBeforeCaret() {
     final beforeCaret = _expression.substring(0, _caretPosition);
     for (final token in const [
+      'sinh⁻¹(',
+      'cosh⁻¹(',
+      'tanh⁻¹(',
+      'sin⁻¹(',
+      'cos⁻¹(',
+      'tan⁻¹(',
+      'sinh(',
+      'cosh(',
+      'tanh(',
+      'sin(',
+      'cos(',
+      'tan(',
       'log₂(',
       'abs(',
       'log(',
@@ -1213,7 +1250,10 @@ class CalculatorController extends ChangeNotifier {
       return;
     }
     try {
-      final value = _engine.evaluate(_expressionForCalculation());
+      final value = _engine.evaluate(
+        _expressionForCalculation(),
+        angleUnit: _angleUnit,
+      );
       _result = _formatNumber(value);
       _rawResult = _rawNumber(value);
       _isPreviewResult = true;

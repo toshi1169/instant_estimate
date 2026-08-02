@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/angle_unit.dart';
 import '../domain/app_settings.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -110,6 +111,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _selectAngleUnit(BuildContext context) async {
+    final value = await _selectValue<AngleUnit>(
+      context,
+      title: '角度単位',
+      selected: _settings.angleUnit,
+      choices: const [
+        (AngleUnit.degrees, '度（DEG）'),
+        (AngleUnit.radians, 'ラジアン（RAD）'),
+      ],
+    );
+    if (value != null) _update(_settings.copyWith(angleUnit: value));
+  }
+
   Future<void> _confirmClearHistory(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -174,6 +188,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: Text(_roundingLabel(_settings.roundingMode)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectRoundingMode(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('angleUnitSetting'),
+                  leading: const Icon(Icons.straighten_outlined),
+                  title: const Text('角度単位'),
+                  subtitle: Text(
+                    _settings.angleUnit == AngleUnit.degrees
+                        ? '度（DEG）'
+                        : 'ラジアン（RAD）',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _selectAngleUnit(context),
                 ),
               ],
             ),

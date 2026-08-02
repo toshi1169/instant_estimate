@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/core/domain/angle_unit.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/data/calculation_history_store.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
@@ -59,10 +60,42 @@ void main() {
       expect(controller.result, '9');
     });
 
-    test('三角関数は角度設定確定まで入力しない', () {
+    test('関数一覧から三角関数を入力して暫定・確定計算できる', () {
       final controller = CalculatorController();
 
-      expect(controller.insertFunction('sin'), '角度・三角関数の設定後に追加します');
+      expect(controller.insertFunction('sin'), isNull);
+      controller.press('3');
+      controller.press('0');
+      expect(controller.expression, 'sin(30');
+      expect(controller.result, '0.5');
+      expect(controller.isPreviewResult, isTrue);
+
+      controller.press('=');
+      expect(controller.result, '0.5');
+    });
+
+    test('角度設定をラジアンへ切り替えて再計算できる', () {
+      final controller = CalculatorController();
+      controller.updateDisplaySettings(
+        decimalPlaces: 5,
+        roundingMode: CalculatorRoundingMode.halfUp,
+        angleUnit: AngleUnit.radians,
+      );
+      controller.insertFunction('sin');
+      controller.insertFunction('π');
+      controller.press('÷');
+      controller.press('2');
+      controller.press('=');
+
+      expect(controller.result, '1');
+    });
+
+    test('バックボタン1回で三角関数トークン全体を削除する', () {
+      final controller = CalculatorController();
+
+      controller.insertFunction('sinh⁻¹');
+      expect(controller.expression, 'sinh⁻¹(');
+      controller.press('←');
       expect(controller.expression, isEmpty);
     });
 

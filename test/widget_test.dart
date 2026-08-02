@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
+import 'package:instant_estimate/core/domain/angle_unit.dart';
 import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
@@ -100,6 +101,12 @@ void main() {
       tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
       ThemeMode.light,
     );
+
+    await tester.tap(find.byKey(const Key('angleUnitSetting')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ラジアン（RAD）'));
+    await tester.pumpAndSettle();
+    expect(settingsStore.settings.angleUnit, AngleUnit.radians);
   });
 
   testWidgets('初回起動では業種選択を表示する', (tester) async {

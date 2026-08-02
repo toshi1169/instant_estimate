@@ -1,0 +1,1 @@
+enum AngleUnit { degrees, radians }

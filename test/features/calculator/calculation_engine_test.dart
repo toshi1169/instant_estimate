@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/core/domain/angle_unit.dart';
 import 'package:instant_estimate/features/calculator/domain/calculation_engine.dart';
 
 void main() {
@@ -32,6 +33,49 @@ void main() {
       expect(engine.evaluate('√(81)'), 9);
       expect(engine.evaluate('³√(-27)'), closeTo(-3, 1e-12));
       expect(engine.evaluate('abs(-12.5)'), 12.5);
+    });
+
+    test('度数法で三角関数と逆三角関数を処理する', () {
+      expect(engine.evaluate('sin(30)'), closeTo(0.5, 1e-12));
+      expect(engine.evaluate('cos(60)'), closeTo(0.5, 1e-12));
+      expect(engine.evaluate('tan(45)'), closeTo(1, 1e-12));
+      expect(engine.evaluate('sin⁻¹(0.5)'), closeTo(30, 1e-12));
+      expect(engine.evaluate('cos⁻¹(0.5)'), closeTo(60, 1e-12));
+      expect(engine.evaluate('tan⁻¹(1)'), closeTo(45, 1e-12));
+    });
+
+    test('ラジアンで三角関数と逆三角関数を処理する', () {
+      expect(
+        engine.evaluate('sin(π÷2)', angleUnit: AngleUnit.radians),
+        closeTo(1, 1e-12),
+      );
+      expect(
+        engine.evaluate('sin⁻¹(1)', angleUnit: AngleUnit.radians),
+        closeTo(1.5707963267948966, 1e-12),
+      );
+    });
+
+    test('双曲線関数と逆双曲線関数を処理する', () {
+      expect(engine.evaluate('sinh(0)'), closeTo(0, 1e-12));
+      expect(engine.evaluate('cosh(0)'), closeTo(1, 1e-12));
+      expect(engine.evaluate('tanh(0)'), closeTo(0, 1e-12));
+      expect(engine.evaluate('sinh⁻¹(0)'), closeTo(0, 1e-12));
+      expect(engine.evaluate('cosh⁻¹(1)'), closeTo(0, 1e-12));
+      expect(engine.evaluate('tanh⁻¹(0)'), closeTo(0, 1e-12));
+    });
+
+    test('定義域外の三角・双曲線関数は拒否する', () {
+      for (final expression in [
+        'tan(90)',
+        'sin⁻¹(2)',
+        'cosh⁻¹(0)',
+        'tanh⁻¹(1)',
+      ]) {
+        expect(
+          () => engine.evaluate(expression),
+          throwsA(isA<CalculationException>()),
+        );
+      }
     });
 
     test('階乗を処理し不正な階乗は拒否する', () {

@@ -82,6 +82,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     _controller.updateDisplaySettings(
       decimalPlaces: widget.settings.decimalPlaces,
       roundingMode: widget.settings.roundingMode,
+      angleUnit: widget.settings.angleUnit,
     );
   }
 

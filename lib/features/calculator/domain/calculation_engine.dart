@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import '../../../core/domain/angle_unit.dart';
+
 class CalculationException implements Exception {
   const CalculationException(this.message);
 
@@ -9,12 +11,15 @@ class CalculationException implements Exception {
 class CalculationEngine {
   const CalculationEngine();
 
-  double evaluate(String expression) {
+  double evaluate(
+    String expression, {
+    AngleUnit angleUnit = AngleUnit.degrees,
+  }) {
     if (expression.trim().isEmpty) {
       throw const CalculationException('計算できません');
     }
 
-    final parser = _ExpressionParser(expression);
+    final parser = _ExpressionParser(expression, angleUnit);
     final value = parser.parse();
     if (!value.isFinite) {
       throw const CalculationException('計算できません');
@@ -24,7 +29,7 @@ class CalculationEngine {
 }
 
 class _ExpressionParser {
-  _ExpressionParser(String source)
+  _ExpressionParser(String source, this._angleUnit)
     : _source = source
           .replaceAll('×', '*')
           .replaceAll('÷', '/')
@@ -32,6 +37,7 @@ class _ExpressionParser {
           .replaceAll(RegExp(r'\s+'), '');
 
   final String _source;
+  final AngleUnit _angleUnit;
   int _position = 0;
 
   double parse() {
@@ -168,7 +174,26 @@ class _ExpressionParser {
   }
 
   String? _readFunctionName() {
-    for (final name in const ['log₂', 'log', 'ln', '³√', '√', 'abs']) {
+    for (final name in const [
+      'sinh⁻¹',
+      'cosh⁻¹',
+      'tanh⁻¹',
+      'sin⁻¹',
+      'cos⁻¹',
+      'tan⁻¹',
+      'sinh',
+      'cosh',
+      'tanh',
+      'sin',
+      'cos',
+      'tan',
+      'log₂',
+      'log',
+      'ln',
+      '³√',
+      '√',
+      'abs',
+    ]) {
       if (_consumeText(name)) return name;
     }
     return null;
@@ -185,12 +210,54 @@ class _ExpressionParser {
             ? -math.pow(-argument, 1 / 3).toDouble()
             : math.pow(argument, 1 / 3).toDouble(),
       'abs' => argument.abs(),
+      'sin' => math.sin(_toRadians(argument)),
+      'cos' => math.cos(_toRadians(argument)),
+      'tan' => _tangent(argument),
+      'sin⁻¹' => _fromRadians(math.asin(argument)),
+      'cos⁻¹' => _fromRadians(math.acos(argument)),
+      'tan⁻¹' => _fromRadians(math.atan(argument)),
+      'sinh' => _sinh(argument),
+      'cosh' => _cosh(argument),
+      'tanh' => _tanh(argument),
+      'sinh⁻¹' => math.log(argument + math.sqrt(argument * argument + 1)),
+      'cosh⁻¹' =>
+        argument >= 1
+            ? math.log(argument + math.sqrt(argument * argument - 1))
+            : double.nan,
+      'tanh⁻¹' =>
+        argument.abs() < 1
+            ? 0.5 * math.log((1 + argument) / (1 - argument))
+            : double.nan,
       _ => double.nan,
     };
     if (!value.isFinite) {
       throw const CalculationException('計算できません');
     }
     return value;
+  }
+
+  double _toRadians(double value) =>
+      _angleUnit == AngleUnit.degrees ? value * math.pi / 180 : value;
+
+  double _fromRadians(double value) =>
+      _angleUnit == AngleUnit.degrees ? value * 180 / math.pi : value;
+
+  double _tangent(double value) {
+    final radians = _toRadians(value);
+    if (math.cos(radians).abs() < 1e-12) return double.nan;
+    return math.tan(radians);
+  }
+
+  double _sinh(double value) => (math.exp(value) - math.exp(-value)) / 2;
+
+  double _cosh(double value) => (math.exp(value) + math.exp(-value)) / 2;
+
+  double _tanh(double value) {
+    if (value > 20) return 1;
+    if (value < -20) return -1;
+    final positive = math.exp(value);
+    final negative = math.exp(-value);
+    return (positive - negative) / (positive + negative);
   }
 
   double _factorial(double value) {
