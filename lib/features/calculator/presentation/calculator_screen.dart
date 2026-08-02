@@ -1277,7 +1277,9 @@ class _KeyButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isGreen = keyData.kind == _KeyKind.operator;
+    final isGreen =
+        keyData.kind == _KeyKind.operator ||
+        keyData.kind == _KeyKind.fractionToggle;
     final isOrange = useFractionToggleColor;
 
     final backgroundColor = isOrange
@@ -1326,6 +1328,7 @@ class _KeyButton extends StatelessWidget {
       button: true,
       label: keyData.semanticLabel,
       child: FilledButton(
+        key: Key('calculatorKey${keyData.label}'),
         onPressed: onPressed,
         onLongPress: onLongPressed,
         style: FilledButton.styleFrom(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
+import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
@@ -38,6 +39,29 @@ class FakeAppSettingsStore implements AppSettingsStore {
 }
 
 void main() {
+  testWidgets('白・グレーテーマのイコールは白文字で表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    expect(
+      AppTheme.gray.scaffoldBackgroundColor,
+      const Color.fromRGBO(180, 180, 180, 1),
+    );
+
+    for (final theme in [AppTheme.light, AppTheme.gray]) {
+      await tester.pumpWidget(
+        MaterialApp(theme: theme, home: const CalculatorScreen()),
+      );
+      await tester.pumpAndSettle();
+      final button = tester.widget<FilledButton>(
+        find.byKey(const Key('calculatorKey=')),
+      );
+      expect(button.style?.foregroundColor?.resolve({}), Colors.white);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
   testWidgets('保存済みテーマを復元し設定画面から変更できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
