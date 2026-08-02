@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/domain/angle_unit.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
@@ -120,12 +121,26 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Future<void> _openFunctionList() async {
     final function = await showDialog<String>(
       context: context,
-      builder: (_) => const FunctionListDialog(),
+      builder: (_) => FunctionListDialog(
+        angleUnit: widget.settings.angleUnit,
+        onAngleUnitChanged: _changeAngleUnitFromFunctionList,
+      ),
     );
     if (function != null && mounted) {
       final notice = _controller.insertFunction(function);
       if (notice != null) _showMessage(notice);
     }
+  }
+
+  void _changeAngleUnitFromFunctionList(AngleUnit angleUnit) {
+    _controller.updateDisplaySettings(
+      decimalPlaces: widget.settings.decimalPlaces,
+      roundingMode: widget.settings.roundingMode,
+      angleUnit: angleUnit,
+    );
+    widget.onSettingsChanged?.call(
+      widget.settings.copyWith(angleUnit: angleUnit),
+    );
   }
 
   void _selectSideMenu(CalculatorSideMenuDestination destination) {

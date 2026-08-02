@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/angle_unit.dart';
 import '../../../core/theme/app_colors.dart';
 
-class FunctionListDialog extends StatelessWidget {
-  const FunctionListDialog({super.key});
+class FunctionListDialog extends StatefulWidget {
+  const FunctionListDialog({
+    required this.angleUnit,
+    required this.onAngleUnitChanged,
+    super.key,
+  });
+
+  final AngleUnit angleUnit;
+  final ValueChanged<AngleUnit> onAngleUnitChanged;
 
   static const functions = <String>[
     'π',
@@ -34,6 +42,13 @@ class FunctionListDialog extends StatelessWidget {
     'eˣ',
     'x!',
   ];
+
+  @override
+  State<FunctionListDialog> createState() => _FunctionListDialogState();
+}
+
+class _FunctionListDialogState extends State<FunctionListDialog> {
+  late AngleUnit _angleUnit = widget.angleUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -67,9 +82,9 @@ class FunctionListDialog extends StatelessWidget {
                     crossAxisSpacing: 5,
                     mainAxisExtent: 48,
                   ),
-                  itemCount: functions.length,
+                  itemCount: FunctionListDialog.functions.length,
                   itemBuilder: (context, index) {
-                    final function = functions[index];
+                    final function = FunctionListDialog.functions[index];
                     return FilledButton(
                       key: Key('functionButton$index'),
                       onPressed: () => Navigator.of(context).pop(function),
@@ -100,6 +115,46 @@ class FunctionListDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              Container(
+                key: const Key('functionAngleUnitSetting'),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: theme.dividerColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '角度単位',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    DropdownButtonHideUnderline(
+                      child: DropdownButton<AngleUnit>(
+                        key: const Key('functionAngleUnitDropdown'),
+                        value: _angleUnit,
+                        items: const [
+                          DropdownMenuItem(
+                            value: AngleUnit.degrees,
+                            child: Text('DEG（度）'),
+                          ),
+                          DropdownMenuItem(
+                            value: AngleUnit.radians,
+                            child: Text('RAD（ラジアン）'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null || value == _angleUnit) return;
+                          setState(() => _angleUnit = value);
+                          widget.onAngleUnitChanged(value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(

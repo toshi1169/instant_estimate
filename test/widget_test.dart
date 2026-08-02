@@ -186,6 +186,8 @@ void main() {
     expect(find.text('π'), findsOneWidget);
     expect(find.text('sinh⁻¹'), findsOneWidget);
     expect(find.text('x!'), findsOneWidget);
+    expect(find.byKey(const Key('functionAngleUnitSetting')), findsOneWidget);
+    expect(find.text('DEG（度）'), findsOneWidget);
     expect(find.text('キャンセル'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('cancelFunctionList')));
@@ -195,6 +197,33 @@ void main() {
     await tester.tap(find.bySemanticsLabel('メニュー'));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('functionListDialog')), findsOneWidget);
+  });
+
+  testWidgets('関数一覧から角度単位を変更して保存できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final settingsStore = FakeAppSettingsStore();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.bySemanticsLabel('メニュー'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('functionAngleUnitDropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('RAD（ラジアン）').last);
+    await tester.pumpAndSettle();
+
+    expect(settingsStore.settings.angleUnit, AngleUnit.radians);
+    expect(find.text('RAD（ラジアン）'), findsOneWidget);
     expect(find.byKey(const Key('functionListDialog')), findsOneWidget);
   });
 
