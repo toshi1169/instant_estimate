@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../application/estimate_controller.dart';
 import '../domain/estimate_item.dart';
+import 'estimate_item_editor_screen.dart';
+
+enum _EstimateItemAction { edit, delete }
 
 class EstimateItemsScreen extends StatelessWidget {
   const EstimateItemsScreen({required this.controller, super.key});
@@ -53,6 +56,11 @@ class EstimateItemsScreen extends StatelessWidget {
                           itemBuilder: (context, index) => _EstimateItemCard(
                             item: controller.items[index],
                             index: index,
+                            onAction: (action) => _handleAction(
+                              context,
+                              controller.items[index],
+                              action,
+                            ),
                           ),
                         ),
                 ),
@@ -63,13 +71,87 @@ class EstimateItemsScreen extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _handleAction(
+    BuildContext context,
+    EstimateItem item,
+    _EstimateItemAction action,
+  ) async {
+    switch (action) {
+      case _EstimateItemAction.edit:
+        final result = await Navigator.of(context)
+            .push<EstimateItemEditorResult>(
+              MaterialPageRoute(
+                builder: (_) => EstimateItemEditorScreen(
+                  initialDraft: item.toDraft(),
+                  isEditing: true,
+                ),
+              ),
+            );
+        if (result == null || !context.mounted) return;
+        try {
+          await controller.update(item.id, result.draft);
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積明細を更新しました')));
+          }
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積明細を更新できませんでした')));
+          }
+        }
+      case _EstimateItemAction.delete:
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('見積明細を削除'),
+            content: Text(
+              '「${item.name.isEmpty ? '名称未入力' : item.name}」を削除しますか？',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('削除'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !context.mounted) return;
+        try {
+          await controller.delete(item.id);
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積明細を削除しました')));
+          }
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積明細を削除できませんでした')));
+          }
+        }
+    }
+  }
 }
 
 class _EstimateItemCard extends StatelessWidget {
-  const _EstimateItemCard({required this.item, required this.index});
+  const _EstimateItemCard({
+    required this.item,
+    required this.index,
+    required this.onAction,
+  });
 
   final EstimateItem item;
   final int index;
+  final ValueChanged<_EstimateItemAction> onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +172,26 @@ class _EstimateItemCard extends StatelessWidget {
                   ),
                 ),
                 if (item.trade.isNotEmpty) Text(item.trade),
+                PopupMenuButton<_EstimateItemAction>(
+                  key: Key('estimateItemMenu$index'),
+                  onSelected: onAction,
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: _EstimateItemAction.edit,
+                      child: ListTile(
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('編集'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: _EstimateItemAction.delete,
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline),
+                        title: Text('削除'),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             if (item.specification.isNotEmpty) ...[

@@ -70,6 +70,18 @@ class EstimateItem {
     return quantity * unitPrice;
   }
 
+  EstimateItemDraft toDraft() => EstimateItemDraft(
+    trade: trade,
+    name: name,
+    specification: specification,
+    quantity: quantity,
+    unit: unit,
+    unitPrice: unitPrice,
+    description: description,
+    calculationBasis: calculationBasis,
+    originalQuantity: originalQuantity,
+  );
+
   Map<String, Object?> toJson() => {
     'id': id,
     'createdAt': createdAt.toIso8601String(),

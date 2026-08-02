@@ -10,6 +10,9 @@ import 'package:instant_estimate/features/settings/data/app_settings_store.dart'
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
+import 'package:instant_estimate/features/estimate/presentation/estimate_items_screen.dart';
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
   FakeOnboardingPreferences({required this.hasSelected});
@@ -781,6 +784,57 @@ void main() {
     expect(find.text('試験明細'), findsOneWidget);
     expect(find.text('24 m²'), findsOneWidget);
     expect(find.text('合計  ¥ 2,400'), findsOneWidget);
+  });
+
+  testWidgets('見積明細を編集・削除して合計と端末保存を更新できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = FakeEstimateItemStore();
+    final estimateController = EstimateController(store: store);
+    await estimateController.load();
+    await estimateController.add(
+      const EstimateItemDraft(
+        name: '根切り',
+        quantity: 2,
+        unit: 'm³',
+        unitPrice: 4000,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: estimateController)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('estimateItemMenu0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('編集'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('estimateUnitPriceField')));
+    await tester.enterText(
+      find.byKey(const Key('estimateUnitPriceField')),
+      '5000',
+    );
+    await tester.ensureVisible(find.byKey(const Key('saveEstimateChanges')));
+    await tester.tap(find.byKey(const Key('saveEstimateChanges')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('合計  ¥ 10,000'), findsOneWidget);
+    expect(store.items.single.unitPrice, 5000);
+
+    await tester.tap(find.byKey(const Key('estimateItemMenu0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    expect(find.text('「根切り」を削除しますか？'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '削除'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('emptyEstimateItems')), findsOneWidget);
+    expect(find.text('合計  ¥ 0'), findsOneWidget);
+    expect(store.items, isEmpty);
   });
 
   testWidgets('履歴スペース長押しで全体画面と分数3形式を確認できる', (tester) async {

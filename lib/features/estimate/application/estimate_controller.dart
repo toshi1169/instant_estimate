@@ -49,4 +49,32 @@ class EstimateController extends ChangeNotifier {
     notifyListeners();
     return item;
   }
+
+  Future<EstimateItem> update(String id, EstimateItemDraft draft) async {
+    final index = _items.indexWhere((item) => item.id == id);
+    if (index < 0) throw StateError('Estimate item was not found.');
+    final current = _items[index];
+    final updatedItem = EstimateItem.fromDraft(
+      draft,
+      id: current.id,
+      createdAt: current.createdAt,
+    );
+    final updated = List<EstimateItem>.of(_items)..[index] = updatedItem;
+    await store?.save(updated);
+    _items
+      ..clear()
+      ..addAll(updated);
+    notifyListeners();
+    return updatedItem;
+  }
+
+  Future<void> delete(String id) async {
+    final updated = _items.where((item) => item.id != id).toList();
+    if (updated.length == _items.length) return;
+    await store?.save(updated);
+    _items
+      ..clear()
+      ..addAll(updated);
+    notifyListeners();
+  }
 }

@@ -13,9 +13,14 @@ class EstimateItemEditorResult {
 }
 
 class EstimateItemEditorScreen extends StatefulWidget {
-  const EstimateItemEditorScreen({required this.initialDraft, super.key});
+  const EstimateItemEditorScreen({
+    required this.initialDraft,
+    this.isEditing = false,
+    super.key,
+  });
 
   final EstimateItemDraft initialDraft;
+  final bool isEditing;
 
   @override
   State<EstimateItemEditorScreen> createState() =>
@@ -90,7 +95,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('見積明細へ追加')),
+      appBar: AppBar(title: Text(widget.isEditing ? '見積明細を編集' : '見積明細へ追加')),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -181,19 +186,28 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   ],
                 ),
               const SizedBox(height: 20),
-              FilledButton(
-                key: const Key('addEstimateAndContinue'),
-                onPressed: () =>
-                    _complete(EstimateItemEditorAction.continueCalculating),
-                child: const Text('追加して続ける'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                key: const Key('addEstimateAndOpen'),
-                onPressed: () =>
-                    _complete(EstimateItemEditorAction.openEstimate),
-                child: const Text('追加して見積を開く'),
-              ),
+              if (widget.isEditing)
+                FilledButton(
+                  key: const Key('saveEstimateChanges'),
+                  onPressed: () =>
+                      _complete(EstimateItemEditorAction.continueCalculating),
+                  child: const Text('変更を保存'),
+                )
+              else ...[
+                FilledButton(
+                  key: const Key('addEstimateAndContinue'),
+                  onPressed: () =>
+                      _complete(EstimateItemEditorAction.continueCalculating),
+                  child: const Text('追加して続ける'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  key: const Key('addEstimateAndOpen'),
+                  onPressed: () =>
+                      _complete(EstimateItemEditorAction.openEstimate),
+                  child: const Text('追加して見積を開く'),
+                ),
+              ],
             ],
           ),
         ),

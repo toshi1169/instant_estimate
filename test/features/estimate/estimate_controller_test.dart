@@ -40,5 +40,16 @@ void main() {
     expect(restored.items.single.name, '根切り');
     expect(restored.items.single.calculationBasis, '5 × 1 × 0.5 = 2.5');
     expect(restored.totalAmount, 10000);
+
+    await restored.update(
+      restored.items.single.id,
+      restored.items.single.toDraft().copyWith(unitPrice: 5000),
+    );
+    expect(restored.totalAmount, 12500);
+    expect(store.items.single.unitPrice, 5000);
+
+    await restored.delete(restored.items.single.id);
+    expect(restored.items, isEmpty);
+    expect(store.items, isEmpty);
   });
 }
