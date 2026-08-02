@@ -4,8 +4,10 @@ abstract final class AppColors {
   static const accent = Color(0xFF179447);
   static const fractionToggle = Color(0xFFF79304);
   static const lightBackground = Color(0xFFF7F8F7);
+  static const grayBackground = Color(0xFFD7DAD8);
   static const darkBackground = Color(0xFF000000);
   static const lightHistory = Color(0xFFF0F1F0);
+  static const grayHistory = Color(0xFFC9CDCA);
   static const darkHistory = Color(0xFF151716);
   static const lightKey = Color(0xFFFBFBFB);
   static const darkKey = Color(0xFF171918);

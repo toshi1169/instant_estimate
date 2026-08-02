@@ -8,6 +8,7 @@ import '../features/calculator/data/calculation_history_store.dart';
 import '../features/onboarding/data/onboarding_preferences.dart';
 import '../features/onboarding/presentation/occupation_selection_screen.dart';
 import '../features/settings/data/app_settings_store.dart';
+import '../features/settings/domain/app_settings.dart';
 
 class InstantEstimateApp extends StatefulWidget {
   const InstantEstimateApp({
@@ -26,37 +27,37 @@ class InstantEstimateApp extends StatefulWidget {
 }
 
 class _InstantEstimateAppState extends State<InstantEstimateApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  AppSettings _settings = const AppSettings();
 
   @override
   void initState() {
     super.initState();
-    unawaited(_loadThemeMode());
+    unawaited(_loadSettings());
   }
 
-  Future<void> _loadThemeMode() async {
+  Future<void> _loadSettings() async {
     final store = widget.appSettingsStore;
     if (store == null) return;
     try {
-      final themeMode = await store.loadThemeMode();
-      if (mounted) setState(() => _themeMode = themeMode);
+      final settings = await store.load();
+      if (mounted) setState(() => _settings = settings);
     } catch (_) {
-      // 保存値を読めない場合は、安全な端末設定のまま起動する。
+      // 保存値を読めない場合は、安全な初期設定のまま起動する。
     }
   }
 
-  void _changeThemeMode(ThemeMode themeMode) {
-    setState(() => _themeMode = themeMode);
+  void _changeSettings(AppSettings settings) {
+    setState(() => _settings = settings);
     final store = widget.appSettingsStore;
-    if (store != null) unawaited(_saveThemeMode(store, themeMode));
+    if (store != null) unawaited(_saveSettings(store, settings));
   }
 
-  Future<void> _saveThemeMode(
+  Future<void> _saveSettings(
     AppSettingsStore store,
-    ThemeMode themeMode,
+    AppSettings settings,
   ) async {
     try {
-      await store.saveThemeMode(themeMode);
+      await store.save(settings);
     } catch (_) {
       // 表示切替は維持し、次回起動時は保存済み設定へ戻す。
     }
@@ -67,14 +68,16 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
     return MaterialApp(
       title: 'インスタント見積',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: _settings.theme == AppThemeSelection.gray
+          ? AppTheme.gray
+          : AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: _themeMode,
+      themeMode: _settings.themeMode,
       home: _StartupGate(
         onboardingPreferences: widget.onboardingPreferences,
         calculationHistoryStore: widget.calculationHistoryStore,
-        themeMode: _themeMode,
-        onThemeModeChanged: _changeThemeMode,
+        settings: _settings,
+        onSettingsChanged: _changeSettings,
       ),
     );
   }
@@ -84,14 +87,14 @@ class _StartupGate extends StatefulWidget {
   const _StartupGate({
     required this.onboardingPreferences,
     required this.calculationHistoryStore,
-    required this.themeMode,
-    required this.onThemeModeChanged,
+    required this.settings,
+    required this.onSettingsChanged,
   });
 
   final OnboardingPreferences onboardingPreferences;
   final CalculationHistoryStore? calculationHistoryStore;
-  final ThemeMode themeMode;
-  final ValueChanged<ThemeMode> onThemeModeChanged;
+  final AppSettings settings;
+  final ValueChanged<AppSettings> onSettingsChanged;
 
   @override
   State<_StartupGate> createState() => _StartupGateState();
@@ -113,8 +116,8 @@ class _StartupGateState extends State<_StartupGate> {
         if (snapshot.data!) {
           return CalculatorScreen(
             historyStore: widget.calculationHistoryStore,
-            themeMode: widget.themeMode,
-            onThemeModeChanged: widget.onThemeModeChanged,
+            settings: widget.settings,
+            onSettingsChanged: widget.onSettingsChanged,
           );
         }
 
@@ -126,8 +129,8 @@ class _StartupGateState extends State<_StartupGate> {
               MaterialPageRoute<void>(
                 builder: (_) => CalculatorScreen(
                   historyStore: widget.calculationHistoryStore,
-                  themeMode: widget.themeMode,
-                  onThemeModeChanged: widget.onThemeModeChanged,
+                  settings: widget.settings,
+                  onSettingsChanged: widget.onSettingsChanged,
                 ),
               ),
             );

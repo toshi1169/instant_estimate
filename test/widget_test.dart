@@ -5,6 +5,7 @@ import 'package:instant_estimate/features/calculator/application/calculator_cont
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
+import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
   FakeOnboardingPreferences({required this.hasSelected});
@@ -23,16 +24,16 @@ class FakeOnboardingPreferences implements OnboardingPreferences {
 }
 
 class FakeAppSettingsStore implements AppSettingsStore {
-  FakeAppSettingsStore({this.themeMode = ThemeMode.system});
+  FakeAppSettingsStore({this.settings = const AppSettings()});
 
-  ThemeMode themeMode;
-
-  @override
-  Future<ThemeMode> loadThemeMode() async => themeMode;
+  AppSettings settings;
 
   @override
-  Future<void> saveThemeMode(ThemeMode themeMode) async {
-    this.themeMode = themeMode;
+  Future<AppSettings> load() async => settings;
+
+  @override
+  Future<void> save(AppSettings settings) async {
+    this.settings = settings;
   }
 }
 
@@ -43,7 +44,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final settingsStore = FakeAppSettingsStore(themeMode: ThemeMode.dark);
+    final settingsStore = FakeAppSettingsStore(
+      settings: const AppSettings(theme: AppThemeSelection.dark),
+    );
     await tester.pumpWidget(
       InstantEstimateApp(
         onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
@@ -60,14 +63,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('設定'), findsOneWidget);
-    expect(find.text('端末設定に合わせる'), findsOneWidget);
-    expect(find.text('ライト'), findsOneWidget);
-    expect(find.text('ダーク'), findsOneWidget);
+    expect(find.text('テーマ'), findsOneWidget);
+    expect(find.text('黒'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('themeModeLight')));
+    await tester.tap(find.byKey(const Key('themeSetting')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('白'));
     await tester.pumpAndSettle();
 
-    expect(settingsStore.themeMode, ThemeMode.light);
+    expect(settingsStore.settings.theme, AppThemeSelection.light);
     expect(
       tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
       ThemeMode.light,
@@ -125,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('設定'), findsOneWidget);
-    expect(find.text('端末設定に合わせる'), findsOneWidget);
+    expect(find.text('テーマ'), findsOneWidget);
   });
 
   testWidgets('メニューボタンの長押しで3列9行の関数一覧を開ける', (tester) async {
@@ -689,21 +693,21 @@ void main() {
 
     expect(find.byKey(const Key('historyCount')), findsOneWidget);
     expect(find.text('2件'), findsOneWidget);
-    expect(find.text('降順'), findsOneWidget);
+    expect(find.text('昇順'), findsOneWidget);
     expect(
       tester.widget<Text>(find.byKey(const Key('fullHistoryExpression0'))).data,
-      '4 + 5',
+      '1 + 2',
     );
 
     await tester.tap(find.byKey(const Key('historySortMenu')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('昇順'));
+    await tester.tap(find.text('降順'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('historySortLabel')), findsOneWidget);
     expect(
       tester.widget<Text>(find.byKey(const Key('fullHistoryExpression0'))).data,
-      '1 + 2',
+      '4 + 5',
     );
   });
 }

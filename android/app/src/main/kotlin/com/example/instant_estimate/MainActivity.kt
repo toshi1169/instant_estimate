@@ -61,6 +61,18 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             val preferences = getSharedPreferences(preferencesName, MODE_PRIVATE)
             when (call.method) {
+                "loadSettings" -> result.success(
+                    preferences.getString("appSettings", null),
+                )
+                "saveSettings" -> {
+                    val settings = call.argument<String>("settings")
+                    if (settings == null) {
+                        result.error("INVALID_ARGUMENT", "Settings are required.", null)
+                    } else {
+                        preferences.edit().putString("appSettings", settings).apply()
+                        result.success(null)
+                    }
+                }
                 "loadThemeMode" -> result.success(
                     preferences.getString("themeMode", "system"),
                 )

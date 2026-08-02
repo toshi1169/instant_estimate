@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/data/calculation_history_store.dart';
+import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 class FakeCalculationHistoryStore implements CalculationHistoryStore {
   FakeCalculationHistoryStore([List<StoredCalculationHistoryEntry>? entries])
@@ -574,6 +575,53 @@ void main() {
       controller.deleteHistoryEntry(controller.history.single);
       await pumpEventQueue();
 
+      expect(store.entries, isEmpty);
+    });
+
+    test('小数桁と丸め方法は表示だけへ適用する', () {
+      final controller = CalculatorController();
+      controller.updateDisplaySettings(
+        decimalPlaces: 2,
+        roundingMode: CalculatorRoundingMode.halfUp,
+      );
+      controller.pasteAtCaret('2/3');
+      controller.press('=');
+      expect(controller.result, '0.67');
+
+      controller.clear();
+      controller.updateDisplaySettings(
+        decimalPlaces: 2,
+        roundingMode: CalculatorRoundingMode.floor,
+      );
+      controller.pasteAtCaret('2/3');
+      controller.press('=');
+      expect(controller.result, '0.66');
+
+      controller.clear();
+      controller.updateDisplaySettings(
+        decimalPlaces: 2,
+        roundingMode: CalculatorRoundingMode.ceiling,
+      );
+      controller.pasteAtCaret('1/3');
+      controller.press('=');
+      expect(controller.result, '0.34');
+    });
+
+    test('履歴をすべて削除して端末保存へ反映する', () async {
+      final store = FakeCalculationHistoryStore([
+        StoredCalculationHistoryEntry(
+          expression: '1 + 2',
+          result: '3',
+          decimalResult: '3',
+          createdAt: DateTime(2026, 8, 2),
+        ),
+      ]);
+      final controller = CalculatorController(historyStore: store);
+      await controller.loadHistory();
+
+      await controller.clearHistory();
+
+      expect(controller.history, isEmpty);
       expect(store.entries, isEmpty);
     });
   });

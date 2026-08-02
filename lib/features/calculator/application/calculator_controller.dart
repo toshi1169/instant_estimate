@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
 import '../data/calculation_history_store.dart';
 import '../domain/calculation_engine.dart';
+import '../../settings/domain/app_settings.dart';
 
 enum CalculatorState { input, result, error }
 
@@ -90,6 +92,8 @@ class CalculatorController extends ChangeNotifier {
   CalculatorController({
     this.historyStore,
     this._engine = const CalculationEngine(),
+    this._decimalPlaces = 12,
+    this._roundingMode = CalculatorRoundingMode.halfUp,
   });
 
   static const int fractionDigitLimit = 10;
@@ -101,6 +105,8 @@ class CalculatorController extends ChangeNotifier {
   Future<void> _pendingHistorySave = Future.value();
   bool _historyLoaded = false;
   bool _historyLoadComplete = false;
+  int _decimalPlaces;
+  CalculatorRoundingMode _roundingMode;
 
   String _expression = '';
   String _result = '0';
@@ -132,6 +138,20 @@ class CalculatorController extends ChangeNotifier {
   int get caretPosition => _caretPosition;
   bool get isEditingFraction => _activeFractionMarker != null;
   List<CalculationHistoryEntry> get history => List.unmodifiable(_history);
+
+  void updateDisplaySettings({
+    required int decimalPlaces,
+    required CalculatorRoundingMode roundingMode,
+  }) {
+    _decimalPlaces = decimalPlaces.clamp(1, 12);
+    _roundingMode = roundingMode;
+    if (_state != CalculatorState.error && _rawResult.isNotEmpty) {
+      final value = double.tryParse(_rawResult);
+      if (value != null && value.isFinite) _result = _formatNumber(value);
+    }
+    notifyListeners();
+  }
+
   String get clipboardText {
     if (_expression.isEmpty) return _result;
     if (_state == CalculatorState.result) {
@@ -432,7 +452,7 @@ class CalculatorController extends ChangeNotifier {
 
     try {
       final value = _engine.evaluate(_expressionForCalculation());
-      _rawResult = _plainNumber(value);
+      _rawResult = _rawNumber(value);
       _result = _formatNumber(value);
       _state = CalculatorState.result;
       _isPreviewResult = false;
@@ -740,6 +760,13 @@ class CalculatorController extends ChangeNotifier {
       _saveHistory();
       notifyListeners();
     }
+  }
+
+  Future<void> clearHistory() async {
+    _history.clear();
+    _saveHistory();
+    await _pendingHistorySave;
+    notifyListeners();
   }
 
   String _normalizeHistoryExpression(String value) {
@@ -1188,7 +1215,7 @@ class CalculatorController extends ChangeNotifier {
     try {
       final value = _engine.evaluate(_expressionForCalculation());
       _result = _formatNumber(value);
-      _rawResult = _plainNumber(value);
+      _rawResult = _rawNumber(value);
       _isPreviewResult = true;
     } catch (_) {
       _result = '0';
@@ -1197,7 +1224,7 @@ class CalculatorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _plainNumber(double value) {
+  String _rawNumber(double value) {
     if (value == value.truncateToDouble()) return value.toInt().toString();
     return value
         .toStringAsFixed(12)
@@ -1209,7 +1236,7 @@ class CalculatorController extends ChangeNotifier {
     if (value.abs() > standardNumberDisplayLimit) {
       return _formatScientificNumber(value);
     }
-    final plain = _plainNumber(value);
+    final plain = _roundedPlainNumber(value);
     final parts = plain.split('.');
     final sign = parts.first.startsWith('-') ? '-' : '';
     final digits = parts.first.replaceFirst('-', '');
@@ -1218,6 +1245,22 @@ class CalculatorController extends ChangeNotifier {
       (_) => ',',
     );
     return ['$sign$grouped', if (parts.length == 2) parts[1]].join('.');
+  }
+
+  String _roundedPlainNumber(double value) {
+    final factor = math.pow(10, _decimalPlaces).toDouble();
+    final scaled = value * factor;
+    final rounded = switch (_roundingMode) {
+      CalculatorRoundingMode.halfUp => scaled.roundToDouble(),
+      CalculatorRoundingMode.ceiling => scaled.ceilToDouble(),
+      CalculatorRoundingMode.floor => scaled.floorToDouble(),
+    };
+    final result = rounded / factor;
+    if (result == result.truncateToDouble()) return result.toInt().toString();
+    return result
+        .toStringAsFixed(_decimalPlaces)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
   }
 
   String _formatScientificNumber(double value) {

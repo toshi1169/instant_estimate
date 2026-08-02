@@ -77,6 +77,24 @@ import UIKit
     )
     settingsChannel.setMethodCallHandler { call, result in
       switch call.method {
+      case "loadSettings":
+        result(UserDefaults.standard.string(forKey: "appSettings"))
+      case "saveSettings":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let settings = arguments["settings"] as? String
+        else {
+          result(
+            FlutterError(
+              code: "INVALID_ARGUMENT",
+              message: "Settings are required.",
+              details: nil
+            )
+          )
+          return
+        }
+        UserDefaults.standard.set(settings, forKey: "appSettings")
+        result(nil)
       case "loadThemeMode":
         result(UserDefaults.standard.string(forKey: "themeMode") ?? "system")
       case "saveThemeMode":

@@ -4,7 +4,23 @@ import 'app_colors.dart';
 
 abstract final class AppTheme {
   static ThemeData get light => _build(Brightness.light);
+  static ThemeData get gray => _buildGray();
   static ThemeData get dark => _build(Brightness.dark);
+
+  static ThemeData _buildGray() {
+    final theme = _build(Brightness.light);
+    return theme.copyWith(
+      colorScheme: theme.colorScheme.copyWith(
+        surface: AppColors.grayBackground,
+        surfaceContainer: AppColors.grayHistory,
+      ),
+      scaffoldBackgroundColor: AppColors.grayBackground,
+      cardTheme: theme.cardTheme.copyWith(color: AppColors.grayHistory),
+      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+        fillColor: const Color(0xFFE5E7E6),
+      ),
+    );
+  }
 
   static ThemeData _build(Brightness brightness) {
     final isDark = brightness == Brightness.dark;

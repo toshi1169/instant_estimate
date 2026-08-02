@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
 import '../../settings/presentation/settings_screen.dart';
+import '../../settings/domain/app_settings.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
 import 'function_list_dialog.dart';
@@ -16,15 +17,15 @@ class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({
     this.controller,
     this.historyStore,
-    this.themeMode = ThemeMode.system,
-    this.onThemeModeChanged,
+    this.settings = const AppSettings(),
+    this.onSettingsChanged,
     super.key,
   });
 
   final CalculatorController? controller;
   final CalculationHistoryStore? historyStore;
-  final ThemeMode themeMode;
-  final ValueChanged<ThemeMode>? onThemeModeChanged;
+  final AppSettings settings;
+  final ValueChanged<AppSettings>? onSettingsChanged;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -67,7 +68,21 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   @override
   void initState() {
     super.initState();
+    _applyDisplaySettings();
     unawaited(_controller.loadHistory());
+  }
+
+  @override
+  void didUpdateWidget(CalculatorScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.settings != widget.settings) _applyDisplaySettings();
+  }
+
+  void _applyDisplaySettings() {
+    _controller.updateDisplaySettings(
+      decimalPlaces: widget.settings.decimalPlaces,
+      roundingMode: widget.settings.roundingMode,
+    );
   }
 
   @override
@@ -93,8 +108,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SettingsScreen(
-          themeMode: widget.themeMode,
-          onThemeModeChanged: widget.onThemeModeChanged ?? (themeMode) {},
+          settings: widget.settings,
+          onSettingsChanged: widget.onSettingsChanged ?? (_) {},
+          onClearHistory: _controller.clearHistory,
         ),
       ),
     );
@@ -221,8 +237,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         }
         _showMessage('計算式を編集欄へ戻しました');
       case _HistoryMenuAction.delete:
-        _controller.deleteHistoryEntry(entry);
-        _showMessage('履歴を削除しました');
+        if (await _confirmHistoryDeletion()) {
+          _controller.deleteHistoryEntry(entry);
+          _showMessage('履歴を削除しました');
+        }
       case _HistoryMenuAction.star:
         _showMessage('スターはアルティメット版で利用できます');
       case _HistoryMenuAction.sendToEstimate:
@@ -233,11 +251,37 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
   }
 
+  Future<bool> _confirmHistoryDeletion() async {
+    if (!widget.settings.confirmHistoryDeletion) return true;
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('履歴を削除'),
+            content: const Text('この計算履歴を削除しますか？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('削除'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   Future<void> _openFullHistory() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => CalculatorHistoryScreen(
           controller: _controller,
+          initialSortOrder: widget.settings.historySortOrder,
+          onSortOrderChanged: (value) => widget.onSettingsChanged?.call(
+            widget.settings.copyWith(historySortOrder: value),
+          ),
           onMenuPressed: (entry) =>
               _showHistoryMenu(entry, returnToCalculatorOnEdit: true),
         ),
