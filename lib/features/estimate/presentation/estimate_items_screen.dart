@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../application/estimate_controller.dart';
 import '../domain/estimate_item.dart';
+import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_item_group.dart';
 import '../domain/estimate_info.dart';
 import 'estimate_info_editor_screen.dart';
@@ -30,6 +31,12 @@ class EstimateItemsScreen extends StatelessWidget {
             icon: const Icon(Icons.edit_note_outlined),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('addEstimateItemDirect'),
+        onPressed: () => _addItem(context),
+        icon: const Icon(Icons.add),
+        label: const Text('明細を追加'),
       ),
       body: SafeArea(
         child: ListenableBuilder(
@@ -91,6 +98,33 @@ class EstimateItemsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _addItem(BuildContext context) async {
+    final result = await Navigator.of(context).push<EstimateItemEditorResult>(
+      MaterialPageRoute(
+        builder: (_) => EstimateItemEditorScreen(
+          initialDraft: const EstimateItemDraft(),
+          estimateTitle: controller.info.displayName,
+          showOpenEstimateAction: false,
+        ),
+      ),
+    );
+    if (result == null || !context.mounted) return;
+    try {
+      await controller.add(result.draft);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('見積明細へ追加しました')));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('見積明細を保存できませんでした')));
+      }
+    }
   }
 
   Future<void> _editInfo(BuildContext context) async {

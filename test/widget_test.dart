@@ -917,6 +917,52 @@ void main() {
     expect(find.text('合計  ¥ 11,500'), findsOneWidget);
   });
 
+  testWidgets('見積明細画面から明細を直接追加して工種小計へ反映できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('emptyEstimateItems')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('addEstimateItemDirect')));
+    await tester.pumpAndSettle();
+    expect(find.text('見積明細へ追加'), findsNWidgets(2));
+    expect(find.byKey(const Key('addEstimateAndOpen')), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('estimateTradeField')),
+      'コンクリート工事',
+    );
+    await tester.enterText(
+      find.byKey(const Key('estimateNameField')),
+      'コンクリート打設',
+    );
+    await tester.enterText(find.byKey(const Key('estimateQuantityField')), '3');
+    await tester.enterText(find.byKey(const Key('estimateUnitField')), 'm³');
+    await tester.ensureVisible(find.byKey(const Key('estimateUnitPriceField')));
+    await tester.enterText(
+      find.byKey(const Key('estimateUnitPriceField')),
+      '15000',
+    );
+    await tester.ensureVisible(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('コンクリート工事'), findsOneWidget);
+    expect(find.text('コンクリート打設'), findsOneWidget);
+    expect(find.text('合計  ¥ 45,000'), findsOneWidget);
+    expect(find.text('¥ 45,000'), findsNWidgets(2));
+    expect(store.items.single.name, 'コンクリート打設');
+  });
+
   testWidgets('見積基本情報を編集し明細を残したまま端末保存できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

@@ -16,12 +16,14 @@ class EstimateItemEditorScreen extends StatefulWidget {
   const EstimateItemEditorScreen({
     required this.initialDraft,
     this.isEditing = false,
+    this.showOpenEstimateAction = true,
     this.estimateTitle = '名称未設定の見積',
     super.key,
   });
 
   final EstimateItemDraft initialDraft;
   final bool isEditing;
+  final bool showOpenEstimateAction;
   final String estimateTitle;
 
   @override
@@ -200,15 +202,19 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   key: const Key('addEstimateAndContinue'),
                   onPressed: () =>
                       _complete(EstimateItemEditorAction.continueCalculating),
-                  child: const Text('追加して続ける'),
+                  child: Text(
+                    widget.showOpenEstimateAction ? '追加して続ける' : '見積明細へ追加',
+                  ),
                 ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  key: const Key('addEstimateAndOpen'),
-                  onPressed: () =>
-                      _complete(EstimateItemEditorAction.openEstimate),
-                  child: const Text('追加して見積を開く'),
-                ),
+                if (widget.showOpenEstimateAction) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    key: const Key('addEstimateAndOpen'),
+                    onPressed: () =>
+                        _complete(EstimateItemEditorAction.openEstimate),
+                    child: const Text('追加して見積を開く'),
+                  ),
+                ],
               ],
             ],
           ),
