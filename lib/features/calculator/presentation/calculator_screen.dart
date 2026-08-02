@@ -12,6 +12,9 @@ import '../../settings/presentation/settings_screen.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../estimate/presentation/estimate_item_editor_screen.dart';
+import '../../estimate/application/estimate_controller.dart';
+import '../../estimate/data/estimate_item_store.dart';
+import '../../estimate/presentation/estimate_items_screen.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
 import 'function_list_dialog.dart';
@@ -22,6 +25,8 @@ class CalculatorScreen extends StatefulWidget {
     this.historyStore,
     this.settings = const AppSettings(),
     this.onSettingsChanged,
+    this.estimateItemStore,
+    this.estimateController,
     super.key,
   });
 
@@ -29,6 +34,8 @@ class CalculatorScreen extends StatefulWidget {
   final CalculationHistoryStore? historyStore;
   final AppSettings settings;
   final ValueChanged<AppSettings>? onSettingsChanged;
+  final EstimateItemStore? estimateItemStore;
+  final EstimateController? estimateController;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -67,12 +74,17 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       widget.controller ??
       CalculatorController(historyStore: widget.historyStore);
   late final bool _ownsController = widget.controller == null;
+  late final EstimateController _estimateController =
+      widget.estimateController ??
+      EstimateController(store: widget.estimateItemStore);
+  late final bool _ownsEstimateController = widget.estimateController == null;
 
   @override
   void initState() {
     super.initState();
     _applyDisplaySettings();
     unawaited(_controller.loadHistory());
+    unawaited(_loadEstimateItems());
   }
 
   @override
@@ -92,7 +104,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   @override
   void dispose() {
     if (_ownsController) _controller.dispose();
+    if (_ownsEstimateController) _estimateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadEstimateItems() async {
+    try {
+      await _estimateController.load();
+    } catch (_) {
+      if (mounted) _showMessage('見積明細を読み込めませんでした');
+    }
   }
 
   void _pressKey(_CalculatorKey key) {
@@ -152,6 +173,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       unawaited(_openSettings());
       return;
     }
+    if (destination == CalculatorSideMenuDestination.instantEstimate) {
+      unawaited(_openEstimateItems());
+      return;
+    }
 
     final label = switch (destination) {
       CalculatorSideMenuDestination.settings => '設定',
@@ -162,6 +187,21 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       CalculatorSideMenuDestination.instantEstimate => 'インスタント見積',
     };
     _showMessage('$labelは今後の工程で追加します');
+  }
+
+  Future<void> _openEstimateItems() async {
+    try {
+      await _estimateController.load();
+    } catch (_) {
+      if (mounted) _showMessage('見積明細を読み込めませんでした');
+      return;
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => EstimateItemsScreen(controller: _estimateController),
+      ),
+    );
   }
 
   Future<void> _showCalculationMenu() async {
@@ -246,12 +286,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           ),
         );
     if (editorResult == null || !mounted) return;
-
-    _showMessage(
-      editorResult.action == EstimateItemEditorAction.openEstimate
-          ? '入力内容を確認しました。見積一覧への保存は次工程で接続します'
-          : '入力内容を確認しました。元の計算画面へ戻りました',
-    );
+    try {
+      await _estimateController.add(editorResult.draft);
+    } catch (_) {
+      if (mounted) _showMessage('見積明細を保存できませんでした');
+      return;
+    }
+    if (!mounted) return;
+    if (editorResult.action == EstimateItemEditorAction.openEstimate) {
+      await _openEstimateItems();
+      return;
+    }
+    _showMessage('見積明細へ追加しました（${_estimateController.items.length}件）');
   }
 
   Future<void> _showHistoryMenu(

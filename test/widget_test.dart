@@ -8,6 +8,8 @@ import 'package:instant_estimate/features/calculator/presentation/calculator_scr
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
+import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
   FakeOnboardingPreferences({required this.hasSelected});
@@ -36,6 +38,18 @@ class FakeAppSettingsStore implements AppSettingsStore {
   @override
   Future<void> save(AppSettings settings) async {
     this.settings = settings;
+  }
+}
+
+class FakeEstimateItemStore implements EstimateItemStore {
+  List<EstimateItem> items = [];
+
+  @override
+  Future<List<EstimateItem>> load() async => List.of(items);
+
+  @override
+  Future<void> save(List<EstimateItem> items) async {
+    this.items = List.of(items);
   }
 }
 
@@ -718,6 +732,55 @@ void main() {
     );
     await tester.pump();
     expect(find.text('¥ 2,400'), findsOneWidget);
+  });
+
+  testWidgets('見積明細を保存して一覧と合計を表示できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final estimateStore = FakeEstimateItemStore();
+    final controller = CalculatorController();
+    controller.pasteAtCaret('12×2');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalculatorScreen(
+          controller: controller,
+          estimateItemStore: estimateStore,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('見積へ送る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateDestinationSelector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('数量').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateTransferNext')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('estimateNameField')), '試験明細');
+    await tester.enterText(find.byKey(const Key('estimateUnitField')), 'm²');
+    await tester.ensureVisible(find.byKey(const Key('estimateUnitPriceField')));
+    await tester.enterText(
+      find.byKey(const Key('estimateUnitPriceField')),
+      '100',
+    );
+    await tester.ensureVisible(find.byKey(const Key('addEstimateAndOpen')));
+    await tester.tap(find.byKey(const Key('addEstimateAndOpen')));
+    await tester.pumpAndSettle();
+
+    expect(estimateStore.items, hasLength(1));
+    expect(find.byKey(const Key('estimateItemsList')), findsOneWidget);
+    expect(find.text('試験明細'), findsOneWidget);
+    expect(find.text('24 m²'), findsOneWidget);
+    expect(find.text('合計  ¥ 2,400'), findsOneWidget);
   });
 
   testWidgets('履歴スペース長押しで全体画面と分数3形式を確認できる', (tester) async {

@@ -117,5 +117,34 @@ import UIKit
         result(FlutterMethodNotImplemented)
       }
     }
+
+    let estimateItemsChannel = FlutterMethodChannel(
+      name: "jp.instant_estimate/estimate_items",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    estimateItemsChannel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "loadEstimateItems":
+        result(UserDefaults.standard.string(forKey: "estimateItems"))
+      case "saveEstimateItems":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let items = arguments["items"] as? String
+        else {
+          result(
+            FlutterError(
+              code: "INVALID_ARGUMENT",
+              message: "Estimate items are required.",
+              details: nil
+            )
+          )
+          return
+        }
+        UserDefaults.standard.set(items, forKey: "estimateItems")
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }

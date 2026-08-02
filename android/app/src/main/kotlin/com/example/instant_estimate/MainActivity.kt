@@ -8,6 +8,7 @@ class MainActivity : FlutterActivity() {
     private val channelName = "jp.instant_estimate/onboarding_preferences"
     private val historyChannelName = "jp.instant_estimate/calculator_history"
     private val settingsChannelName = "jp.instant_estimate/app_settings"
+    private val estimateItemsChannelName = "jp.instant_estimate/estimate_items"
     private val preferencesName = "instant_estimate_preferences"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -82,6 +83,28 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGUMENT", "Theme mode is required.", null)
                     } else {
                         preferences.edit().putString("themeMode", themeMode).apply()
+                        result.success(null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            estimateItemsChannelName,
+        ).setMethodCallHandler { call, result ->
+            val preferences = getSharedPreferences(preferencesName, MODE_PRIVATE)
+            when (call.method) {
+                "loadEstimateItems" -> result.success(
+                    preferences.getString("estimateItems", null),
+                )
+                "saveEstimateItems" -> {
+                    val items = call.argument<String>("items")
+                    if (items == null) {
+                        result.error("INVALID_ARGUMENT", "Estimate items are required.", null)
+                    } else {
+                        preferences.edit().putString("estimateItems", items).apply()
                         result.success(null)
                     }
                 }
