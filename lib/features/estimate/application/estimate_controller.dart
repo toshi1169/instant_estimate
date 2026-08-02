@@ -153,6 +153,32 @@ class EstimateController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteEstimate(String id) async {
+    final currentWorkspace = _workspaceWithActive();
+    if (currentWorkspace.estimates.length <= 1) {
+      throw StateError('The final estimate cannot be deleted.');
+    }
+    final remaining = currentWorkspace.estimates
+        .where((estimate) => estimate.info.id != id)
+        .toList(growable: false);
+    if (remaining.length == currentWorkspace.estimates.length) return;
+    final activeId = id == _info.id ? remaining.first.info.id : _info.id;
+    final active = remaining.firstWhere(
+      (estimate) => estimate.info.id == activeId,
+    );
+    final workspace = EstimateWorkspace(
+      activeEstimateId: activeId,
+      estimates: remaining,
+    );
+    await store?.save(workspace);
+    _replaceEstimates(remaining);
+    _info = active.info;
+    _items
+      ..clear()
+      ..addAll(active.items);
+    notifyListeners();
+  }
+
   Future<void> _save(List<EstimateItem> items) {
     return store?.save(_workspaceWithActive(items: items)) ??
         Future<void>.value();

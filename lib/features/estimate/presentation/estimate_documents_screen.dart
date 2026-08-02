@@ -6,6 +6,8 @@ import '../domain/estimate_info.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_items_screen.dart';
 
+enum _EstimateDocumentAction { delete }
+
 class EstimateDocumentsScreen extends StatelessWidget {
   const EstimateDocumentsScreen({required this.controller, super.key});
 
@@ -48,6 +50,8 @@ class EstimateDocumentsScreen extends StatelessWidget {
                         index: index,
                         isActive: estimate.info.id == controller.info.id,
                         onTap: () => _openEstimate(context, estimate),
+                        onAction: (action) =>
+                            _handleAction(context, estimate, action),
                       );
                     },
                   ),
@@ -64,6 +68,56 @@ class EstimateDocumentsScreen extends StatelessWidget {
         label: const Text('新しい見積'),
       ),
     );
+  }
+
+  Future<void> _handleAction(
+    BuildContext context,
+    EstimateDocument estimate,
+    _EstimateDocumentAction action,
+  ) async {
+    switch (action) {
+      case _EstimateDocumentAction.delete:
+        if (controller.estimates.length <= 1) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('最後の見積は削除できません')));
+          return;
+        }
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('見積を削除'),
+            content: Text(
+              '「${estimate.info.displayName}」を削除しますか？\n含まれる明細もすべて削除されます。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('キャンセル'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('削除'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !context.mounted) return;
+        try {
+          await controller.deleteEstimate(estimate.info.id);
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積を削除しました')));
+          }
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積を削除できませんでした')));
+          }
+        }
+    }
   }
 
   Future<void> _createEstimate(BuildContext context) async {
@@ -128,12 +182,14 @@ class _EstimateDocumentCard extends StatelessWidget {
     required this.index,
     required this.isActive,
     required this.onTap,
+    required this.onAction,
   });
 
   final EstimateDocument estimate;
   final int index;
   final bool isActive;
   final VoidCallback onTap;
+  final ValueChanged<_EstimateDocumentAction> onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +219,26 @@ class _EstimateDocumentCard extends StatelessWidget {
             ].join('　'),
           ),
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PopupMenuButton<_EstimateDocumentAction>(
+              key: Key('estimateDocumentMenu$index'),
+              tooltip: '見積メニュー',
+              onSelected: onAction,
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: _EstimateDocumentAction.delete,
+                  child: ListTile(
+                    leading: Icon(Icons.delete_outline),
+                    title: Text('削除'),
+                  ),
+                ),
+              ],
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
       ),
     );
   }

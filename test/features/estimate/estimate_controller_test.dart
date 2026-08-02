@@ -125,6 +125,16 @@ void main() {
     expect(restored.estimates, hasLength(2));
     await restored.selectEstimate(secondInfo.id);
     expect(restored.items.single.name, '2件目の明細');
+
+    await restored.deleteEstimate(secondInfo.id);
+    expect(restored.estimates, hasLength(1));
+    expect(restored.info.estimateName, '1件目の見積');
+    expect(restored.items.single.name, '1件目の明細');
+    expect(store.workspace.estimates, hasLength(1));
+    await expectLater(
+      restored.deleteEstimate(restored.info.id),
+      throwsStateError,
+    );
   });
 
   test('無料版では見積を5件まで作成できる', () async {

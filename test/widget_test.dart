@@ -951,6 +951,18 @@ void main() {
     expect(find.text('1件目の見積'), findsOneWidget);
     expect(controller.info.estimateName, '1件目の見積');
     expect(store.workspace.activeEstimateId, controller.info.id);
+
+    Navigator.of(tester.element(find.byType(EstimateItemsScreen))).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateDocumentMenu1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('削除'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('含まれる明細もすべて削除されます'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '削除'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 / 5件'), findsOneWidget);
+    expect(controller.estimates, hasLength(1));
   });
 
   testWidgets('履歴スペース長押しで全体画面と分数3形式を確認できる', (tester) async {
