@@ -13,8 +13,10 @@ import 'package:instant_estimate/features/estimate/domain/estimate_document.dart
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_workspace.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_items_screen.dart';
+import 'package:instant_estimate/features/estimate/presentation/estimate_documents_screen.dart';
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
   FakeOnboardingPreferences({required this.hasSelected});
@@ -47,21 +49,36 @@ class FakeAppSettingsStore implements AppSettingsStore {
 }
 
 class FakeEstimateItemStore implements EstimateItemStore {
-  EstimateDocument document = EstimateDocument(
-    info: EstimateInfo.initial(DateTime(2026, 8, 2)),
-    items: const [],
+  late EstimateWorkspace workspace;
+
+  FakeEstimateItemStore() {
+    final document = EstimateDocument(
+      info: EstimateInfo.initial(DateTime(2026, 8, 2)),
+      items: const [],
+    );
+    workspace = EstimateWorkspace(
+      activeEstimateId: document.info.id,
+      estimates: [document],
+    );
+  }
+
+  EstimateDocument get document => workspace.estimates.firstWhere(
+    (estimate) => estimate.info.id == workspace.activeEstimateId,
   );
 
   List<EstimateItem> get items => document.items;
 
   @override
-  Future<EstimateDocument> load() async => document;
+  Future<EstimateWorkspace> load() async => workspace;
 
   @override
-  Future<void> save(EstimateDocument document) async {
-    this.document = EstimateDocument(
-      info: document.info,
-      items: List.of(document.items),
+  Future<void> save(EstimateWorkspace workspace) async {
+    this.workspace = EstimateWorkspace(
+      activeEstimateId: workspace.activeEstimateId,
+      estimates: [
+        for (final document in workspace.estimates)
+          EstimateDocument(info: document.info, items: List.of(document.items)),
+      ],
     );
   }
 }
@@ -892,6 +909,48 @@ void main() {
     expect(store.document.info.clientName, '○○様');
     expect(store.document.info.estimateNumber, '2026-001');
     expect(store.items.single.name, '根切り');
+  });
+
+  testWidgets('見積一覧から新しい見積を作成して追加先を切り替えられる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await controller.updateInfo(
+      controller.info.copyWith(estimateName: '1件目の見積'),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateDocumentsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 / 5件'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('createEstimateDocument')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('estimateInfoNameField')),
+      '2件目の見積',
+    );
+    await tester.ensureVisible(find.byKey(const Key('saveEstimateInfo')));
+    await tester.tap(find.byKey(const Key('saveEstimateInfo')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2件目の見積'), findsOneWidget);
+    expect(controller.estimates, hasLength(2));
+    expect(controller.info.estimateName, '2件目の見積');
+    Navigator.of(tester.element(find.byType(EstimateItemsScreen))).pop();
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 5件'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('estimateDocument0')));
+    await tester.pumpAndSettle();
+    expect(find.text('1件目の見積'), findsOneWidget);
+    expect(controller.info.estimateName, '1件目の見積');
+    expect(store.workspace.activeEstimateId, controller.info.id);
   });
 
   testWidgets('履歴スペース長押しで全体画面と分数3形式を確認できる', (tester) async {

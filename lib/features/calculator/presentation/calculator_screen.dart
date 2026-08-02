@@ -15,6 +15,7 @@ import '../../estimate/presentation/estimate_item_editor_screen.dart';
 import '../../estimate/application/estimate_controller.dart';
 import '../../estimate/data/estimate_item_store.dart';
 import '../../estimate/presentation/estimate_items_screen.dart';
+import '../../estimate/presentation/estimate_documents_screen.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
 import 'function_list_dialog.dart';
@@ -174,7 +175,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       return;
     }
     if (destination == CalculatorSideMenuDestination.instantEstimate) {
-      unawaited(_openEstimateItems());
+      unawaited(_openEstimateDocuments());
       return;
     }
 
@@ -189,13 +190,23 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     _showMessage('$labelは今後の工程で追加します');
   }
 
-  Future<void> _openEstimateItems() async {
+  Future<void> _openEstimateDocuments() async {
     try {
       await _estimateController.load();
     } catch (_) {
       if (mounted) _showMessage('見積明細を読み込めませんでした');
       return;
     }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            EstimateDocumentsScreen(controller: _estimateController),
+      ),
+    );
+  }
+
+  Future<void> _openActiveEstimate() async {
     if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -297,7 +308,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
     if (!mounted) return;
     if (editorResult.action == EstimateItemEditorAction.openEstimate) {
-      await _openEstimateItems();
+      await _openActiveEstimate();
       return;
     }
     _showMessage('見積明細へ追加しました（${_estimateController.items.length}件）');

@@ -5,23 +5,39 @@ import 'package:instant_estimate/features/estimate/domain/estimate_document.dart
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_workspace.dart';
 
 class _MemoryEstimateItemStore implements EstimateItemStore {
-  EstimateDocument document = EstimateDocument(
-    info: EstimateInfo.initial(DateTime(2026, 8, 2)),
-    items: const [],
+  late EstimateWorkspace workspace;
+
+  _MemoryEstimateItemStore() {
+    final document = EstimateDocument(
+      info: EstimateInfo.initial(DateTime(2026, 8, 2)),
+      items: const [],
+    );
+    workspace = EstimateWorkspace(
+      activeEstimateId: document.info.id,
+      estimates: [document],
+    );
+  }
+
+  EstimateDocument get document => workspace.estimates.firstWhere(
+    (estimate) => estimate.info.id == workspace.activeEstimateId,
   );
 
   List<EstimateItem> get items => document.items;
 
   @override
-  Future<EstimateDocument> load() async => document;
+  Future<EstimateWorkspace> load() async => workspace;
 
   @override
-  Future<void> save(EstimateDocument document) async {
-    this.document = EstimateDocument(
-      info: document.info,
-      items: List.of(document.items),
+  Future<void> save(EstimateWorkspace workspace) async {
+    this.workspace = EstimateWorkspace(
+      activeEstimateId: workspace.activeEstimateId,
+      estimates: [
+        for (final document in workspace.estimates)
+          EstimateDocument(info: document.info, items: List.of(document.items)),
+      ],
     );
   }
 }
@@ -78,5 +94,51 @@ void main() {
     expect(infoRestored.items, isEmpty);
     expect(store.items, isEmpty);
     expect(store.document.info.estimateName, '○○邸 外構工事');
+  });
+
+  test('複数の見積を作成して選択中の見積と明細を復元できる', () async {
+    final store = _MemoryEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await controller.updateInfo(
+      controller.info.copyWith(estimateName: '1件目の見積'),
+    );
+    await controller.add(const EstimateItemDraft(name: '1件目の明細'));
+
+    final secondInfo = EstimateInfo.initial(
+      DateTime(2026, 8, 3),
+    ).copyWith(estimateName: '2件目の見積');
+    await controller.createEstimate(secondInfo);
+    expect(controller.estimates, hasLength(2));
+    expect(controller.info.estimateName, '2件目の見積');
+    expect(controller.items, isEmpty);
+    await controller.add(const EstimateItemDraft(name: '2件目の明細'));
+
+    final firstId = controller.estimates.first.info.id;
+    await controller.selectEstimate(firstId);
+    expect(controller.info.estimateName, '1件目の見積');
+    expect(controller.items.single.name, '1件目の明細');
+
+    final restored = EstimateController(store: store);
+    await restored.load();
+    expect(restored.info.estimateName, '1件目の見積');
+    expect(restored.estimates, hasLength(2));
+    await restored.selectEstimate(secondInfo.id);
+    expect(restored.items.single.name, '2件目の明細');
+  });
+
+  test('無料版では見積を5件まで作成できる', () async {
+    final controller = EstimateController();
+    await controller.load();
+    for (var day = 3; day <= 6; day++) {
+      await controller.createEstimate(
+        EstimateInfo.initial(DateTime(2026, 8, day)),
+      );
+    }
+    expect(controller.estimates, hasLength(5));
+    await expectLater(
+      controller.createEstimate(EstimateInfo.initial(DateTime(2026, 8, 7))),
+      throwsStateError,
+    );
   });
 }
