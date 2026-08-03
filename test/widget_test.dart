@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
 import 'package:instant_estimate/core/domain/angle_unit.dart';
@@ -915,6 +916,53 @@ void main() {
     expect(find.text('¥ 11,000'), findsOneWidget);
     expect(find.text('¥ 500'), findsNWidgets(2));
     expect(find.text('合計  ¥ 11,500'), findsOneWidget);
+  });
+
+  testWidgets('見積明細をExcel貼り付け用の表としてコピーできる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    String? copiedText;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copiedText =
+              (call.arguments as Map<Object?, Object?>)['text'] as String?;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    final controller = EstimateController();
+    await controller.load();
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        quantity: 2,
+        unit: 'm³',
+        unitPrice: 4000,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('copyEstimateTable')));
+    await tester.pumpAndSettle();
+
+    expect(copiedText, contains('工種\t名称\t仕様\t数量\t単位\t単価\t金額\t摘要'));
+    expect(copiedText, contains('土工事\t根切り\t\t2\tm³\t4000\t8000\t'));
+    expect(find.text('見積明細をコピーしました（1件）'), findsOneWidget);
   });
 
   testWidgets('見積明細画面から明細を直接追加して工種小計へ反映できる', (tester) async {

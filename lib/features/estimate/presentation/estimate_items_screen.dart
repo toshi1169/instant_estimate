@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../application/estimate_controller.dart';
+import '../application/estimate_table_export.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_item_group.dart';
@@ -24,6 +26,12 @@ class EstimateItemsScreen extends StatelessWidget {
           builder: (_, _) => Text(controller.info.displayName),
         ),
         actions: [
+          IconButton(
+            key: const Key('copyEstimateTable'),
+            tooltip: 'Excel用に表をコピー',
+            onPressed: () => _copyTable(context),
+            icon: const Icon(Icons.table_view_outlined),
+          ),
           IconButton(
             key: const Key('editEstimateInfo'),
             tooltip: '見積基本情報',
@@ -98,6 +106,31 @@ class EstimateItemsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _copyTable(BuildContext context) async {
+    if (controller.items.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('コピーする明細がありません')));
+      return;
+    }
+    try {
+      await Clipboard.setData(
+        ClipboardData(text: buildEstimateTableText(controller.items)),
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('見積明細をコピーしました（${controller.items.length}件）')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('見積明細をコピーできませんでした')));
+      }
+    }
   }
 
   Future<void> _addItem(BuildContext context) async {
