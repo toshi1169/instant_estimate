@@ -963,6 +963,72 @@ void main() {
     expect(store.items.single.name, 'コンクリート打設');
   });
 
+  testWidgets('既存の見積明細を複製して編集し同じ工種の小計へ追加できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        specification: 'W1.0 × H0.5',
+        quantity: 2,
+        unit: 'm³',
+        unitPrice: 4000,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('estimateItemMenu0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('複製'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('見積明細へ追加'), findsNWidgets(2));
+    expect(find.byKey(const Key('saveEstimateChanges')), findsNothing);
+    expect(
+      tester
+          .widget<TextFormField>(find.byKey(const Key('estimateTradeField')))
+          .controller
+          ?.text,
+      '土工事',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('estimateUnitPriceField')),
+          )
+          .controller
+          ?.text,
+      '4000',
+    );
+    await tester.enterText(
+      find.byKey(const Key('estimateNameField')),
+      '根切り 追加分',
+    );
+    await tester.enterText(find.byKey(const Key('estimateQuantityField')), '3');
+    await tester.ensureVisible(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('根切り'), findsOneWidget);
+    expect(find.text('根切り 追加分'), findsOneWidget);
+    expect(find.text('2件'), findsNWidgets(2));
+    expect(find.text('¥ 20,000'), findsOneWidget);
+    expect(find.text('合計  ¥ 20,000'), findsOneWidget);
+    expect(store.items, hasLength(2));
+    expect(store.items[0].id, isNot(store.items[1].id));
+    expect(store.items[1].specification, 'W1.0 × H0.5');
+  });
+
   testWidgets('見積基本情報を編集し明細を残したまま端末保存できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

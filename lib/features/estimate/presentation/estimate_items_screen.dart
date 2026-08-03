@@ -8,7 +8,7 @@ import '../domain/estimate_info.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_item_editor_screen.dart';
 
-enum _EstimateItemAction { edit, delete }
+enum _EstimateItemAction { duplicate, edit, delete }
 
 class EstimateItemsScreen extends StatelessWidget {
   const EstimateItemsScreen({required this.controller, super.key});
@@ -156,6 +156,32 @@ class EstimateItemsScreen extends StatelessWidget {
     _EstimateItemAction action,
   ) async {
     switch (action) {
+      case _EstimateItemAction.duplicate:
+        final result = await Navigator.of(context)
+            .push<EstimateItemEditorResult>(
+              MaterialPageRoute(
+                builder: (_) => EstimateItemEditorScreen(
+                  initialDraft: item.toDraft(),
+                  estimateTitle: controller.info.displayName,
+                  showOpenEstimateAction: false,
+                ),
+              ),
+            );
+        if (result == null || !context.mounted) return;
+        try {
+          await controller.add(result.draft);
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積明細を複製しました')));
+          }
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積明細を複製できませんでした')));
+          }
+        }
       case _EstimateItemAction.edit:
         final result = await Navigator.of(context)
             .push<EstimateItemEditorResult>(
@@ -299,6 +325,13 @@ class _EstimateItemCard extends StatelessWidget {
                   key: Key('estimateItemMenu$index'),
                   onSelected: onAction,
                   itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: _EstimateItemAction.duplicate,
+                      child: ListTile(
+                        leading: Icon(Icons.copy_outlined),
+                        title: Text('複製'),
+                      ),
+                    ),
                     PopupMenuItem(
                       value: _EstimateItemAction.edit,
                       child: ListTile(
