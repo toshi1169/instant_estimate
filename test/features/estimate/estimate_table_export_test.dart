@@ -34,8 +34,8 @@ void main() {
     expect(
       buildEstimateTableText(items),
       '工種\t名称\t仕様\t数量\t単位\t単価\t金額\t摘要\n'
-      '土工事\t根切り\tW1.2 × H0.5\t7.2\tm³\t4500\t32400\t小運搬含む\n'
-      '内装工事\tクロス貼り\t\t40\tm²\t\t\t',
+      '土工事\t根切り\tW1.2 × H0.5\t7.2\tm³\t4500\t=D2*F2\t小運搬含む\n'
+      '内装工事\tクロス貼り\t\t40\tm²\t\t=D3*F3\t',
     );
   });
 
@@ -55,6 +55,6 @@ void main() {
     );
 
     final row = buildEstimateTableText([item]).split('\n').last;
-    expect(row, "外構 工事\t'=1+1\t既存 撤去\t1\t式\t-500\t-500\t'@SUM(A1:A2)");
+    expect(row, "外構 工事\t'=1+1\t既存 撤去\t1\t式\t-500\t=D2*F2\t'@SUM(A1:A2)");
   });
 }

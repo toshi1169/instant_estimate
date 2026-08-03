@@ -961,7 +961,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(copiedText, contains('工種\t名称\t仕様\t数量\t単位\t単価\t金額\t摘要'));
-    expect(copiedText, contains('土工事\t根切り\t\t2\tm³\t4000\t8000\t'));
+    expect(copiedText, contains('土工事\t根切り\t\t2\tm³\t4000\t=D2*F2\t'));
     expect(find.text('見積明細をコピーしました（1件）'), findsOneWidget);
   });
 
