@@ -6,7 +6,7 @@ import '../domain/estimate_info.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_items_screen.dart';
 
-enum _EstimateDocumentAction { delete }
+enum _EstimateDocumentAction { duplicate, delete }
 
 class EstimateDocumentsScreen extends StatelessWidget {
   const EstimateDocumentsScreen({required this.controller, super.key});
@@ -76,6 +76,32 @@ class EstimateDocumentsScreen extends StatelessWidget {
     _EstimateDocumentAction action,
   ) async {
     switch (action) {
+      case _EstimateDocumentAction.duplicate:
+        if (controller.estimates.length >= 5) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('無料版では見積を5件まで保存できます')));
+          return;
+        }
+        try {
+          await controller.duplicateEstimate(estimate.info.id);
+        } catch (_) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('見積を複製できませんでした')));
+          }
+          return;
+        }
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('見積を複製しました')));
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => EstimateItemsScreen(controller: controller),
+          ),
+        );
       case _EstimateDocumentAction.delete:
         if (controller.estimates.length <= 1) {
           ScaffoldMessenger.of(
@@ -227,6 +253,13 @@ class _EstimateDocumentCard extends StatelessWidget {
               tooltip: '見積メニュー',
               onSelected: onAction,
               itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: _EstimateDocumentAction.duplicate,
+                  child: ListTile(
+                    leading: Icon(Icons.copy_outlined),
+                    title: Text('複製'),
+                  ),
+                ),
                 PopupMenuItem(
                   value: _EstimateDocumentAction.delete,
                   child: ListTile(

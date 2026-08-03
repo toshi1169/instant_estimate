@@ -144,6 +144,50 @@ class EstimateController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<EstimateDocument> duplicateEstimate(String id) async {
+    if (_estimates.length >= 5) {
+      throw StateError('Free estimate limit reached.');
+    }
+    final currentWorkspace = _workspaceWithActive();
+    final source = currentWorkspace.estimates.firstWhere(
+      (estimate) => estimate.info.id == id,
+      orElse: () => throw StateError('Estimate was not found.'),
+    );
+    final now = DateTime.now();
+    final copyId = now.microsecondsSinceEpoch.toString();
+    final copiedInfo = EstimateInfo(
+      id: copyId,
+      estimateName: '${source.info.displayName}（コピー）',
+      siteName: source.info.siteName,
+      clientName: source.info.clientName,
+      createdDate: DateTime(now.year, now.month, now.day),
+      estimateNumber: '',
+      notes: source.info.notes,
+    );
+    final copiedItems = [
+      for (var index = 0; index < source.items.length; index++)
+        EstimateItem.fromDraft(
+          source.items[index].toDraft(),
+          id: '$copyId-$index',
+          createdAt: now.add(Duration(microseconds: index)),
+        ),
+    ];
+    final copied = EstimateDocument(info: copiedInfo, items: copiedItems);
+    final estimates = [...currentWorkspace.estimates, copied];
+    final workspace = EstimateWorkspace(
+      activeEstimateId: copiedInfo.id,
+      estimates: estimates,
+    );
+    await store?.save(workspace);
+    _replaceEstimates(estimates);
+    _info = copiedInfo;
+    _items
+      ..clear()
+      ..addAll(copiedItems);
+    notifyListeners();
+    return copied;
+  }
+
   Future<void> selectEstimate(String id) async {
     if (id == _info.id) return;
     final selected = _estimates.firstWhere(

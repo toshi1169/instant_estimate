@@ -1130,6 +1130,52 @@ void main() {
     expect(controller.estimates, hasLength(1));
   });
 
+  testWidgets('見積一覧から見積全体を複製してコピーを開ける', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await controller.updateInfo(
+      controller.info.copyWith(estimateName: '○○邸 見積'),
+    );
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        quantity: 2,
+        unitPrice: 4000,
+      ),
+    );
+    final sourceInfoId = controller.info.id;
+    final sourceItemId = controller.items.single.id;
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateDocumentsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('estimateDocumentMenu0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('複製'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EstimateItemsScreen), findsOneWidget);
+    expect(find.text('○○邸 見積（コピー）'), findsOneWidget);
+    expect(find.text('根切り'), findsOneWidget);
+    expect(find.text('合計  ¥ 8,000'), findsOneWidget);
+    expect(controller.estimates, hasLength(2));
+    expect(controller.info.id, isNot(sourceInfoId));
+    expect(controller.items.single.id, isNot(sourceItemId));
+
+    Navigator.of(tester.element(find.byType(EstimateItemsScreen))).pop();
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 5件'), findsOneWidget);
+    expect(find.byKey(const Key('activeEstimateDocument')), findsOneWidget);
+  });
+
   testWidgets('履歴スペース長押しで全体画面と分数3形式を確認できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

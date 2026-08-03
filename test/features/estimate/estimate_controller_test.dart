@@ -150,6 +150,55 @@ void main() {
       controller.createEstimate(EstimateInfo.initial(DateTime(2026, 8, 7))),
       throwsStateError,
     );
+    await expectLater(
+      controller.duplicateEstimate(controller.info.id),
+      throwsStateError,
+    );
+  });
+
+  test('見積全体を別IDで複製してコピーを追加先にできる', () async {
+    final store = _MemoryEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await controller.updateInfo(
+      controller.info.copyWith(
+        estimateName: '○○邸 外構工事',
+        siteName: '○○邸',
+        clientName: '○○様',
+        estimateNumber: '2026-001',
+        notes: '既存見積',
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        quantity: 2,
+        unit: 'm³',
+        unitPrice: 4000,
+      ),
+    );
+    final sourceInfoId = controller.info.id;
+    final sourceItemId = controller.items.single.id;
+
+    final copied = await controller.duplicateEstimate(sourceInfoId);
+
+    expect(controller.estimates, hasLength(2));
+    expect(controller.info.id, copied.info.id);
+    expect(copied.info.id, isNot(sourceInfoId));
+    expect(copied.info.estimateName, '○○邸 外構工事（コピー）');
+    expect(copied.info.siteName, '○○邸');
+    expect(copied.info.clientName, '○○様');
+    expect(copied.info.estimateNumber, isEmpty);
+    expect(copied.info.notes, '既存見積');
+    expect(copied.items.single.id, isNot(sourceItemId));
+    expect(copied.items.single.name, '根切り');
+    expect(copied.totalAmount, 8000);
+    expect(store.workspace.activeEstimateId, copied.info.id);
+
+    await controller.selectEstimate(sourceInfoId);
+    expect(controller.info.estimateName, '○○邸 外構工事');
+    expect(controller.items.single.id, sourceItemId);
   });
 
   test('明細を工種ごとにまとめて小計を計算できる', () async {
