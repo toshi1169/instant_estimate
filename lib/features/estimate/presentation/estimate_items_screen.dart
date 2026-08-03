@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../application/estimate_controller.dart';
+import '../application/estimate_excel_export.dart';
 import '../application/estimate_table_export.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
@@ -26,6 +28,12 @@ class EstimateItemsScreen extends StatelessWidget {
           builder: (_, _) => Text(controller.info.displayName),
         ),
         actions: [
+          IconButton(
+            key: const Key('exportEstimateExcel'),
+            tooltip: 'A4横のExcelを出力',
+            onPressed: () => _exportExcel(context),
+            icon: const Icon(Icons.file_download_outlined),
+          ),
           IconButton(
             key: const Key('copyEstimateTable'),
             tooltip: 'Excel用に表をコピー',
@@ -106,6 +114,44 @@ class EstimateItemsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _exportExcel(BuildContext context) async {
+    if (controller.items.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('出力する明細がありません')));
+      return;
+    }
+    try {
+      final file = await createEstimateWorkbookFile(
+        info: controller.info,
+        items: controller.items,
+      );
+      if (!context.mounted) return;
+      final box = context.findRenderObject() as RenderBox?;
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile(
+              file.path,
+              mimeType:
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ),
+          ],
+          subject: controller.info.displayName,
+          sharePositionOrigin: box == null
+              ? null
+              : box.localToGlobal(Offset.zero) & box.size,
+        ),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Excelファイルを作成できませんでした')));
+      }
+    }
   }
 
   Future<void> _copyTable(BuildContext context) async {
