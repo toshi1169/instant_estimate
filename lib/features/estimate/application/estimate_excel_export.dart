@@ -6,7 +6,7 @@ import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
 
 const _sheetName = '内訳';
-const _headers = ['工種', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
+const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
 const _numberFormat = '#,##0.###';
 const _moneyFormat = '#,##0';
 
@@ -29,8 +29,9 @@ List<int> buildEstimateWorkbook({
   var row = 5;
   final subtotalRows = <int>[];
   final groupedItems = _groupItems(itemList);
+  var groupNumber = 1;
   for (final entry in groupedItems.entries) {
-    _writeTradeHeader(sheet, row, entry.key);
+    _writeTradeHeader(sheet, row, groupNumber, entry.key);
     row++;
     final firstItemRow = row;
     for (final item in entry.value) {
@@ -40,15 +41,15 @@ List<int> buildEstimateWorkbook({
     _writeSubtotal(sheet, row, firstItemRow, row - 1);
     subtotalRows.add(row);
     row += 2;
+    groupNumber++;
   }
 
-  final totalRow = row;
-  _writeTotal(sheet, totalRow, subtotalRows);
+  final summaryEndRow = _writeSummary(sheet, row, subtotalRows);
   sheet.setPrintArea(
     CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
-    CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: totalRow),
+    CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: summaryEndRow),
   );
-  sheet.setPrintTitleRows(4, 4);
+  sheet.setPrintTitleRows(0, 4);
   sheet.pageSetup = const PageSetup(
     orientation: PageOrientation.landscape,
     paperSize: PaperSize.a4,
@@ -143,19 +144,12 @@ void _writeHeader(Sheet sheet) {
   sheet.setRowHeight(4, 26);
 }
 
-void _writeTradeHeader(Sheet sheet, int row, String trade) {
+void _writeTradeHeader(Sheet sheet, int row, int number, String trade) {
   for (var column = 0; column < 8; column++) {
     _setCell(sheet, row, column, TextCellValue(''), _tradeStyle());
   }
-  sheet.merge(
-    CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row),
-    CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: row),
-    customValue: TextCellValue(trade),
-  );
-  sheet
-          .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row))
-          .cellStyle =
-      _tradeStyle();
+  _setCell(sheet, row, 0, TextCellValue(_groupMarker(number)), _tradeStyle());
+  _setCell(sheet, row, 1, TextCellValue(trade), _tradeStyle());
   sheet.setRowHeight(row, 24);
 }
 
@@ -203,20 +197,49 @@ void _writeSubtotal(Sheet sheet, int row, int firstItemRow, int lastItemRow) {
   sheet.setRowHeight(row, 24);
 }
 
-void _writeTotal(Sheet sheet, int row, List<int> subtotalRows) {
-  for (var column = 0; column < 8; column++) {
-    _setCell(sheet, row, column, TextCellValue(''), _totalStyle());
-  }
-  _setCell(sheet, row, 5, TextCellValue('見積合計'), _totalStyle());
+int _writeSummary(Sheet sheet, int row, List<int> subtotalRows) {
+  _writeSummaryRow(sheet, row, '税抜合計');
   final references = subtotalRows.map((row) => 'G${row + 1}').join(',');
   _setCell(
     sheet,
     row,
     6,
     FormulaCellValue(references.isEmpty ? '0' : 'SUM($references)'),
+    _summaryStyle(numberFormat: _moneyFormat),
+  );
+
+  _writeSummaryRow(sheet, row + 1, '消費税（10%）');
+  _setCell(
+    sheet,
+    row + 1,
+    6,
+    FormulaCellValue('ROUNDDOWN(G${row + 1}*10%,0)'),
+    _summaryStyle(numberFormat: _moneyFormat),
+  );
+
+  _writeSummaryRow(sheet, row + 2, '税込総額', emphasized: true);
+  _setCell(
+    sheet,
+    row + 2,
+    6,
+    FormulaCellValue('G${row + 1}+G${row + 2}'),
     _totalStyle(numberFormat: _moneyFormat),
   );
-  sheet.setRowHeight(row, 28);
+  return row + 2;
+}
+
+void _writeSummaryRow(
+  Sheet sheet,
+  int row,
+  String label, {
+  bool emphasized = false,
+}) {
+  final style = emphasized ? _totalStyle() : _summaryStyle();
+  for (var column = 0; column < 8; column++) {
+    _setCell(sheet, row, column, TextCellValue(''), style);
+  }
+  _setCell(sheet, row, 5, TextCellValue(label), style);
+  sheet.setRowHeight(row, emphasized ? 28 : 24);
 }
 
 void _mergeText(
@@ -279,7 +302,8 @@ CellStyle _tradeStyle() => CellStyle(
   fontFamily: 'Yu Gothic',
   fontSize: 10,
   bold: true,
-  backgroundColorHex: ExcelColor.fromHexString('#D9EAD3'),
+  horizontalAlign: HorizontalAlign.Center,
+  textWrapping: TextWrapping.WrapText,
   verticalAlign: VerticalAlign.Center,
   leftBorder: _thinBorder(),
   rightBorder: _thinBorder(),
@@ -318,6 +342,21 @@ CellStyle _subtotalStyle({String? numberFormat}) => CellStyle(
   bottomBorder: _mediumBorder(),
 );
 
+CellStyle _summaryStyle({String? numberFormat}) => CellStyle(
+  fontFamily: 'Yu Gothic',
+  fontSize: 10,
+  bold: true,
+  horizontalAlign: HorizontalAlign.Right,
+  verticalAlign: VerticalAlign.Center,
+  numberFormat: numberFormat == null
+      ? NumFormat.standard_0
+      : NumFormat.custom(formatCode: numberFormat),
+  leftBorder: _thinBorder(),
+  rightBorder: _thinBorder(),
+  topBorder: _thinBorder(),
+  bottomBorder: _thinBorder(),
+);
+
 CellStyle _totalStyle({String? numberFormat}) => CellStyle(
   fontFamily: 'Yu Gothic',
   fontSize: 11,
@@ -341,6 +380,32 @@ Border _mediumBorder() =>
     Border(borderStyle: BorderStyle.Medium, borderColorHex: ExcelColor.black);
 
 String _fallback(String value) => value.trim().isEmpty ? '未設定' : value.trim();
+
+String _groupMarker(int number) {
+  const markers = [
+    '①',
+    '②',
+    '③',
+    '④',
+    '⑤',
+    '⑥',
+    '⑦',
+    '⑧',
+    '⑨',
+    '⑩',
+    '⑪',
+    '⑫',
+    '⑬',
+    '⑭',
+    '⑮',
+    '⑯',
+    '⑰',
+    '⑱',
+    '⑲',
+    '⑳',
+  ];
+  return number <= markers.length ? markers[number - 1] : '($number)';
+}
 
 String _safeFileName(String value) {
   final sanitized = value

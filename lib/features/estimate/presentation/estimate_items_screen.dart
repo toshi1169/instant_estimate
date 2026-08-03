@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../application/estimate_controller.dart';
 import '../application/estimate_excel_export.dart';
+import '../application/estimate_pdf_export.dart';
 import '../application/estimate_table_export.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
@@ -28,6 +31,12 @@ class EstimateItemsScreen extends StatelessWidget {
           builder: (_, _) => Text(controller.info.displayName),
         ),
         actions: [
+          IconButton(
+            key: const Key('printEstimatePdf'),
+            tooltip: 'A4横で印刷',
+            onPressed: () => _printEstimate(context),
+            icon: const Icon(Icons.print_outlined),
+          ),
           IconButton(
             key: const Key('exportEstimateExcel'),
             tooltip: 'A4横のExcelを出力',
@@ -114,6 +123,30 @@ class EstimateItemsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _printEstimate(BuildContext context) async {
+    if (controller.items.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('印刷する明細がありません')));
+      return;
+    }
+    try {
+      await Printing.layoutPdf(
+        name: '${controller.info.displayName}.pdf',
+        format: PdfPageFormat.a4.landscape,
+        dynamicLayout: false,
+        onLayout: (_) =>
+            buildEstimatePdf(info: controller.info, items: controller.items),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('印刷用PDFを作成できませんでした')));
+      }
+    }
   }
 
   Future<void> _exportExcel(BuildContext context) async {
