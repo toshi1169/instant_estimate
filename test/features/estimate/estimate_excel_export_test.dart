@@ -6,7 +6,7 @@ import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 
 void main() {
-  test('A4横の内訳書を工種小計と計算式付きで生成する', () {
+  test('A4横の内訳書を記号・小計・計算式付きで生成する', () {
     final bytes = buildEstimateWorkbook(
       info: EstimateInfo(
         id: 'estimate-1',
@@ -57,10 +57,7 @@ void main() {
       TextCellValue('記号'),
     );
     expect(sheet.cell(CellIndex.indexByString('A6')).value, TextCellValue('①'));
-    expect(
-      sheet.cell(CellIndex.indexByString('B6')).value,
-      TextCellValue('土工事'),
-    );
+    expect(sheet.cell(CellIndex.indexByString('B6')).value, TextCellValue(''));
     expect(
       sheet.cell(CellIndex.indexByString('B7')).value,
       TextCellValue('根切り'),

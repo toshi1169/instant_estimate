@@ -160,7 +160,7 @@ List<pw.Widget> _detailTables(Map<String, List<EstimateItem>> grouped) {
           pw.TableRow(
             children: [
               _cell(_groupMarker(number), bold: true, center: true),
-              _cell(entry.key, bold: true),
+              _cell(''),
               ...List.generate(6, (_) => _cell('')),
             ],
           ),

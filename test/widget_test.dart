@@ -1366,8 +1366,14 @@ void main() {
     await tester.tap(find.byKey(const Key('copyEstimateTable')));
     await tester.pumpAndSettle();
 
-    expect(copiedText, contains('工種\t名称\t仕様\t数量\t単位\t単価\t金額\t摘要'));
-    expect(copiedText, contains('土工事\t根切り\t\t2\tm³\t4000\t=D2*F2\t'));
+    expect(copiedText, contains('記号\t名称\t仕様\t数量\t単位\t単価\t金額\t摘要'));
+    expect(copiedText, contains('①\t\t\t\t\t\t\t'));
+    expect(copiedText, contains('\t根切り\t\t2\tm³\t4000\t=D3*F3\t'));
+    expect(copiedText, isNot(contains('土工事')));
+    expect(copiedText, contains('小計\t=SUM(G3:G3)'));
+    expect(copiedText, contains('税抜合計'));
+    expect(copiedText, contains('消費税（10%）'));
+    expect(copiedText, contains('税込総額'));
     expect(find.text('見積明細をコピーしました（1件）'), findsOneWidget);
   });
 

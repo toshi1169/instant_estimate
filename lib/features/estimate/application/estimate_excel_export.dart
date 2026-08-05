@@ -31,7 +31,7 @@ List<int> buildEstimateWorkbook({
   final groupedItems = _groupItems(itemList);
   var groupNumber = 1;
   for (final entry in groupedItems.entries) {
-    _writeTradeHeader(sheet, row, groupNumber, entry.key);
+    _writeGroupHeader(sheet, row, groupNumber);
     row++;
     final firstItemRow = row;
     for (final item in entry.value) {
@@ -144,12 +144,11 @@ void _writeHeader(Sheet sheet) {
   sheet.setRowHeight(4, 26);
 }
 
-void _writeTradeHeader(Sheet sheet, int row, int number, String trade) {
+void _writeGroupHeader(Sheet sheet, int row, int number) {
   for (var column = 0; column < 8; column++) {
     _setCell(sheet, row, column, TextCellValue(''), _tradeStyle());
   }
   _setCell(sheet, row, 0, TextCellValue(_groupMarker(number)), _tradeStyle());
-  _setCell(sheet, row, 1, TextCellValue(trade), _tradeStyle());
   sheet.setRowHeight(row, 24);
 }
 
