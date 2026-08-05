@@ -98,6 +98,77 @@ void main() {
     expect(store.document.info.estimateName, '○○邸 外構工事');
   });
 
+  test('同じ計算根拠または同じ手入力内容の見積明細を重複候補として検出できる', () async {
+    final controller = EstimateController();
+    await controller.load();
+    final calculated = await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        quantity: 2.5,
+        unit: 'm³',
+        unitPrice: 4000,
+        calculationBasis: '5 × 1 × 0.5 = 2.5',
+      ),
+    );
+    final manual = await controller.add(
+      const EstimateItemDraft(
+        trade: '外構工事',
+        name: 'フェンス',
+        specification: 'H800',
+        quantity: 5,
+        unit: 'm',
+        unitPrice: 6000,
+        description: '材料施工共',
+      ),
+    );
+
+    expect(
+      controller
+          .findDuplicate(
+            const EstimateItemDraft(
+              trade: '土工事',
+              name: '掘削へ変更',
+              quantity: 3,
+              unit: 'm³',
+              calculationBasis: ' 5   × 1 × 0.5 = 2.5 ',
+            ),
+          )
+          ?.id,
+      calculated.id,
+    );
+    expect(
+      controller
+          .findDuplicate(
+            const EstimateItemDraft(
+              trade: ' 外構工事 ',
+              name: 'フェンス',
+              specification: 'H800',
+              quantity: 5,
+              unit: 'm',
+              unitPrice: 6000,
+              description: '材料施工共',
+            ),
+          )
+          ?.id,
+      manual.id,
+    );
+    expect(
+      controller.findDuplicate(
+        const EstimateItemDraft(
+          trade: '外構工事',
+          name: 'フェンス',
+          specification: 'H800',
+          quantity: 6,
+          unit: 'm',
+          unitPrice: 6000,
+          description: '材料施工共',
+        ),
+      ),
+      isNull,
+    );
+  });
+
   test('複数の見積を作成して選択中の見積と明細を復元できる', () async {
     final store = _MemoryEstimateItemStore();
     final controller = EstimateController(store: store);

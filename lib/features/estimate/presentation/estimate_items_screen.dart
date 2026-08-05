@@ -12,6 +12,7 @@ import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_item_group.dart';
 import '../domain/estimate_info.dart';
+import 'duplicate_estimate_item_dialog.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_item_editor_screen.dart';
 
@@ -222,6 +223,35 @@ class EstimateItemsScreen extends StatelessWidget {
     if (result == null || !context.mounted) return;
     try {
       await _selectEstimateDestination(result);
+      if (!context.mounted) return;
+      final duplicate = controller.findDuplicate(result.draft);
+      if (duplicate != null) {
+        final action = await showDuplicateEstimateItemDialog(
+          context,
+          duplicate,
+        );
+        if (!context.mounted || action == DuplicateEstimateItemAction.cancel) {
+          return;
+        }
+        if (action == DuplicateEstimateItemAction.updateExisting) {
+          await controller.update(duplicate.id, result.draft);
+          final addedToMaster = result.saveToUnitPriceMaster
+              ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
+                  result.draft,
+                )
+              : false;
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  addedToMaster ? '既存明細を更新し単価マスタへ追加しました' : '既存の見積明細を更新しました',
+                ),
+              ),
+            );
+          }
+          return;
+        }
+      }
       final addedItem = await controller.add(result.draft);
       final addedToMaster = result.saveToUnitPriceMaster
           ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(

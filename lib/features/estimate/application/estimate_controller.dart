@@ -96,6 +96,30 @@ class EstimateController extends ChangeNotifier {
     return item;
   }
 
+  EstimateItem? findDuplicate(EstimateItemDraft draft) {
+    final calculationBasis = _normalizedText(draft.calculationBasis);
+    for (final item in _items.reversed) {
+      if (calculationBasis.isNotEmpty &&
+          _normalizedText(item.calculationBasis) == calculationBasis) {
+        return item;
+      }
+      if (calculationBasis.isEmpty &&
+          _normalizedText(item.calculationBasis).isEmpty &&
+          _normalizedText(item.trade) == _normalizedText(draft.trade) &&
+          _normalizedText(item.name) == _normalizedText(draft.name) &&
+          _normalizedText(item.specification) ==
+              _normalizedText(draft.specification) &&
+          item.quantity == draft.quantity &&
+          _normalizedText(item.unit) == _normalizedText(draft.unit) &&
+          item.unitPrice == draft.unitPrice &&
+          _normalizedText(item.description) ==
+              _normalizedText(draft.description)) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   Future<EstimateItem> update(String id, EstimateItemDraft draft) async {
     final index = _items.indexWhere((item) => item.id == id);
     if (index < 0) throw StateError('Estimate item was not found.');
@@ -364,6 +388,9 @@ class EstimateController extends ChangeNotifier {
       ..addAll(unitPriceMasters);
   }
 }
+
+String _normalizedText(String value) =>
+    value.trim().replaceAll(RegExp(r'\s+'), ' ');
 
 bool _hasSameUnitPriceMasterContent(
   UnitPriceMaster price,

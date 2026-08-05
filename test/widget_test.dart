@@ -1081,6 +1081,66 @@ void main() {
     expect(find.text('直前の追加を取り消しました'), findsOneWidget);
   });
 
+  testWidgets('電卓から同じ計算内容を送ると既存明細を更新できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final estimateStore = FakeEstimateItemStore();
+    final calculator = CalculatorController();
+    calculator.pasteAtCaret('12×2');
+    calculator.press('=');
+    final estimateController = EstimateController(store: estimateStore);
+    await estimateController.load();
+    await estimateController.add(
+      EstimateItemDraft(
+        name: '更新前',
+        quantity: calculator.estimateQuantityValue,
+        calculationBasis:
+            '${calculator.estimateExpressionText} = ${calculator.estimateResultText}',
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalculatorScreen(
+          controller: calculator,
+          estimateItemStore: estimateStore,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('見積へ送る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateDestinationSelector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('数量').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateTransferNext')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('estimateNameField')), '更新後');
+    await tester.drag(
+      find.byKey(const Key('estimateItemEditor')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('同じ計算内容があります'), findsOneWidget);
+    expect(find.textContaining('更新前'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('updateDuplicateEstimateItem')));
+    await tester.pumpAndSettle();
+
+    expect(estimateStore.items, hasLength(1));
+    expect(estimateStore.items.single.name, '更新後');
+    expect(find.text('既存の見積明細を更新しました'), findsOneWidget);
+  });
+
   testWidgets('見積明細を編集・削除して合計と端末保存を更新できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

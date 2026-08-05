@@ -16,6 +16,7 @@ import '../../estimate/application/estimate_controller.dart';
 import '../../estimate/data/estimate_item_store.dart';
 import '../../estimate/presentation/estimate_items_screen.dart';
 import '../../estimate/presentation/estimate_documents_screen.dart';
+import '../../estimate/presentation/duplicate_estimate_item_dialog.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
 import 'function_list_dialog.dart';
@@ -305,13 +306,31 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     if (editorResult == null || !mounted) return;
     var addedToMaster = false;
     String? addedItemId;
+    var updatedExisting = false;
     try {
       final estimateId = editorResult.estimateId;
       if (estimateId != null && estimateId != _estimateController.info.id) {
         await _estimateController.selectEstimate(estimateId);
       }
-      final addedItem = await _estimateController.add(editorResult.draft);
-      addedItemId = addedItem.id;
+      if (!mounted) return;
+      final duplicate = _estimateController.findDuplicate(editorResult.draft);
+      if (duplicate != null) {
+        final action = await showDuplicateEstimateItemDialog(
+          context,
+          duplicate,
+        );
+        if (!mounted || action == DuplicateEstimateItemAction.cancel) return;
+        if (action == DuplicateEstimateItemAction.updateExisting) {
+          await _estimateController.update(duplicate.id, editorResult.draft);
+          updatedExisting = true;
+        } else {
+          final addedItem = await _estimateController.add(editorResult.draft);
+          addedItemId = addedItem.id;
+        }
+      } else {
+        final addedItem = await _estimateController.add(editorResult.draft);
+        addedItemId = addedItem.id;
+      }
       if (editorResult.saveToUnitPriceMaster) {
         addedToMaster = await _estimateController
             .addEstimateItemToUnitPriceMasterIfAbsent(editorResult.draft);
@@ -323,6 +342,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     if (!mounted) return;
     if (editorResult.action == EstimateItemEditorAction.openEstimate) {
       await _openActiveEstimate();
+      return;
+    }
+    if (updatedExisting) {
+      _showMessage(addedToMaster ? '既存明細を更新し単価マスタへ追加しました' : '既存の見積明細を更新しました');
       return;
     }
     _showEstimateAddedMessage(
