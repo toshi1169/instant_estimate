@@ -212,6 +212,8 @@ class EstimateItemsScreen extends StatelessWidget {
         builder: (_) => EstimateItemEditorScreen(
           initialDraft: const EstimateItemDraft(),
           estimateTitle: controller.info.displayName,
+          estimates: controller.estimates,
+          initialEstimateId: controller.info.id,
           showOpenEstimateAction: false,
           unitPriceMasters: controller.unitPriceMasters,
         ),
@@ -219,6 +221,7 @@ class EstimateItemsScreen extends StatelessWidget {
     );
     if (result == null || !context.mounted) return;
     try {
+      await _selectEstimateDestination(result);
       await controller.add(result.draft);
       final addedToMaster = result.saveToUnitPriceMaster
           ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
@@ -277,6 +280,8 @@ class EstimateItemsScreen extends StatelessWidget {
                 builder: (_) => EstimateItemEditorScreen(
                   initialDraft: item.toDraft(),
                   estimateTitle: controller.info.displayName,
+                  estimates: controller.estimates,
+                  initialEstimateId: controller.info.id,
                   showOpenEstimateAction: false,
                   unitPriceMasters: controller.unitPriceMasters,
                 ),
@@ -284,6 +289,7 @@ class EstimateItemsScreen extends StatelessWidget {
             );
         if (result == null || !context.mounted) return;
         try {
+          await _selectEstimateDestination(result);
           await controller.add(result.draft);
           final addedToMaster = result.saveToUnitPriceMaster
               ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
@@ -314,6 +320,8 @@ class EstimateItemsScreen extends StatelessWidget {
                   initialDraft: item.toDraft(),
                   isEditing: true,
                   estimateTitle: controller.info.displayName,
+                  estimates: controller.estimates,
+                  initialEstimateId: controller.info.id,
                   unitPriceMasters: controller.unitPriceMasters,
                 ),
               ),
@@ -377,6 +385,15 @@ class EstimateItemsScreen extends StatelessWidget {
             ).showSnackBar(const SnackBar(content: Text('見積明細を削除できませんでした')));
           }
         }
+    }
+  }
+
+  Future<void> _selectEstimateDestination(
+    EstimateItemEditorResult result,
+  ) async {
+    final estimateId = result.estimateId;
+    if (estimateId != null && estimateId != controller.info.id) {
+      await controller.selectEstimate(estimateId);
     }
   }
 }

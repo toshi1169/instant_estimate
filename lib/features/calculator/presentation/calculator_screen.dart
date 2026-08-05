@@ -296,6 +296,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             builder: (_) => EstimateItemEditorScreen(
               initialDraft: draft,
               estimateTitle: _estimateController.info.displayName,
+              estimates: _estimateController.estimates,
+              initialEstimateId: _estimateController.info.id,
               unitPriceMasters: _estimateController.unitPriceMasters,
             ),
           ),
@@ -303,6 +305,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     if (editorResult == null || !mounted) return;
     var addedToMaster = false;
     try {
+      final estimateId = editorResult.estimateId;
+      if (estimateId != null && estimateId != _estimateController.info.id) {
+        await _estimateController.selectEstimate(estimateId);
+      }
       await _estimateController.add(editorResult.draft);
       if (editorResult.saveToUnitPriceMaster) {
         addedToMaster = await _estimateController

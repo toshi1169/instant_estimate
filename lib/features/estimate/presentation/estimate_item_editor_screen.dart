@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../domain/estimate_item_draft.dart';
+import '../domain/estimate_document.dart';
 import '../domain/unit_price_master.dart';
 
 enum EstimateItemEditorAction { continueCalculating, openEstimate }
@@ -11,11 +12,13 @@ class EstimateItemEditorResult {
     required this.draft,
     required this.action,
     this.saveToUnitPriceMaster = false,
+    this.estimateId,
   });
 
   final EstimateItemDraft draft;
   final EstimateItemEditorAction action;
   final bool saveToUnitPriceMaster;
+  final String? estimateId;
 }
 
 class EstimateItemEditorScreen extends StatefulWidget {
@@ -24,6 +27,8 @@ class EstimateItemEditorScreen extends StatefulWidget {
     this.isEditing = false,
     this.showOpenEstimateAction = true,
     this.estimateTitle = '名称未設定の見積',
+    this.estimates = const [],
+    this.initialEstimateId,
     this.unitPriceMasters = const [],
     super.key,
   });
@@ -32,6 +37,8 @@ class EstimateItemEditorScreen extends StatefulWidget {
   final bool isEditing;
   final bool showOpenEstimateAction;
   final String estimateTitle;
+  final List<EstimateDocument> estimates;
+  final String? initialEstimateId;
   final List<UnitPriceMaster> unitPriceMasters;
 
   @override
@@ -57,6 +64,15 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     text: widget.initialDraft.description,
   );
   bool _saveToUnitPriceMaster = false;
+  late String? _selectedEstimateId;
+  late String _selectedEstimateTitle;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedEstimateId = widget.initialEstimateId;
+    _selectedEstimateTitle = widget.estimateTitle;
+  }
 
   @override
   void dispose() {
@@ -90,6 +106,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     Navigator.of(context).pop(
       EstimateItemEditorResult(
         action: action,
+        estimateId: _selectedEstimateId,
         saveToUnitPriceMaster:
             _saveToUnitPriceMaster &&
             _name.text.trim().isNotEmpty &&
@@ -107,6 +124,65 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _selectEstimate() async {
+    final selected = await showModalBottomSheet<EstimateDocument>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Row(
+                children: [
+                  Text(
+                    '追加先の見積を選択',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const Spacer(),
+                  Text('${widget.estimates.length}件'),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: ListView.builder(
+                key: const Key('estimateDestinationList'),
+                shrinkWrap: true,
+                itemCount: widget.estimates.length,
+                itemBuilder: (context, index) {
+                  final estimate = widget.estimates[index];
+                  final selected = estimate.info.id == _selectedEstimateId;
+                  return ListTile(
+                    key: Key('estimateDestination${estimate.info.id}'),
+                    leading: Icon(
+                      selected
+                          ? Icons.check_circle
+                          : Icons.description_outlined,
+                    ),
+                    title: Text(estimate.info.displayName),
+                    subtitle: Text(
+                      estimate.info.siteName.isEmpty
+                          ? '${estimate.items.length}件の明細'
+                          : estimate.info.siteName,
+                    ),
+                    onTap: () => Navigator.of(context).pop(estimate),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _selectedEstimateId = selected.info.id;
+      _selectedEstimateTitle = selected.info.displayName;
+    });
   }
 
   Future<void> _selectUnitPriceMaster() async {
@@ -222,9 +298,15 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.description_outlined),
                   title: const Text('追加先'),
-                  subtitle: Text(widget.estimateTitle),
+                  subtitle: Text(
+                    _selectedEstimateTitle,
+                    key: const Key('selectedEstimateDestination'),
+                  ),
                   trailing: TextButton(
-                    onPressed: null,
+                    key: const Key('changeEstimateDestination'),
+                    onPressed: !widget.isEditing && widget.estimates.length > 1
+                        ? _selectEstimate
+                        : null,
                     child: const Text('変更'),
                   ),
                 ),

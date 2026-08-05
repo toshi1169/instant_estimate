@@ -1335,6 +1335,65 @@ void main() {
     expect(controller.estimates, hasLength(1));
   });
 
+  testWidgets('明細追加画面から保存済みの別見積を追加先に選べる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await controller.updateInfo(
+      controller.info.copyWith(estimateName: '1件目の見積'),
+    );
+    final firstId = controller.info.id;
+    await controller.createEstimate(
+      EstimateInfo.initial(
+        DateTime(2026, 8, 5, 12, 0, 0, 1),
+      ).copyWith(estimateName: '2件目の見積'),
+    );
+    final secondId = controller.info.id;
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('addEstimateItemDirect')));
+    await tester.pumpAndSettle();
+    expect(find.text('2件目の見積'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('changeEstimateDestination')));
+    await tester.pumpAndSettle();
+    expect(find.text('追加先の見積を選択'), findsOneWidget);
+    await tester.tap(find.text('1件目の見積'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('selectedEstimateDestination')))
+          .data,
+      '1件目の見積',
+    );
+
+    await tester.enterText(find.byKey(const Key('estimateNameField')), '追加先確認');
+    await tester.drag(
+      find.byKey(const Key('estimateItemEditor')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.pumpAndSettle();
+
+    expect(controller.info.id, firstId);
+    expect(controller.items.single.name, '追加先確認');
+    expect(store.workspace.activeEstimateId, firstId);
+    expect(
+      controller.estimates
+          .firstWhere((estimate) => estimate.info.id == secondId)
+          .items,
+      isEmpty,
+    );
+  });
+
   testWidgets('見積一覧から見積全体を複製してコピーを開ける', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
