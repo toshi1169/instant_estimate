@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_document.dart';
+import '../domain/estimate_item.dart';
+import '../domain/estimate_item_draft.dart';
 import '../domain/unit_price_master.dart';
 
 enum EstimateItemEditorAction { continueCalculating, openEstimate }
@@ -88,6 +89,19 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
 
   double? get _quantityValue => _parseNumber(_quantity.text);
   double? get _unitPriceValue => _parseNumber(_unitPrice.text);
+
+  List<_PastUnitPriceCandidate> get _pastUnitPrices {
+    final candidates = [
+      for (final estimate in widget.estimates)
+        for (final item in estimate.items)
+          if (item.unitPrice != null && item.name.trim().isNotEmpty)
+            _PastUnitPriceCandidate(estimate: estimate, item: item),
+    ];
+    candidates.sort(
+      (left, right) => right.item.createdAt.compareTo(left.item.createdAt),
+    );
+    return candidates;
+  }
 
   double? get _amount {
     final quantity = _quantityValue;
@@ -283,6 +297,95 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     });
   }
 
+  Future<void> _selectPastUnitPrice() async {
+    final allCandidates = _pastUnitPrices;
+    var filtered = allCandidates;
+    final selected = await showModalBottomSheet<_PastUnitPriceCandidate>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.72,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        '過去の見積から選択',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const Spacer(),
+                      Text('${filtered.length} / ${allCandidates.length}件'),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: TextField(
+                    key: const Key('selectPastUnitPriceSearch'),
+                    autofocus: allCandidates.length > 8,
+                    onChanged: (query) {
+                      setModalState(() {
+                        filtered = allCandidates
+                            .where((candidate) => candidate.matches(query))
+                            .toList(growable: false);
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: '過去の名称・工種・現場などを検索',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? const Center(child: Text('一致する過去明細がありません'))
+                      : ListView.separated(
+                          key: const Key('selectPastUnitPriceList'),
+                          padding: const EdgeInsets.all(12),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final candidate = filtered[index];
+                            final item = candidate.item;
+                            return ListTile(
+                              key: Key(
+                                'selectPastUnitPrice-${candidate.estimate.info.id}-${item.id}',
+                              ),
+                              title: Text(item.name),
+                              subtitle: Text(candidate.subtitle),
+                              trailing: Text(
+                                '¥ ${_displayAmount(item.unitPrice!)}',
+                              ),
+                              onTap: () => Navigator.of(context).pop(candidate),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    final item = selected.item;
+    setState(() {
+      _trade.text = item.trade;
+      _name.text = item.name;
+      _specification.text = item.specification;
+      _unit.text = item.unit;
+      _unitPrice.text = _editableNumber(item.unitPrice);
+      _description.text = item.description;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -351,6 +454,19 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   widget.unitPriceMasters.isEmpty
                       ? '単価マスタ（登録なし）'
                       : '単価マスタから選択（${widget.unitPriceMasters.length}件）',
+                ),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const Key('selectPastUnitPrice'),
+                onPressed: _pastUnitPrices.isEmpty
+                    ? null
+                    : _selectPastUnitPrice,
+                icon: const Icon(Icons.history),
+                label: Text(
+                  _pastUnitPrices.isEmpty
+                      ? '過去の見積（履歴なし）'
+                      : '過去の見積から選択（${_pastUnitPrices.length}件）',
                 ),
               ),
               const SizedBox(height: 12),
@@ -494,6 +610,45 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
         ),
       ),
     );
+  }
+}
+
+class _PastUnitPriceCandidate {
+  const _PastUnitPriceCandidate({required this.estimate, required this.item});
+
+  final EstimateDocument estimate;
+  final EstimateItem item;
+
+  String get subtitle {
+    final date = item.createdAt;
+    final parts = [
+      estimate.info.displayName,
+      '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}',
+      if (item.trade.isNotEmpty) item.trade,
+      if (item.specification.isNotEmpty) item.specification,
+      if (item.unit.isNotEmpty) item.unit,
+    ];
+    return parts.join(' ／ ');
+  }
+
+  bool matches(String query) {
+    final terms = query
+        .trim()
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((term) => term.isNotEmpty);
+    if (terms.isEmpty) return true;
+    final searchable = [
+      estimate.info.displayName,
+      estimate.info.siteName,
+      item.trade,
+      item.name,
+      item.specification,
+      item.unit,
+      item.description,
+      item.unitPrice.toString(),
+    ].join(' ').toLowerCase();
+    return terms.every(searchable.contains);
   }
 }
 

@@ -130,6 +130,10 @@ void main() {
   });
 
   testWidgets('単価マスタを選ぶと見積明細へ各項目を反映する', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final master = UnitPriceMaster.fromDraft(
       const UnitPriceMasterDraft(
         trade: '土工事',
@@ -213,6 +217,86 @@ void main() {
       '4500',
     );
     expect(find.text('¥ 9,000'), findsOneWidget);
+  });
+
+  testWidgets('過去の見積を検索して明細と単価を呼び出せる', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final pastEstimate = EstimateDocument(
+      info: EstimateInfo.initial(
+        DateTime(2026, 8, 1),
+      ).copyWith(estimateName: '○○邸 外構工事', siteName: '○○邸'),
+      items: [
+        EstimateItem.fromDraft(
+          const EstimateItemDraft(
+            trade: '外構工事',
+            name: '化粧ブロック積み',
+            specification: 'スマートC120',
+            quantity: 10,
+            unit: '本',
+            unitPrice: 1350,
+            description: '色：ダークグレー',
+          ),
+          id: 'past-1',
+          createdAt: DateTime(2026, 8, 1),
+        ),
+      ],
+    );
+    final otherEstimate = EstimateDocument(
+      info: EstimateInfo.initial(
+        DateTime(2026, 7, 1),
+      ).copyWith(estimateName: '△△工事'),
+      items: [
+        EstimateItem.fromDraft(
+          const EstimateItemDraft(
+            trade: '内装工事',
+            name: 'クロス貼り',
+            quantity: 20,
+            unit: 'm²',
+            unitPrice: 1200,
+          ),
+          id: 'past-2',
+          createdAt: DateTime(2026, 7, 1),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EstimateItemEditorScreen(
+          initialDraft: const EstimateItemDraft(quantity: 2),
+          estimates: [pastEstimate, otherEstimate],
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('selectPastUnitPrice')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('selectPastUnitPriceSearch')),
+      '○○邸 ダーク',
+    );
+    await tester.pump();
+    expect(find.text('クロス貼り'), findsNothing);
+    await tester.tap(
+      find.byKey(Key('selectPastUnitPrice-${pastEstimate.info.id}-past-1')),
+    );
+    await tester.pumpAndSettle();
+
+    String fieldText(String key) =>
+        tester.widget<TextFormField>(find.byKey(Key(key))).controller!.text;
+    expect(fieldText('estimateTradeField'), '外構工事');
+    expect(fieldText('estimateNameField'), '化粧ブロック積み');
+    expect(fieldText('estimateSpecificationField'), 'スマートC120');
+    expect(fieldText('estimateQuantityField'), '2');
+    expect(fieldText('estimateUnitField'), '本');
+    expect(fieldText('estimateUnitPriceField'), '1350');
+    expect(
+      tester.widget<Text>(find.byKey(const Key('estimateAmountValue'))).data,
+      '¥ 2,700',
+    );
+    expect(fieldText('estimateDescriptionField'), '色：ダークグレー');
   });
 
   testWidgets('白・グレーテーマのイコールは白文字で表示する', (tester) async {
