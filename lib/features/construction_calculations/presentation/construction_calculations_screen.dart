@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../area/presentation/quadrilateral_area_screen.dart';
+import '../../density/presentation/weight_calculation_screen.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 
 class ConstructionCalculationsScreen extends StatelessWidget {
@@ -32,10 +33,18 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const _CalculationTile(
+            _CalculationTile(
+              key: const Key('openWeightCalculation'),
               icon: Icons.scale_outlined,
               title: '比重・重量計算',
-              subtitle: '次の工程で追加',
+              subtitle: '材料と体積から重量を算出',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => WeightCalculationScreen(
+                    onSendToEstimate: onSendToEstimate,
+                  ),
+                ),
+              ),
             ),
             const _CalculationTile(
               icon: Icons.landscape_outlined,
