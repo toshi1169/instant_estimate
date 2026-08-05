@@ -185,7 +185,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       unawaited(
         Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => const ConstructionCalculationsScreen(),
+            builder: (_) => ConstructionCalculationsScreen(
+              onSendToEstimate: _sendDraftToEstimate,
+            ),
           ),
         ),
       );
@@ -303,6 +305,17 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       calculationBasis: '$expression = $result',
       originalQuantity: quantity,
     );
+    await _sendDraftToEstimate(draft);
+  }
+
+  Future<void> _sendDraftToEstimate(EstimateItemDraft draft) async {
+    try {
+      await _estimateController.load();
+    } catch (_) {
+      if (mounted) _showMessage('見積明細を読み込めませんでした');
+      return;
+    }
+    if (!mounted) return;
     final editorResult = await Navigator.of(context)
         .push<EstimateItemEditorResult>(
           MaterialPageRoute(

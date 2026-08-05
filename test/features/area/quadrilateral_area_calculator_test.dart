@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/area/domain/quadrilateral_area_calculator.dart';
 import 'package:instant_estimate/features/area/presentation/quadrilateral_area_screen.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 
 void main() {
   test('対角線で分けた2つの三角形の面積を合計する', () {
@@ -45,7 +46,14 @@ void main() {
   });
 
   testWidgets('4辺と対角線を入力すると合計面積を表示する', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: QuadrilateralAreaScreen()));
+    EstimateItemDraft? sentDraft;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: QuadrilateralAreaScreen(
+          onSendToEstimate: (draft) async => sentDraft = draft,
+        ),
+      ),
+    );
 
     for (final (index, value) in ['3', '4', '3', '4', '5'].indexed) {
       await tester.enterText(
@@ -59,5 +67,19 @@ void main() {
     expect(find.byKey(const Key('quadrilateralAreaResult')), findsOneWidget);
     expect(find.text('12 m²'), findsOneWidget);
     expect(find.textContaining('三角形① 6 m²'), findsOneWidget);
+
+    final sendButton = find.byKey(const Key('sendQuadrilateralAreaToEstimate'));
+    await tester.scrollUntilVisible(
+      sendButton,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(sendButton);
+    await tester.pump();
+    expect(sentDraft?.name, '面積');
+    expect(sentDraft?.quantity, 12);
+    expect(sentDraft?.unit, 'm²');
+    expect(sentDraft?.specification, contains('対角線=5m'));
+    expect(sentDraft?.calculationBasis, contains('＝ 12m²'));
   });
 }

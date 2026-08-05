@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../estimate/domain/estimate_item_draft.dart';
 import '../domain/quadrilateral_area_calculator.dart';
 
 class QuadrilateralAreaScreen extends StatefulWidget {
-  const QuadrilateralAreaScreen({super.key});
+  const QuadrilateralAreaScreen({required this.onSendToEstimate, super.key});
+
+  final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
 
   @override
   State<QuadrilateralAreaScreen> createState() =>
@@ -61,6 +64,31 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
       _result = null;
       _errorMessage = null;
     });
+  }
+
+  Future<void> _sendToEstimate() async {
+    final result = _result;
+    if (result == null) return;
+    final values = [for (var index = 0; index < 5; index++) _valueAt(index)];
+    final specification =
+        'A=${_format(values[0])}m B=${_format(values[1])}m '
+        'C=${_format(values[2])}m D=${_format(values[3])}m '
+        '対角線=${_format(values[4])}m';
+    final calculationBasis =
+        '$specification\n'
+        '三角形① ${_format(result.firstTriangleArea)}m² ＋ '
+        '三角形② ${_format(result.secondTriangleArea)}m² '
+        '＝ ${_format(result.totalArea)}m²';
+    await widget.onSendToEstimate(
+      EstimateItemDraft(
+        name: '面積',
+        specification: specification,
+        quantity: result.totalArea,
+        unit: 'm²',
+        calculationBasis: calculationBasis,
+        originalQuantity: result.totalArea,
+      ),
+    );
   }
 
   String? _validateLength(String? value) {
@@ -173,6 +201,13 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                key: const Key('sendQuadrilateralAreaToEstimate'),
+                onPressed: _sendToEstimate,
+                icon: const Icon(Icons.request_quote_outlined),
+                label: const Text('見積明細へ追加'),
               ),
             ],
           ],

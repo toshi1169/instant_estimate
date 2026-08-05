@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../area/presentation/quadrilateral_area_screen.dart';
+import '../../estimate/domain/estimate_item_draft.dart';
 
 class ConstructionCalculationsScreen extends StatelessWidget {
-  const ConstructionCalculationsScreen({super.key});
+  const ConstructionCalculationsScreen({
+    required this.onSendToEstimate,
+    super.key,
+  });
+
+  final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +26,9 @@ class ConstructionCalculationsScreen extends StatelessWidget {
               subtitle: '4辺と対角線から面積を算出',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const QuadrilateralAreaScreen(),
+                  builder: (_) => QuadrilateralAreaScreen(
+                    onSendToEstimate: onSendToEstimate,
+                  ),
                 ),
               ),
             ),
