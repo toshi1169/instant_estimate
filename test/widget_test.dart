@@ -20,6 +20,7 @@ import 'package:instant_estimate/features/estimate/application/estimate_controll
 import 'package:instant_estimate/features/estimate/presentation/estimate_item_editor_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_items_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_documents_screen.dart';
+import 'package:instant_estimate/features/estimate/presentation/unit_price_master_screen.dart';
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
   FakeOnboardingPreferences({required this.hasSelected});
@@ -88,6 +89,46 @@ class FakeEstimateItemStore implements EstimateItemStore {
 }
 
 void main() {
+  testWidgets('単価マスタを工種・名称・仕様・単位・摘要から検索できる', (tester) async {
+    final controller = EstimateController();
+    await controller.load();
+    await controller.addUnitPriceMaster(
+      const UnitPriceMasterDraft(
+        trade: '土工事',
+        name: '根切り',
+        specification: '機械掘削',
+        unit: 'm³',
+        unitPrice: 4500,
+        description: '小運搬別途',
+      ),
+    );
+    await controller.addUnitPriceMaster(
+      const UnitPriceMasterDraft(
+        trade: '内装工事',
+        name: 'クロス貼り',
+        specification: '量産品',
+        unit: 'm²',
+        unitPrice: 1200,
+        description: '材料施工共',
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: UnitPriceMasterScreen(controller: controller)),
+    );
+
+    expect(find.text('根切り'), findsOneWidget);
+    expect(find.text('クロス貼り'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('unitPriceMasterSearch')),
+      '土工事 小運搬',
+    );
+    await tester.pump();
+
+    expect(find.text('根切り'), findsOneWidget);
+    expect(find.text('クロス貼り'), findsNothing);
+    expect(find.text('1 / 2件'), findsOneWidget);
+  });
+
   testWidgets('単価マスタを選ぶと見積明細へ各項目を反映する', (tester) async {
     final master = UnitPriceMaster.fromDraft(
       const UnitPriceMasterDraft(
@@ -101,17 +142,34 @@ void main() {
       id: 'price-1',
       createdAt: DateTime(2026, 8, 5),
     );
+    final other = UnitPriceMaster.fromDraft(
+      const UnitPriceMasterDraft(
+        trade: '内装工事',
+        name: 'クロス貼り',
+        specification: '量産品',
+        unit: 'm²',
+        unitPrice: 1200,
+      ),
+      id: 'price-2',
+      createdAt: DateTime(2026, 8, 5),
+    );
     await tester.pumpWidget(
       MaterialApp(
         home: EstimateItemEditorScreen(
           initialDraft: const EstimateItemDraft(quantity: 2),
-          unitPriceMasters: [master],
+          unitPriceMasters: [master, other],
         ),
       ),
     );
 
     await tester.tap(find.byKey(const Key('selectUnitPriceMaster')));
     await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('selectUnitPriceMasterSearch')),
+      '機械掘削',
+    );
+    await tester.pump();
+    expect(find.text('クロス貼り'), findsNothing);
     await tester.tap(find.byKey(const Key('selectUnitPrice-price-1')));
     await tester.pumpAndSettle();
 

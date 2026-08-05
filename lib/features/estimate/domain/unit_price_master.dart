@@ -84,3 +84,21 @@ class UnitPriceMaster {
     'description': description,
   };
 }
+
+bool matchesUnitPriceMasterQuery(UnitPriceMaster price, String query) {
+  final terms = query
+      .trim()
+      .toLowerCase()
+      .split(RegExp(r'\s+'))
+      .where((term) => term.isNotEmpty);
+  if (terms.isEmpty) return true;
+  final searchable = [
+    price.trade,
+    price.name,
+    price.specification,
+    price.unit,
+    price.description,
+    if (price.unitPrice != null) price.unitPrice.toString(),
+  ].join(' ').toLowerCase();
+  return terms.every(searchable.contains);
+}

@@ -6,10 +6,25 @@ import 'unit_price_master_editor_screen.dart';
 
 enum _UnitPriceAction { edit, delete }
 
-class UnitPriceMasterScreen extends StatelessWidget {
+class UnitPriceMasterScreen extends StatefulWidget {
   const UnitPriceMasterScreen({required this.controller, super.key});
 
   final EstimateController controller;
+
+  @override
+  State<UnitPriceMasterScreen> createState() => _UnitPriceMasterScreenState();
+}
+
+class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
+  final _search = TextEditingController();
+
+  EstimateController get controller => widget.controller;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +34,8 @@ class UnitPriceMasterScreen extends StatelessWidget {
         child: ListenableBuilder(
           listenable: controller,
           builder: (context, _) {
-            final prices = controller.unitPriceMasters;
-            if (prices.isEmpty) {
+            final allPrices = controller.unitPriceMasters;
+            if (allPrices.isEmpty) {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.all(32),
@@ -31,47 +46,95 @@ class UnitPriceMasterScreen extends StatelessWidget {
                 ),
               );
             }
-            return ListView.separated(
-              key: const Key('unitPriceMasterList'),
-              padding: const EdgeInsets.all(12),
-              itemCount: prices.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final price = prices[index];
-                return Card(
-                  child: ListTile(
-                    key: Key('unitPriceMaster-${price.id}'),
-                    title: Text(price.name),
-                    subtitle: Text(_subtitle(price)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          price.unitPrice == null
-                              ? '未入力'
-                              : '¥ ${_displayPrice(price.unitPrice!)}',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        PopupMenuButton<_UnitPriceAction>(
-                          onSelected: (action) =>
-                              _handleAction(context, price, action),
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: _UnitPriceAction.edit,
-                              child: Text('編集'),
+            final prices = allPrices
+                .where(
+                  (price) => matchesUnitPriceMasterQuery(price, _search.text),
+                )
+                .toList(growable: false);
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                  child: TextField(
+                    key: const Key('unitPriceMasterSearch'),
+                    controller: _search,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: '工種・名称・仕様・単位・摘要を検索',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _search.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: '検索をクリア',
+                              onPressed: () {
+                                _search.clear();
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.clear),
                             ),
-                            PopupMenuItem(
-                              value: _UnitPriceAction.delete,
-                              child: Text('削除'),
-                            ),
-                          ],
-                        ),
-                      ],
+                      border: const OutlineInputBorder(),
                     ),
-                    onTap: () => _edit(context, price),
                   ),
-                );
-              },
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text('${prices.length} / ${allPrices.length}件'),
+                  ),
+                ),
+                Expanded(
+                  child: prices.isEmpty
+                      ? const Center(child: Text('一致する単価がありません'))
+                      : ListView.separated(
+                          key: const Key('unitPriceMasterList'),
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
+                          itemCount: prices.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final price = prices[index];
+                            return Card(
+                              child: ListTile(
+                                key: Key('unitPriceMaster-${price.id}'),
+                                title: Text(price.name),
+                                subtitle: Text(_subtitle(price)),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      price.unitPrice == null
+                                          ? '未入力'
+                                          : '¥ ${_displayPrice(price.unitPrice!)}',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
+                                    ),
+                                    PopupMenuButton<_UnitPriceAction>(
+                                      onSelected: (action) =>
+                                          _handleAction(context, price, action),
+                                      itemBuilder: (_) => const [
+                                        PopupMenuItem(
+                                          value: _UnitPriceAction.edit,
+                                          child: Text('編集'),
+                                        ),
+                                        PopupMenuItem(
+                                          value: _UnitPriceAction.delete,
+                                          child: Text('削除'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => _edit(context, price),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             );
           },
         ),

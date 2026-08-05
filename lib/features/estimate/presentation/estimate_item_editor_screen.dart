@@ -100,59 +100,88 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   }
 
   Future<void> _selectUnitPriceMaster() async {
+    var filtered = widget.unitPriceMasters;
     final selected = await showModalBottomSheet<UnitPriceMaster>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.65,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-                child: Row(
-                  children: [
-                    Text(
-                      '単価マスタから選択',
-                      style: Theme.of(context).textTheme.titleLarge,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.72,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        '単価マスタから選択',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${filtered.length} / ${widget.unitPriceMasters.length}件',
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: TextField(
+                    key: const Key('selectUnitPriceMasterSearch'),
+                    autofocus: widget.unitPriceMasters.length > 8,
+                    onChanged: (query) {
+                      setModalState(() {
+                        filtered = widget.unitPriceMasters
+                            .where(
+                              (price) =>
+                                  matchesUnitPriceMasterQuery(price, query),
+                            )
+                            .toList(growable: false);
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: '単価を検索',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
                     ),
-                    const Spacer(),
-                    Text('${widget.unitPriceMasters.length}件'),
-                  ],
+                  ),
                 ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView.separated(
-                  key: const Key('selectUnitPriceMasterList'),
-                  padding: const EdgeInsets.all(12),
-                  itemCount: widget.unitPriceMasters.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final price = widget.unitPriceMasters[index];
-                    return ListTile(
-                      key: Key('selectUnitPrice-${price.id}'),
-                      title: Text(price.name),
-                      subtitle: Text(
-                        [
-                          if (price.trade.isNotEmpty) price.trade,
-                          if (price.specification.isNotEmpty)
-                            price.specification,
-                          if (price.unit.isNotEmpty) price.unit,
-                        ].join(' ／ '),
-                      ),
-                      trailing: Text(
-                        price.unitPrice == null
-                            ? '未入力'
-                            : '¥ ${_displayAmount(price.unitPrice!)}',
-                      ),
-                      onTap: () => Navigator.of(context).pop(price),
-                    );
-                  },
+                const Divider(height: 1),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? const Center(child: Text('一致する単価がありません'))
+                      : ListView.separated(
+                          key: const Key('selectUnitPriceMasterList'),
+                          padding: const EdgeInsets.all(12),
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final price = filtered[index];
+                            return ListTile(
+                              key: Key('selectUnitPrice-${price.id}'),
+                              title: Text(price.name),
+                              subtitle: Text(
+                                [
+                                  if (price.trade.isNotEmpty) price.trade,
+                                  if (price.specification.isNotEmpty)
+                                    price.specification,
+                                  if (price.unit.isNotEmpty) price.unit,
+                                ].join(' ／ '),
+                              ),
+                              trailing: Text(
+                                price.unitPrice == null
+                                    ? '未入力'
+                                    : '¥ ${_displayAmount(price.unitPrice!)}',
+                              ),
+                              onTap: () => Navigator.of(context).pop(price),
+                            );
+                          },
+                        ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
