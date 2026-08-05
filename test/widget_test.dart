@@ -15,7 +15,9 @@ import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_workspace.dart';
+import 'package:instant_estimate/features/estimate/domain/unit_price_master.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
+import 'package:instant_estimate/features/estimate/presentation/estimate_item_editor_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_items_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_documents_screen.dart';
 
@@ -80,11 +82,81 @@ class FakeEstimateItemStore implements EstimateItemStore {
         for (final document in workspace.estimates)
           EstimateDocument(info: document.info, items: List.of(document.items)),
       ],
+      unitPriceMasters: List.of(workspace.unitPriceMasters),
     );
   }
 }
 
 void main() {
+  testWidgets('単価マスタを選ぶと見積明細へ各項目を反映する', (tester) async {
+    final master = UnitPriceMaster.fromDraft(
+      const UnitPriceMasterDraft(
+        trade: '土工事',
+        name: '根切り',
+        specification: '機械掘削',
+        unit: 'm³',
+        unitPrice: 4500,
+        description: '小運搬別途',
+      ),
+      id: 'price-1',
+      createdAt: DateTime(2026, 8, 5),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EstimateItemEditorScreen(
+          initialDraft: const EstimateItemDraft(quantity: 2),
+          unitPriceMasters: [master],
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('selectUnitPriceMaster')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('selectUnitPrice-price-1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(find.byKey(const Key('estimateTradeField')))
+          .controller
+          ?.text,
+      '土工事',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(find.byKey(const Key('estimateNameField')))
+          .controller
+          ?.text,
+      '根切り',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('estimateSpecificationField')),
+          )
+          .controller
+          ?.text,
+      '機械掘削',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(find.byKey(const Key('estimateUnitField')))
+          .controller
+          ?.text,
+      'm³',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('estimateUnitPriceField')),
+          )
+          .controller
+          ?.text,
+      '4500',
+    );
+    expect(find.text('¥ 9,000'), findsOneWidget);
+  });
+
   testWidgets('白・グレーテーマのイコールは白文字で表示する', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

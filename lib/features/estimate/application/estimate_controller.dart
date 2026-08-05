@@ -8,6 +8,7 @@ import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_item_group.dart';
 import '../domain/estimate_workspace.dart';
 import '../domain/estimate_totals.dart';
+import '../domain/unit_price_master.dart';
 
 class EstimateController extends ChangeNotifier {
   EstimateController({this.store, DateTime? now})
@@ -16,6 +17,7 @@ class EstimateController extends ChangeNotifier {
   final EstimateItemStore? store;
   final List<EstimateItem> _items = [];
   final List<EstimateDocument> _estimates = [];
+  final List<UnitPriceMaster> _unitPriceMasters = [];
   EstimateInfo _info;
   bool _loaded = false;
 
@@ -23,6 +25,8 @@ class EstimateController extends ChangeNotifier {
   EstimateInfo get info => _info;
   List<EstimateDocument> get estimates =>
       List.unmodifiable(_workspaceWithActive().estimates);
+  List<UnitPriceMaster> get unitPriceMasters =>
+      List.unmodifiable(_unitPriceMasters);
   bool get isLoaded => _loaded;
   double get totalAmount =>
       _items.fold(0, (total, item) => total + (item.amount ?? 0));
@@ -58,6 +62,9 @@ class EstimateController extends ChangeNotifier {
       _estimates
         ..clear()
         ..addAll(workspace.estimates);
+      _unitPriceMasters
+        ..clear()
+        ..addAll(workspace.unitPriceMasters);
       final document = _estimates.firstWhere(
         (estimate) => estimate.info.id == workspace.activeEstimateId,
         orElse: () => _estimates.first,
@@ -140,6 +147,7 @@ class EstimateController extends ChangeNotifier {
     final workspace = EstimateWorkspace(
       activeEstimateId: created.info.id,
       estimates: estimates,
+      unitPriceMasters: _unitPriceMasters,
     );
     await store?.save(workspace);
     _replaceEstimates(estimates);
@@ -181,6 +189,7 @@ class EstimateController extends ChangeNotifier {
     final workspace = EstimateWorkspace(
       activeEstimateId: copiedInfo.id,
       estimates: estimates,
+      unitPriceMasters: _unitPriceMasters,
     );
     await store?.save(workspace);
     _replaceEstimates(estimates);
@@ -205,6 +214,7 @@ class EstimateController extends ChangeNotifier {
     final workspace = EstimateWorkspace(
       activeEstimateId: selected.info.id,
       estimates: estimates,
+      unitPriceMasters: _unitPriceMasters,
     );
     await store?.save(workspace);
     _replaceEstimates(estimates);
@@ -231,6 +241,7 @@ class EstimateController extends ChangeNotifier {
     final workspace = EstimateWorkspace(
       activeEstimateId: activeId,
       estimates: remaining,
+      unitPriceMasters: _unitPriceMasters,
     );
     await store?.save(workspace);
     _replaceEstimates(remaining);
@@ -246,6 +257,49 @@ class EstimateController extends ChangeNotifier {
         Future<void>.value();
   }
 
+  Future<UnitPriceMaster> addUnitPriceMaster(UnitPriceMasterDraft draft) async {
+    final now = DateTime.now();
+    final price = UnitPriceMaster.fromDraft(
+      draft,
+      id: now.microsecondsSinceEpoch.toString(),
+      createdAt: now,
+    );
+    final updated = [..._unitPriceMasters, price];
+    await store?.save(_workspaceWithActive(unitPriceMasters: updated));
+    _replaceUnitPriceMasters(updated);
+    notifyListeners();
+    return price;
+  }
+
+  Future<void> updateUnitPriceMaster(
+    String id,
+    UnitPriceMasterDraft draft,
+  ) async {
+    final index = _unitPriceMasters.indexWhere((price) => price.id == id);
+    if (index < 0) throw StateError('Unit price was not found.');
+    final current = _unitPriceMasters[index];
+    final updatedPrice = UnitPriceMaster.fromDraft(
+      draft,
+      id: current.id,
+      createdAt: current.createdAt,
+    );
+    final updated = List<UnitPriceMaster>.of(_unitPriceMasters)
+      ..[index] = updatedPrice;
+    await store?.save(_workspaceWithActive(unitPriceMasters: updated));
+    _replaceUnitPriceMasters(updated);
+    notifyListeners();
+  }
+
+  Future<void> deleteUnitPriceMaster(String id) async {
+    final updated = _unitPriceMasters
+        .where((price) => price.id != id)
+        .toList(growable: false);
+    if (updated.length == _unitPriceMasters.length) return;
+    await store?.save(_workspaceWithActive(unitPriceMasters: updated));
+    _replaceUnitPriceMasters(updated);
+    notifyListeners();
+  }
+
   EstimateDocument _currentDocument({
     EstimateInfo? info,
     List<EstimateItem>? items,
@@ -257,6 +311,7 @@ class EstimateController extends ChangeNotifier {
   EstimateWorkspace _workspaceWithActive({
     EstimateInfo? info,
     List<EstimateItem>? items,
+    List<UnitPriceMaster>? unitPriceMasters,
   }) {
     final active = _currentDocument(info: info, items: items);
     final estimates = _estimates.isEmpty
@@ -268,6 +323,9 @@ class EstimateController extends ChangeNotifier {
     return EstimateWorkspace(
       activeEstimateId: active.info.id,
       estimates: estimates,
+      unitPriceMasters: List.unmodifiable(
+        unitPriceMasters ?? _unitPriceMasters,
+      ),
     );
   }
 
@@ -275,5 +333,11 @@ class EstimateController extends ChangeNotifier {
     _estimates
       ..clear()
       ..addAll(estimates);
+  }
+
+  void _replaceUnitPriceMasters(List<UnitPriceMaster> unitPriceMasters) {
+    _unitPriceMasters
+      ..clear()
+      ..addAll(unitPriceMasters);
   }
 }

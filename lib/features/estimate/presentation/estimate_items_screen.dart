@@ -213,6 +213,7 @@ class EstimateItemsScreen extends StatelessWidget {
           initialDraft: const EstimateItemDraft(),
           estimateTitle: controller.info.displayName,
           showOpenEstimateAction: false,
+          unitPriceMasters: controller.unitPriceMasters,
         ),
       ),
     );
@@ -270,6 +271,7 @@ class EstimateItemsScreen extends StatelessWidget {
                   initialDraft: item.toDraft(),
                   estimateTitle: controller.info.displayName,
                   showOpenEstimateAction: false,
+                  unitPriceMasters: controller.unitPriceMasters,
                 ),
               ),
             );
@@ -296,6 +298,7 @@ class EstimateItemsScreen extends StatelessWidget {
                   initialDraft: item.toDraft(),
                   isEditing: true,
                   estimateTitle: controller.info.displayName,
+                  unitPriceMasters: controller.unitPriceMasters,
                 ),
               ),
             );

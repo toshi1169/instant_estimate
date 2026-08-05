@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../domain/estimate_item_draft.dart';
+import '../domain/unit_price_master.dart';
 
 enum EstimateItemEditorAction { continueCalculating, openEstimate }
 
@@ -18,6 +19,7 @@ class EstimateItemEditorScreen extends StatefulWidget {
     this.isEditing = false,
     this.showOpenEstimateAction = true,
     this.estimateTitle = '名称未設定の見積',
+    this.unitPriceMasters = const [],
     super.key,
   });
 
@@ -25,6 +27,7 @@ class EstimateItemEditorScreen extends StatefulWidget {
   final bool isEditing;
   final bool showOpenEstimateAction;
   final String estimateTitle;
+  final List<UnitPriceMaster> unitPriceMasters;
 
   @override
   State<EstimateItemEditorScreen> createState() =>
@@ -96,6 +99,75 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     );
   }
 
+  Future<void> _selectUnitPriceMaster() async {
+    final selected = await showModalBottomSheet<UnitPriceMaster>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.65,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    Text(
+                      '単価マスタから選択',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const Spacer(),
+                    Text('${widget.unitPriceMasters.length}件'),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.separated(
+                  key: const Key('selectUnitPriceMasterList'),
+                  padding: const EdgeInsets.all(12),
+                  itemCount: widget.unitPriceMasters.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final price = widget.unitPriceMasters[index];
+                    return ListTile(
+                      key: Key('selectUnitPrice-${price.id}'),
+                      title: Text(price.name),
+                      subtitle: Text(
+                        [
+                          if (price.trade.isNotEmpty) price.trade,
+                          if (price.specification.isNotEmpty)
+                            price.specification,
+                          if (price.unit.isNotEmpty) price.unit,
+                        ].join(' ／ '),
+                      ),
+                      trailing: Text(
+                        price.unitPrice == null
+                            ? '未入力'
+                            : '¥ ${_displayAmount(price.unitPrice!)}',
+                      ),
+                      onTap: () => Navigator.of(context).pop(price),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _trade.text = selected.trade;
+      _name.text = selected.name;
+      _specification.text = selected.specification;
+      _unit.text = selected.unit;
+      _unitPrice.text = _editableNumber(selected.unitPrice);
+      _description.text = selected.description;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,6 +220,19 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   ),
                 ],
               ),
+              OutlinedButton.icon(
+                key: const Key('selectUnitPriceMaster'),
+                onPressed: widget.unitPriceMasters.isEmpty
+                    ? null
+                    : _selectUnitPriceMaster,
+                icon: const Icon(Icons.price_check_outlined),
+                label: Text(
+                  widget.unitPriceMasters.isEmpty
+                      ? '単価マスタ（登録なし）'
+                      : '単価マスタから選択（${widget.unitPriceMasters.length}件）',
+                ),
+              ),
+              const SizedBox(height: 12),
               _numberField(
                 _unitPrice,
                 '単価',

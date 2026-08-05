@@ -6,6 +6,7 @@ import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_workspace.dart';
+import 'package:instant_estimate/features/estimate/domain/unit_price_master.dart';
 
 class _MemoryEstimateItemStore implements EstimateItemStore {
   late EstimateWorkspace workspace;
@@ -38,6 +39,7 @@ class _MemoryEstimateItemStore implements EstimateItemStore {
         for (final document in workspace.estimates)
           EstimateDocument(info: document.info, items: List.of(document.items)),
       ],
+      unitPriceMasters: List.of(workspace.unitPriceMasters),
     );
   }
 }
@@ -241,5 +243,46 @@ void main() {
     expect(controller.groups[2].displayName, '工種未設定');
     expect(controller.groups[2].subtotal, 500);
     expect(controller.totalAmount, 41500);
+  });
+
+  test('単価マスタを登録・編集・削除して再起動後も復元できる', () async {
+    final store = _MemoryEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+
+    final registered = await controller.addUnitPriceMaster(
+      const UnitPriceMasterDraft(
+        trade: '土工事',
+        name: '根切り',
+        specification: '機械掘削',
+        unit: 'm³',
+        unitPrice: 4500,
+        description: '小運搬別途',
+      ),
+    );
+
+    final restored = EstimateController(store: store);
+    await restored.load();
+    expect(restored.unitPriceMasters, hasLength(1));
+    expect(restored.unitPriceMasters.single.name, '根切り');
+    expect(restored.unitPriceMasters.single.unitPrice, 4500);
+
+    await restored.updateUnitPriceMaster(
+      registered.id,
+      const UnitPriceMasterDraft(
+        trade: '土工事',
+        name: '根切り',
+        specification: '機械掘削',
+        unit: 'm³',
+        unitPrice: 5000,
+        description: '小運搬含む',
+      ),
+    );
+    expect(restored.unitPriceMasters.single.unitPrice, 5000);
+    expect(store.workspace.unitPriceMasters.single.description, '小運搬含む');
+
+    await restored.deleteUnitPriceMaster(registered.id);
+    expect(restored.unitPriceMasters, isEmpty);
+    expect(store.workspace.unitPriceMasters, isEmpty);
   });
 }

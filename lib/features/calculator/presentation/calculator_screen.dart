@@ -296,6 +296,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             builder: (_) => EstimateItemEditorScreen(
               initialDraft: draft,
               estimateTitle: _estimateController.info.displayName,
+              unitPriceMasters: _estimateController.unitPriceMasters,
             ),
           ),
         );

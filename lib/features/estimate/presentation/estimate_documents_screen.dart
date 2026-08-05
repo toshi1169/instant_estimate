@@ -5,6 +5,7 @@ import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_items_screen.dart';
+import 'unit_price_master_screen.dart';
 
 enum _EstimateDocumentAction { duplicate, delete }
 
@@ -16,7 +17,21 @@ class EstimateDocumentsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('インスタント見積')),
+      appBar: AppBar(
+        title: const Text('インスタント見積'),
+        actions: [
+          IconButton(
+            key: const Key('openUnitPriceMaster'),
+            tooltip: '単価マスタ',
+            icon: const Icon(Icons.price_change_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => UnitPriceMasterScreen(controller: controller),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,

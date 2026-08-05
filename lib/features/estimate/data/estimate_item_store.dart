@@ -6,6 +6,7 @@ import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_workspace.dart';
+import '../domain/unit_price_master.dart';
 
 abstract interface class EstimateItemStore {
   Future<EstimateWorkspace> load();
@@ -61,6 +62,7 @@ class PlatformEstimateItemStore implements EstimateItemStore {
           return EstimateWorkspace(
             activeEstimateId: activeId,
             estimates: estimates,
+            unitPriceMasters: _decodeUnitPriceMasters(map['unitPriceMasters']),
           );
         }
       }
@@ -96,6 +98,18 @@ class PlatformEstimateItemStore implements EstimateItemStore {
         .map(
           (item) => EstimateItem.fromJson(
             item.map((key, value) => MapEntry(key.toString(), value)),
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<UnitPriceMaster> _decodeUnitPriceMasters(Object? encoded) {
+    if (encoded is! List<Object?>) return const [];
+    return encoded
+        .whereType<Map<Object?, Object?>>()
+        .map(
+          (price) => UnitPriceMaster.fromJson(
+            price.map((key, value) => MapEntry(key.toString(), value)),
           ),
         )
         .toList(growable: false);
