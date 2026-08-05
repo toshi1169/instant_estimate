@@ -9,12 +9,16 @@ String buildEstimateTableText(Iterable<EstimateItem> items) {
   var groupNumber = 1;
 
   for (final groupItems in groupedItems.values) {
-    rows.add([_groupMarker(groupNumber), '', '', '', '', '', '', '']);
-
     final firstItemRow = rows.length + 1;
-    for (final item in groupItems) {
+    for (var index = 0; index < groupItems.length; index++) {
       final excelRow = rows.length + 1;
-      rows.add(_itemCells(item, excelRow: excelRow));
+      rows.add(
+        _itemCells(
+          groupItems[index],
+          excelRow: excelRow,
+          marker: index == 0 ? _groupMarker(groupNumber) : '',
+        ),
+      );
     }
     final lastItemRow = rows.length;
 
@@ -71,9 +75,13 @@ Map<String, List<EstimateItem>> _groupItems(Iterable<EstimateItem> items) {
   return grouped;
 }
 
-List<String> _itemCells(EstimateItem item, {required int excelRow}) {
+List<String> _itemCells(
+  EstimateItem item, {
+  required int excelRow,
+  required String marker,
+}) {
   return [
-    '',
+    marker,
     _textCell(item.name),
     _textCell(item.specification),
     _numberCell(item.quantity),

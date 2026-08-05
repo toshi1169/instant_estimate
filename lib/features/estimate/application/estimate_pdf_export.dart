@@ -157,27 +157,26 @@ List<pw.Widget> _detailTables(Map<String, List<EstimateItem>> grouped) {
         columnWidths: _columnWidths,
         border: pw.TableBorder.all(width: 0.45),
         children: [
-          pw.TableRow(
-            children: [
-              _cell(_groupMarker(number), bold: true, center: true),
-              _cell(''),
-              ...List.generate(6, (_) => _cell('')),
-            ],
-          ),
-          ...groupItems.map(
-            (item) => pw.TableRow(
+          for (var index = 0; index < groupItems.length; index++)
+            pw.TableRow(
               children: [
-                _cell(''),
-                _cell(item.name),
-                _cell(item.specification),
-                _cell(_number(item.quantity), right: true),
-                _cell(item.unit, center: true),
-                _cell(_moneyValue(item.unitPrice), right: true),
-                _cell(_money(estimateLineAmount(item)), right: true),
-                _cell(item.description),
+                _cell(
+                  index == 0 ? _groupMarker(number) : '',
+                  bold: true,
+                  center: true,
+                ),
+                _cell(groupItems[index].name),
+                _cell(groupItems[index].specification),
+                _cell(_number(groupItems[index].quantity), right: true),
+                _cell(groupItems[index].unit, center: true),
+                _cell(_moneyValue(groupItems[index].unitPrice), right: true),
+                _cell(
+                  _money(estimateLineAmount(groupItems[index])),
+                  right: true,
+                ),
+                _cell(groupItems[index].description),
               ],
             ),
-          ),
           pw.TableRow(
             children: [
               ...List.generate(5, (_) => _cell('')),

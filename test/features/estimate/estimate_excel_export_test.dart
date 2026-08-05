@@ -57,25 +57,48 @@ void main() {
       TextCellValue('記号'),
     );
     expect(sheet.cell(CellIndex.indexByString('A6')).value, TextCellValue('①'));
-    expect(sheet.cell(CellIndex.indexByString('B6')).value, TextCellValue(''));
     expect(
-      sheet.cell(CellIndex.indexByString('B7')).value,
+      sheet.cell(CellIndex.indexByString('B6')).value,
       TextCellValue('根切り'),
     );
     expect(
-      sheet.cell(CellIndex.indexByString('G7')).value,
+      sheet.cell(CellIndex.indexByString('A10')).value,
+      TextCellValue('②'),
+    );
+    expect(
+      sheet.cell(CellIndex.indexByString('B10')).value,
+      TextCellValue('フェンス'),
+    );
+    expect(
+      sheet.cell(CellIndex.indexByString('G6')).value,
       isA<FormulaCellValue>().having(
         (value) => value.formula,
         'formula',
-        'D7*F7',
+        'D6*F6',
       ),
     );
     expect(
-      sheet.cell(CellIndex.indexByString('G9')).value,
+      sheet.cell(CellIndex.indexByString('G8')).value,
       isA<FormulaCellValue>().having(
         (value) => value.formula,
         'formula',
-        'SUM(G7:G8)',
+        'SUM(G6:G7)',
+      ),
+    );
+    expect(
+      sheet.cell(CellIndex.indexByString('G13')).value,
+      isA<FormulaCellValue>().having(
+        (value) => value.formula,
+        'formula',
+        'SUM(G8,G11)',
+      ),
+    );
+    expect(
+      sheet.cell(CellIndex.indexByString('G14')).value,
+      isA<FormulaCellValue>().having(
+        (value) => value.formula,
+        'formula',
+        'ROUNDDOWN(G13*10%,0)',
       ),
     );
     expect(
@@ -83,30 +106,14 @@ void main() {
       isA<FormulaCellValue>().having(
         (value) => value.formula,
         'formula',
-        'SUM(G9,G13)',
-      ),
-    );
-    expect(
-      sheet.cell(CellIndex.indexByString('G16')).value,
-      isA<FormulaCellValue>().having(
-        (value) => value.formula,
-        'formula',
-        'ROUNDDOWN(G15*10%,0)',
-      ),
-    );
-    expect(
-      sheet.cell(CellIndex.indexByString('G17')).value,
-      isA<FormulaCellValue>().having(
-        (value) => value.formula,
-        'formula',
-        'G15+G16',
+        'G13+G14',
       ),
     );
     expect(sheet.pageSetup?.orientation, PageOrientation.landscape);
     expect(sheet.pageSetup?.paperSize, PaperSize.a4);
     expect(sheet.pageSetup?.fitToWidth, 1);
     expect(sheet.pageSetup?.fitToHeight, 0);
-    expect(sheet.printArea, 'A1:H17');
+    expect(sheet.printArea, 'A1:H15');
     expect(sheet.printTitleRows, '1:5');
   });
 }

@@ -31,11 +31,14 @@ List<int> buildEstimateWorkbook({
   final groupedItems = _groupItems(itemList);
   var groupNumber = 1;
   for (final entry in groupedItems.entries) {
-    _writeGroupHeader(sheet, row, groupNumber);
-    row++;
     final firstItemRow = row;
-    for (final item in entry.value) {
-      _writeItem(sheet, row, item);
+    for (var index = 0; index < entry.value.length; index++) {
+      _writeItem(
+        sheet,
+        row,
+        entry.value[index],
+        marker: index == 0 ? _groupMarker(groupNumber) : '',
+      );
       row++;
     }
     _writeSubtotal(sheet, row, firstItemRow, row - 1);
@@ -144,17 +147,14 @@ void _writeHeader(Sheet sheet) {
   sheet.setRowHeight(4, 26);
 }
 
-void _writeGroupHeader(Sheet sheet, int row, int number) {
-  for (var column = 0; column < 8; column++) {
-    _setCell(sheet, row, column, TextCellValue(''), _tradeStyle());
-  }
-  _setCell(sheet, row, 0, TextCellValue(_groupMarker(number)), _tradeStyle());
-  sheet.setRowHeight(row, 24);
-}
-
-void _writeItem(Sheet sheet, int row, EstimateItem item) {
+void _writeItem(
+  Sheet sheet,
+  int row,
+  EstimateItem item, {
+  required String marker,
+}) {
   final values = <CellValue>[
-    TextCellValue(''),
+    TextCellValue(marker),
     TextCellValue(item.name),
     TextCellValue(item.specification),
     _numberValue(item.quantity),
@@ -165,6 +165,7 @@ void _writeItem(Sheet sheet, int row, EstimateItem item) {
   ];
   for (var column = 0; column < values.length; column++) {
     final style = switch (column) {
+      0 => _bodyStyle(horizontalAlign: HorizontalAlign.Center),
       3 => _bodyStyle(
         horizontalAlign: HorizontalAlign.Right,
         numberFormat: _numberFormat,
@@ -295,19 +296,6 @@ CellStyle _headerStyle() => CellStyle(
   rightBorder: _thinBorder(),
   topBorder: _mediumBorder(),
   bottomBorder: _mediumBorder(),
-);
-
-CellStyle _tradeStyle() => CellStyle(
-  fontFamily: 'Yu Gothic',
-  fontSize: 10,
-  bold: true,
-  horizontalAlign: HorizontalAlign.Center,
-  textWrapping: TextWrapping.WrapText,
-  verticalAlign: VerticalAlign.Center,
-  leftBorder: _thinBorder(),
-  rightBorder: _thinBorder(),
-  topBorder: _mediumBorder(),
-  bottomBorder: _thinBorder(),
 );
 
 CellStyle _bodyStyle({

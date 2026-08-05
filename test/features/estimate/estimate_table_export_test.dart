@@ -34,17 +34,15 @@ void main() {
     expect(
       buildEstimateTableText(items),
       '記号\t名称\t仕様\t数量\t単位\t単価\t金額\t摘要\n'
-      '①\t\t\t\t\t\t\t\n'
-      '\t根切り\tW1.2 × H0.5\t7.2\tm³\t4500\t=D3*F3\t小運搬含む\n'
-      '\t\t\t\t\t小計\t=SUM(G3:G3)\t\n'
+      '①\t根切り\tW1.2 × H0.5\t7.2\tm³\t4500\t=D2*F2\t小運搬含む\n'
+      '\t\t\t\t\t小計\t=SUM(G2:G2)\t\n'
       '\t\t\t\t\t\t\t\n'
-      '②\t\t\t\t\t\t\t\n'
-      '\tクロス貼り\t\t40\tm²\t\t=D7*F7\t\n'
-      '\t\t\t\t\t小計\t=SUM(G7:G7)\t\n'
+      '②\tクロス貼り\t\t40\tm²\t\t=D5*F5\t\n'
+      '\t\t\t\t\t小計\t=SUM(G5:G5)\t\n'
       '\t\t\t\t\t\t\t\n'
-      '\t\t\t\t\t税抜合計\t=SUM(G4,G8)\t\n'
-      '\t\t\t\t\t消費税（10%）\t=ROUNDDOWN(G10*10%,0)\t\n'
-      '\t\t\t\t\t税込総額\t=G10+G11\t',
+      '\t\t\t\t\t税抜合計\t=SUM(G3,G6)\t\n'
+      '\t\t\t\t\t消費税（10%）\t=ROUNDDOWN(G8*10%,0)\t\n'
+      '\t\t\t\t\t税込総額\t=G8+G9\t',
     );
   });
 
@@ -66,7 +64,7 @@ void main() {
     final row = buildEstimateTableText([
       item,
     ]).split('\n').firstWhere((row) => row.contains("'=1+1"));
-    expect(row, "\t'=1+1\t既存 撤去\t1\t式\t-500\t=D3*F3\t'@SUM(A1:A2)");
+    expect(row, "①\t'=1+1\t既存 撤去\t1\t式\t-500\t=D2*F2\t'@SUM(A1:A2)");
   });
 
   test('工種名は出力せず同じ工種を同じ記号と小計にまとめる', () {
@@ -99,7 +97,7 @@ void main() {
     expect(text, isNot(contains('ブロック工事')));
     expect(RegExp('①').allMatches(text), hasLength(1));
     expect(text, isNot(contains('②')));
-    expect(text, contains('小計\t=SUM(G3:G4)'));
+    expect(text, contains('小計\t=SUM(G2:G3)'));
     expect(text, contains('税抜合計'));
     expect(text, contains('消費税（10%）'));
     expect(text, contains('税込総額'));
