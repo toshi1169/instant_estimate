@@ -15,6 +15,7 @@ import '../domain/estimate_info.dart';
 import 'duplicate_estimate_item_dialog.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_item_editor_screen.dart';
+import 'merge_estimate_quantity_dialog.dart';
 
 enum _EstimateItemAction { duplicate, edit, delete }
 
@@ -251,6 +252,44 @@ class EstimateItemsScreen extends StatelessWidget {
           }
           return;
         }
+      } else {
+        final mergeCandidate = controller.findQuantityMergeCandidate(
+          result.draft,
+        );
+        if (mergeCandidate != null) {
+          final action = await showMergeEstimateQuantityDialog(
+            context,
+            existing: mergeCandidate,
+            incoming: result.draft,
+          );
+          if (!context.mounted ||
+              action == MergeEstimateQuantityAction.cancel) {
+            return;
+          }
+          if (action == MergeEstimateQuantityAction.merge) {
+            final merged = await controller.mergeQuantity(
+              mergeCandidate.id,
+              result.draft,
+            );
+            final addedToMaster = result.saveToUnitPriceMaster
+                ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
+                    result.draft,
+                  )
+                : false;
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    addedToMaster
+                        ? '数量を加算し単価マスタへ追加しました'
+                        : '既存明細の数量を${_displayQuantity(merged.quantity)}へ加算しました',
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+        }
       }
       final addedItem = await controller.add(result.draft);
       final addedToMaster = result.saveToUnitPriceMaster
@@ -460,6 +499,13 @@ class EstimateItemsScreen extends StatelessWidget {
         ),
       );
   }
+}
+
+String _displayQuantity(double? value) {
+  if (value == null) return '';
+  return value == value.truncateToDouble()
+      ? value.toInt().toString()
+      : value.toString();
 }
 
 class _EstimateTotalsSummary extends StatelessWidget {

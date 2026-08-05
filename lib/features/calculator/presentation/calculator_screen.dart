@@ -17,6 +17,7 @@ import '../../estimate/data/estimate_item_store.dart';
 import '../../estimate/presentation/estimate_items_screen.dart';
 import '../../estimate/presentation/estimate_documents_screen.dart';
 import '../../estimate/presentation/duplicate_estimate_item_dialog.dart';
+import '../../estimate/presentation/merge_estimate_quantity_dialog.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
 import 'function_list_dialog.dart';
@@ -307,6 +308,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     var addedToMaster = false;
     String? addedItemId;
     var updatedExisting = false;
+    double? mergedQuantity;
     try {
       final estimateId = editorResult.estimateId;
       if (estimateId != null && estimateId != _estimateController.info.id) {
@@ -328,8 +330,30 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           addedItemId = addedItem.id;
         }
       } else {
-        final addedItem = await _estimateController.add(editorResult.draft);
-        addedItemId = addedItem.id;
+        final mergeCandidate = _estimateController.findQuantityMergeCandidate(
+          editorResult.draft,
+        );
+        if (mergeCandidate != null) {
+          final action = await showMergeEstimateQuantityDialog(
+            context,
+            existing: mergeCandidate,
+            incoming: editorResult.draft,
+          );
+          if (!mounted || action == MergeEstimateQuantityAction.cancel) return;
+          if (action == MergeEstimateQuantityAction.merge) {
+            final merged = await _estimateController.mergeQuantity(
+              mergeCandidate.id,
+              editorResult.draft,
+            );
+            mergedQuantity = merged.quantity;
+          } else {
+            final addedItem = await _estimateController.add(editorResult.draft);
+            addedItemId = addedItem.id;
+          }
+        } else {
+          final addedItem = await _estimateController.add(editorResult.draft);
+          addedItemId = addedItem.id;
+        }
       }
       if (editorResult.saveToUnitPriceMaster) {
         addedToMaster = await _estimateController
@@ -346,6 +370,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
     if (updatedExisting) {
       _showMessage(addedToMaster ? '既存明細を更新し単価マスタへ追加しました' : '既存の見積明細を更新しました');
+      return;
+    }
+    if (mergedQuantity != null) {
+      _showMessage(
+        addedToMaster
+            ? '数量を加算し単価マスタへ追加しました'
+            : '既存明細の数量を${_displayEstimateQuantity(mergedQuantity)}へ加算しました',
+      );
       return;
     }
     _showEstimateAddedMessage(
@@ -547,6 +579,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       ),
     );
   }
+}
+
+String _displayEstimateQuantity(double? value) {
+  if (value == null) return '';
+  return value == value.truncateToDouble()
+      ? value.toInt().toString()
+      : value.toString();
 }
 
 class _AdBanner extends StatelessWidget {

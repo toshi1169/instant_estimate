@@ -120,6 +120,65 @@ class EstimateController extends ChangeNotifier {
     return null;
   }
 
+  EstimateItem? findQuantityMergeCandidate(EstimateItemDraft draft) {
+    final name = _normalizedText(draft.name);
+    final unit = _normalizedText(draft.unit);
+    if (name.isEmpty ||
+        unit.isEmpty ||
+        draft.quantity == null ||
+        draft.unitPrice == null) {
+      return null;
+    }
+    for (final item in _items.reversed) {
+      if (item.quantity != null &&
+          item.unitPrice == draft.unitPrice &&
+          _normalizedText(item.name) == name &&
+          _normalizedText(item.unit) == unit) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  Future<EstimateItem> mergeQuantity(
+    String id,
+    EstimateItemDraft incoming,
+  ) async {
+    final index = _items.indexWhere((item) => item.id == id);
+    if (index < 0) throw StateError('Estimate item was not found.');
+    final current = _items[index];
+    final currentQuantity = current.quantity;
+    final incomingQuantity = incoming.quantity;
+    if (currentQuantity == null || incomingQuantity == null) {
+      throw StateError('Estimate quantity was not found.');
+    }
+    final currentBasis = current.calculationBasis.trim();
+    final incomingBasis = incoming.calculationBasis.trim();
+    final mergedBasis = switch ((currentBasis, incomingBasis)) {
+      ('', final value) => value,
+      (final value, '') => value,
+      (final first, final second) => '$first\n＋ $second',
+    };
+    final mergedOriginalQuantity =
+        current.originalQuantity != null && incoming.originalQuantity != null
+        ? current.originalQuantity! + incoming.originalQuantity!
+        : null;
+    return update(
+      id,
+      EstimateItemDraft(
+        trade: current.trade,
+        name: current.name,
+        specification: current.specification,
+        quantity: currentQuantity + incomingQuantity,
+        unit: current.unit,
+        unitPrice: current.unitPrice,
+        description: current.description,
+        calculationBasis: mergedBasis,
+        originalQuantity: mergedOriginalQuantity,
+      ),
+    );
+  }
+
   Future<EstimateItem> update(String id, EstimateItemDraft draft) async {
     final index = _items.indexWhere((item) => item.id == id);
     if (index < 0) throw StateError('Estimate item was not found.');

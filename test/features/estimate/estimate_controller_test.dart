@@ -169,6 +169,45 @@ void main() {
     );
   });
 
+  test('名称・単位・単価が同じ明細を検出して数量と計算根拠を加算できる', () async {
+    final controller = EstimateController();
+    await controller.load();
+    final existing = await controller.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        quantity: 7.2,
+        unit: 'm³',
+        unitPrice: 4500,
+        calculationBasis: '12 × 1.2 × 0.5 = 7.2',
+        originalQuantity: 7.2,
+      ),
+    );
+    const incoming = EstimateItemDraft(
+      trade: '別工種でも候補になる',
+      name: ' 根切り ',
+      quantity: 3.5,
+      unit: 'm³',
+      unitPrice: 4500,
+      calculationBasis: '7 × 1 × 0.5 = 3.5',
+      originalQuantity: 3.5,
+    );
+
+    expect(controller.findQuantityMergeCandidate(incoming)?.id, existing.id);
+    final merged = await controller.mergeQuantity(existing.id, incoming);
+
+    expect(controller.items, hasLength(1));
+    expect(merged.quantity, closeTo(10.7, 0.000001));
+    expect(merged.originalQuantity, closeTo(10.7, 0.000001));
+    expect(merged.trade, '土工事');
+    expect(merged.calculationBasis, contains('12 × 1.2 × 0.5 = 7.2'));
+    expect(merged.calculationBasis, contains('7 × 1 × 0.5 = 3.5'));
+    expect(
+      controller.findQuantityMergeCandidate(incoming.copyWith(unitPrice: 4600)),
+      isNull,
+    );
+  });
+
   test('複数の見積を作成して選択中の見積と明細を復元できる', () async {
     final store = _MemoryEstimateItemStore();
     final controller = EstimateController(store: store);

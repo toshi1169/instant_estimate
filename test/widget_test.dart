@@ -1141,6 +1141,80 @@ void main() {
     expect(find.text('既存の見積明細を更新しました'), findsOneWidget);
   });
 
+  testWidgets('電卓から送った数量を同じ名称・単位・単価の既存明細へ加算できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final estimateStore = FakeEstimateItemStore();
+    final initialController = EstimateController(store: estimateStore);
+    await initialController.load();
+    await initialController.add(
+      const EstimateItemDraft(
+        trade: '土工事',
+        name: '根切り',
+        quantity: 7.2,
+        unit: 'm³',
+        unitPrice: 4500,
+        calculationBasis: '既存の計算根拠',
+      ),
+    );
+    final calculator = CalculatorController();
+    calculator.pasteAtCaret('12×2');
+    calculator.press('=');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalculatorScreen(
+          controller: calculator,
+          estimateItemStore: estimateStore,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('見積へ送る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateDestinationSelector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('数量').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateTransferNext')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('estimateNameField')), '根切り');
+    await tester.enterText(find.byKey(const Key('estimateUnitField')), 'm³');
+    await tester.ensureVisible(find.byKey(const Key('estimateUnitPriceField')));
+    await tester.enterText(
+      find.byKey(const Key('estimateUnitPriceField')),
+      '4500',
+    );
+    await tester.drag(
+      find.byKey(const Key('estimateItemEditor')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('既存明細へ数量を加算'), findsOneWidget);
+    expect(find.textContaining('既存：7.2 m³'), findsOneWidget);
+    expect(find.textContaining('今回：24 m³'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('mergeEstimateQuantities')));
+    await tester.pumpAndSettle();
+
+    expect(estimateStore.items, hasLength(1));
+    expect(estimateStore.items.single.quantity, closeTo(31.2, 0.000001));
+    expect(estimateStore.items.single.calculationBasis, contains('既存の計算根拠'));
+    expect(
+      estimateStore.items.single.calculationBasis,
+      contains(calculator.estimateExpressionText),
+    );
+    expect(find.text('既存明細の数量を31.2へ加算しました'), findsOneWidget);
+  });
+
   testWidgets('見積明細を編集・削除して合計と端末保存を更新できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
