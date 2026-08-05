@@ -222,17 +222,17 @@ class EstimateItemsScreen extends StatelessWidget {
     if (result == null || !context.mounted) return;
     try {
       await _selectEstimateDestination(result);
-      await controller.add(result.draft);
+      final addedItem = await controller.add(result.draft);
       final addedToMaster = result.saveToUnitPriceMaster
           ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
               result.draft,
             )
           : false;
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(addedToMaster ? '見積明細と単価マスタへ追加しました' : '見積明細へ追加しました'),
-          ),
+        _showAddedSnackBar(
+          context,
+          message: addedToMaster ? '見積明細と単価マスタへ追加しました' : '見積明細へ追加しました',
+          itemId: addedItem.id,
         );
       }
     } catch (_) {
@@ -290,19 +290,17 @@ class EstimateItemsScreen extends StatelessWidget {
         if (result == null || !context.mounted) return;
         try {
           await _selectEstimateDestination(result);
-          await controller.add(result.draft);
+          final addedItem = await controller.add(result.draft);
           final addedToMaster = result.saveToUnitPriceMaster
               ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
                   result.draft,
                 )
               : false;
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  addedToMaster ? '見積明細を複製し単価マスタへ追加しました' : '見積明細を複製しました',
-                ),
-              ),
+            _showAddedSnackBar(
+              context,
+              message: addedToMaster ? '見積明細を複製し単価マスタへ追加しました' : '見積明細を複製しました',
+              itemId: addedItem.id,
             );
           }
         } catch (_) {
@@ -395,6 +393,42 @@ class EstimateItemsScreen extends StatelessWidget {
     if (estimateId != null && estimateId != controller.info.id) {
       await controller.selectEstimate(estimateId);
     }
+  }
+
+  void _showAddedSnackBar(
+    BuildContext context, {
+    required String message,
+    required String itemId,
+  }) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 5),
+          content: Text('$message（${controller.items.length}件）'),
+          action: SnackBarAction(
+            key: const Key('undoEstimateItemAdd'),
+            label: '元に戻す',
+            onPressed: () async {
+              try {
+                await controller.delete(itemId);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('直前の追加を取り消しました')),
+                  );
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('追加を取り消せませんでした')),
+                  );
+                }
+              }
+            },
+          ),
+        ),
+      );
   }
 }
 

@@ -304,12 +304,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         );
     if (editorResult == null || !mounted) return;
     var addedToMaster = false;
+    String? addedItemId;
     try {
       final estimateId = editorResult.estimateId;
       if (estimateId != null && estimateId != _estimateController.info.id) {
         await _estimateController.selectEstimate(estimateId);
       }
-      await _estimateController.add(editorResult.draft);
+      final addedItem = await _estimateController.add(editorResult.draft);
+      addedItemId = addedItem.id;
       if (editorResult.saveToUnitPriceMaster) {
         addedToMaster = await _estimateController
             .addEstimateItemToUnitPriceMasterIfAbsent(editorResult.draft);
@@ -323,10 +325,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       await _openActiveEstimate();
       return;
     }
-    _showMessage(
+    _showEstimateAddedMessage(
       addedToMaster
           ? '見積明細と単価マスタへ追加しました'
           : '見積明細へ追加しました（${_estimateController.items.length}件）',
+      itemId: addedItemId,
     );
   }
 
@@ -423,6 +426,43 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+      );
+  }
+
+  void _showEstimateAddedMessage(String message, {required String? itemId}) {
+    if (!mounted || itemId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 5),
+          content: Row(
+            children: [
+              Expanded(child: Text(message)),
+              TextButton(
+                key: const Key('openAddedEstimate'),
+                onPressed: () {
+                  messenger.hideCurrentSnackBar();
+                  unawaited(_openActiveEstimate());
+                },
+                child: const Text('見積を開く'),
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            key: const Key('undoEstimateItemAdd'),
+            label: '元に戻す',
+            onPressed: () async {
+              try {
+                await _estimateController.delete(itemId);
+                if (mounted) _showMessage('直前の追加を取り消しました');
+              } catch (_) {
+                if (mounted) _showMessage('追加を取り消せませんでした');
+              }
+            },
+          ),
+        ),
       );
   }
 

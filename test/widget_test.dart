@@ -1030,6 +1030,57 @@ void main() {
     expect(find.text('税込総額  ¥ 2,640'), findsOneWidget);
   });
 
+  testWidgets('電卓から追加した直後の見積明細を取り消せる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final estimateStore = FakeEstimateItemStore();
+    final calculator = CalculatorController();
+    calculator.pasteAtCaret('12×2');
+    calculator.press('=');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalculatorScreen(
+          controller: calculator,
+          estimateItemStore: estimateStore,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('見積へ送る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateDestinationSelector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('数量').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateTransferNext')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('estimateNameField')), '取消確認');
+    await tester.drag(
+      find.byKey(const Key('estimateItemEditor')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.pumpAndSettle();
+
+    expect(estimateStore.items, hasLength(1));
+    expect(find.byKey(const Key('openAddedEstimate')), findsOneWidget);
+    expect(find.byKey(const Key('undoEstimateItemAdd')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('undoEstimateItemAdd')));
+    await tester.pumpAndSettle();
+
+    expect(estimateStore.items, isEmpty);
+    expect(find.text('直前の追加を取り消しました'), findsOneWidget);
+  });
+
   testWidgets('見積明細を編集・削除して合計と端末保存を更新できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -1244,7 +1295,16 @@ void main() {
     expect(controller.unitPriceMasters, hasLength(1));
     expect(controller.unitPriceMasters.single.name, 'コンクリート打設');
     expect(controller.unitPriceMasters.single.unitPrice, 15000);
-    expect(find.text('見積明細と単価マスタへ追加しました'), findsOneWidget);
+    expect(find.text('見積明細と単価マスタへ追加しました（1件）'), findsOneWidget);
+    expect(find.byKey(const Key('undoEstimateItemAdd')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('undoEstimateItemAdd')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('emptyEstimateItems')), findsOneWidget);
+    expect(store.items, isEmpty);
+    expect(controller.unitPriceMasters, hasLength(1));
+    expect(find.text('直前の追加を取り消しました'), findsOneWidget);
   });
 
   testWidgets('既存の見積明細を複製して編集し同じ工種の小計へ追加できる', (tester) async {
