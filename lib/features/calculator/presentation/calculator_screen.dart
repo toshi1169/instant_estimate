@@ -20,6 +20,7 @@ import '../../estimate/presentation/duplicate_estimate_item_dialog.dart';
 import '../../estimate/presentation/merge_estimate_quantity_dialog.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
+import '../../construction_calculations/presentation/construction_calculations_screen.dart';
 import 'function_list_dialog.dart';
 
 class CalculatorScreen extends StatefulWidget {
@@ -178,6 +179,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
     if (destination == CalculatorSideMenuDestination.instantEstimate) {
       unawaited(_openEstimateDocuments());
+      return;
+    }
+    if (destination == CalculatorSideMenuDestination.constructionCalculations) {
+      unawaited(
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const ConstructionCalculationsScreen(),
+          ),
+        ),
+      );
       return;
     }
 
