@@ -1,5 +1,6 @@
 import 'estimate_info.dart';
 import 'estimate_item.dart';
+import 'estimate_totals.dart';
 
 class EstimateDocument {
   const EstimateDocument({required this.info, required this.items});
@@ -9,6 +10,9 @@ class EstimateDocument {
 
   double get totalAmount =>
       items.fold(0, (total, item) => total + (item.amount ?? 0));
+  int get subtotalAmount => estimateSubtotal(items);
+  int get taxAmount => estimateTax(subtotalAmount);
+  int get grandTotalAmount => subtotalAmount + taxAmount;
 
   factory EstimateDocument.fromJson(Map<String, Object?> json) {
     final infoMap = (json['info'] as Map<Object?, Object?>).map(

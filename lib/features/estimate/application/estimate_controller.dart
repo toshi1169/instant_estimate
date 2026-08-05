@@ -7,6 +7,7 @@ import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_item_group.dart';
 import '../domain/estimate_workspace.dart';
+import '../domain/estimate_totals.dart';
 
 class EstimateController extends ChangeNotifier {
   EstimateController({this.store, DateTime? now})
@@ -25,6 +26,9 @@ class EstimateController extends ChangeNotifier {
   bool get isLoaded => _loaded;
   double get totalAmount =>
       _items.fold(0, (total, item) => total + (item.amount ?? 0));
+  int get subtotalAmount => estimateSubtotal(_items);
+  int get taxAmount => estimateTax(subtotalAmount);
+  int get grandTotalAmount => subtotalAmount + taxAmount;
   List<EstimateItemGroup> get groups {
     final grouped = <String, List<EstimateItem>>{};
     for (final item in _items) {

@@ -4,7 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
-import 'estimate_totals.dart';
+import '../domain/estimate_totals.dart';
 
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
 const _columnWidths = <int, pw.TableColumnWidth>{

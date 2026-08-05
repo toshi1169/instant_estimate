@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:instant_estimate/features/estimate/application/estimate_totals.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_totals.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 

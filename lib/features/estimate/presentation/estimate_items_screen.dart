@@ -76,17 +76,11 @@ class EstimateItemsScreen extends StatelessWidget {
                   _EstimateInfoSummary(info: controller.info),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-                  child: Row(
-                    children: [
-                      Text('${controller.items.length}件'),
-                      const Spacer(),
-                      Text(
-                        '合計  ¥ ${_money(controller.totalAmount)}',
-                        key: const Key('estimateTotalAmount'),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ],
+                  child: _EstimateTotalsSummary(
+                    itemCount: controller.items.length,
+                    subtotal: controller.subtotalAmount,
+                    tax: controller.taxAmount,
+                    grandTotal: controller.grandTotalAmount,
                   ),
                 ),
                 const Divider(height: 1),
@@ -356,6 +350,73 @@ class EstimateItemsScreen extends StatelessWidget {
           }
         }
     }
+  }
+}
+
+class _EstimateTotalsSummary extends StatelessWidget {
+  const _EstimateTotalsSummary({
+    required this.itemCount,
+    required this.subtotal,
+    required this.tax,
+    required this.grandTotal,
+  });
+
+  final int itemCount;
+  final int subtotal;
+  final int tax;
+  final int grandTotal;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: Text('$itemCount件'),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  '税抜合計  ¥ ${_money(subtotal.toDouble())}',
+                  key: const Key('estimateSubtotalAmount'),
+                  style: textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  '消費税（10%）  ¥ ${_money(tax.toDouble())}',
+                  key: const Key('estimateTaxAmount'),
+                  style: textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(height: 3),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  '税込総額  ¥ ${_money(grandTotal.toDouble())}',
+                  key: const Key('estimateGrandTotalAmount'),
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

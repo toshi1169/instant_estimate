@@ -1,4 +1,4 @@
-import '../domain/estimate_item.dart';
+import 'estimate_item.dart';
 
 const estimateTaxRate = 0.10;
 

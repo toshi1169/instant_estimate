@@ -241,7 +241,7 @@ class _EstimateDocumentCard extends StatelessWidget {
             [
               if (estimate.info.siteName.isNotEmpty) estimate.info.siteName,
               '${estimate.items.length}明細',
-              '合計 ¥ ${_money(estimate.totalAmount)}',
+              '税込 ¥ ${_money(estimate.grandTotalAmount.toDouble())}',
             ].join('　'),
           ),
         ),
