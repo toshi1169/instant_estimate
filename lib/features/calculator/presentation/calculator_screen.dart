@@ -301,8 +301,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           ),
         );
     if (editorResult == null || !mounted) return;
+    var addedToMaster = false;
     try {
       await _estimateController.add(editorResult.draft);
+      if (editorResult.saveToUnitPriceMaster) {
+        addedToMaster = await _estimateController
+            .addEstimateItemToUnitPriceMasterIfAbsent(editorResult.draft);
+      }
     } catch (_) {
       if (mounted) _showMessage('見積明細を保存できませんでした');
       return;
@@ -312,7 +317,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       await _openActiveEstimate();
       return;
     }
-    _showMessage('見積明細へ追加しました（${_estimateController.items.length}件）');
+    _showMessage(
+      addedToMaster
+          ? '見積明細と単価マスタへ追加しました'
+          : '見積明細へ追加しました（${_estimateController.items.length}件）',
+    );
   }
 
   Future<void> _showHistoryMenu(

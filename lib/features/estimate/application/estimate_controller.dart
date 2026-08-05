@@ -271,6 +271,29 @@ class EstimateController extends ChangeNotifier {
     return price;
   }
 
+  Future<bool> addEstimateItemToUnitPriceMasterIfAbsent(
+    EstimateItemDraft draft,
+  ) async {
+    final name = draft.name.trim();
+    final unitPrice = draft.unitPrice;
+    if (name.isEmpty || unitPrice == null) return false;
+    final masterDraft = UnitPriceMasterDraft(
+      trade: draft.trade.trim(),
+      name: name,
+      specification: draft.specification.trim(),
+      unit: draft.unit.trim(),
+      unitPrice: unitPrice,
+      description: draft.description.trim(),
+    );
+    if (_unitPriceMasters.any(
+      (price) => _hasSameUnitPriceMasterContent(price, masterDraft),
+    )) {
+      return false;
+    }
+    await addUnitPriceMaster(masterDraft);
+    return true;
+  }
+
   Future<void> updateUnitPriceMaster(
     String id,
     UnitPriceMasterDraft draft,
@@ -341,3 +364,16 @@ class EstimateController extends ChangeNotifier {
       ..addAll(unitPriceMasters);
   }
 }
+
+bool _hasSameUnitPriceMasterContent(
+  UnitPriceMaster price,
+  UnitPriceMasterDraft draft,
+) =>
+    _normalized(price.trade) == _normalized(draft.trade) &&
+    _normalized(price.name) == _normalized(draft.name) &&
+    _normalized(price.specification) == _normalized(draft.specification) &&
+    _normalized(price.unit) == _normalized(draft.unit) &&
+    price.unitPrice == draft.unitPrice &&
+    _normalized(price.description) == _normalized(draft.description);
+
+String _normalized(String value) => value.trim().toLowerCase();

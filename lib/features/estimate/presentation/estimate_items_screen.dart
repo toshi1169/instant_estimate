@@ -220,10 +220,17 @@ class EstimateItemsScreen extends StatelessWidget {
     if (result == null || !context.mounted) return;
     try {
       await controller.add(result.draft);
+      final addedToMaster = result.saveToUnitPriceMaster
+          ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
+              result.draft,
+            )
+          : false;
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('見積明細へ追加しました')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(addedToMaster ? '見積明細と単価マスタへ追加しました' : '見積明細へ追加しました'),
+          ),
+        );
       }
     } catch (_) {
       if (context.mounted) {
@@ -278,10 +285,19 @@ class EstimateItemsScreen extends StatelessWidget {
         if (result == null || !context.mounted) return;
         try {
           await controller.add(result.draft);
+          final addedToMaster = result.saveToUnitPriceMaster
+              ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
+                  result.draft,
+                )
+              : false;
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積明細を複製しました')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  addedToMaster ? '見積明細を複製し単価マスタへ追加しました' : '見積明細を複製しました',
+                ),
+              ),
+            );
           }
         } catch (_) {
           if (context.mounted) {
@@ -305,10 +321,19 @@ class EstimateItemsScreen extends StatelessWidget {
         if (result == null || !context.mounted) return;
         try {
           await controller.update(item.id, result.draft);
+          final addedToMaster = result.saveToUnitPriceMaster
+              ? await controller.addEstimateItemToUnitPriceMasterIfAbsent(
+                  result.draft,
+                )
+              : false;
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積明細を更新しました')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  addedToMaster ? '見積明細を更新し単価マスタへ追加しました' : '見積明細を更新しました',
+                ),
+              ),
+            );
           }
         } catch (_) {
           if (context.mounted) {

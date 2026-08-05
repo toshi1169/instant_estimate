@@ -7,10 +7,15 @@ import '../domain/unit_price_master.dart';
 enum EstimateItemEditorAction { continueCalculating, openEstimate }
 
 class EstimateItemEditorResult {
-  const EstimateItemEditorResult({required this.draft, required this.action});
+  const EstimateItemEditorResult({
+    required this.draft,
+    required this.action,
+    this.saveToUnitPriceMaster = false,
+  });
 
   final EstimateItemDraft draft;
   final EstimateItemEditorAction action;
+  final bool saveToUnitPriceMaster;
 }
 
 class EstimateItemEditorScreen extends StatefulWidget {
@@ -51,6 +56,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   late final _description = TextEditingController(
     text: widget.initialDraft.description,
   );
+  bool _saveToUnitPriceMaster = false;
 
   @override
   void dispose() {
@@ -84,6 +90,10 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     Navigator.of(context).pop(
       EstimateItemEditorResult(
         action: action,
+        saveToUnitPriceMaster:
+            _saveToUnitPriceMaster &&
+            _name.text.trim().isNotEmpty &&
+            _unitPriceValue != null,
         draft: widget.initialDraft.copyWith(
           trade: _trade.text.trim(),
           name: _name.text.trim(),
@@ -282,6 +292,28 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
+              ),
+              ListenableBuilder(
+                listenable: Listenable.merge([_name, _unitPrice]),
+                builder: (context, _) {
+                  final canSave =
+                      _name.text.trim().isNotEmpty && _unitPriceValue != null;
+                  return CheckboxListTile(
+                    key: const Key('saveEstimateToUnitPriceMaster'),
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: _saveToUnitPriceMaster && canSave,
+                    onChanged: canSave
+                        ? (value) => setState(
+                            () => _saveToUnitPriceMaster = value ?? false,
+                          )
+                        : null,
+                    title: const Text('この内容を単価マスタへ登録'),
+                    subtitle: Text(
+                      canSave ? '次回から単価マスタで検索・選択できます' : '名称と単価を入力すると登録できます',
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
               _field(

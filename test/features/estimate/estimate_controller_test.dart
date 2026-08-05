@@ -285,4 +285,39 @@ void main() {
     expect(restored.unitPriceMasters, isEmpty);
     expect(store.workspace.unitPriceMasters, isEmpty);
   });
+
+  test('見積明細の内容を単価マスタへ登録し同じ内容の重複を防ぐ', () async {
+    final store = _MemoryEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    const draft = EstimateItemDraft(
+      trade: ' 土工事 ',
+      name: '根切り',
+      specification: '機械掘削',
+      quantity: 3,
+      unit: 'm³',
+      unitPrice: 4500,
+      description: '小運搬別途',
+    );
+
+    expect(
+      await controller.addEstimateItemToUnitPriceMasterIfAbsent(draft),
+      isTrue,
+    );
+    expect(
+      await controller.addEstimateItemToUnitPriceMasterIfAbsent(
+        const EstimateItemDraft(
+          trade: '土工事',
+          name: ' 根切り ',
+          specification: '機械掘削',
+          unit: 'm³',
+          unitPrice: 4500,
+          description: '小運搬別途',
+        ),
+      ),
+      isFalse,
+    );
+    expect(controller.unitPriceMasters, hasLength(1));
+    expect(store.workspace.unitPriceMasters, hasLength(1));
+  });
 }

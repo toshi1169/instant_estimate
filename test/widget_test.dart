@@ -1119,7 +1119,7 @@ void main() {
     expect(find.byKey(const Key('emptyEstimateItems')), findsOneWidget);
     await tester.tap(find.byKey(const Key('addEstimateItemDirect')));
     await tester.pumpAndSettle();
-    expect(find.text('見積明細へ追加'), findsNWidgets(2));
+    expect(find.text('見積明細へ追加'), findsOneWidget);
     expect(find.byKey(const Key('addEstimateAndOpen')), findsNothing);
 
     await tester.enterText(
@@ -1137,7 +1137,17 @@ void main() {
       find.byKey(const Key('estimateUnitPriceField')),
       '15000',
     );
-    await tester.ensureVisible(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.ensureVisible(
+      find.byKey(const Key('saveEstimateToUnitPriceMaster')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('この内容を単価マスタへ登録'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('estimateItemEditor')),
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
     await tester.pumpAndSettle();
 
@@ -1147,6 +1157,10 @@ void main() {
     expect(find.text('税込総額  ¥ 49,500'), findsOneWidget);
     expect(find.text('¥ 45,000'), findsNWidgets(2));
     expect(store.items.single.name, 'コンクリート打設');
+    expect(controller.unitPriceMasters, hasLength(1));
+    expect(controller.unitPriceMasters.single.name, 'コンクリート打設');
+    expect(controller.unitPriceMasters.single.unitPrice, 15000);
+    expect(find.text('見積明細と単価マスタへ追加しました'), findsOneWidget);
   });
 
   testWidgets('既存の見積明細を複製して編集し同じ工種の小計へ追加できる', (tester) async {
@@ -1178,7 +1192,7 @@ void main() {
     await tester.tap(find.text('複製'));
     await tester.pumpAndSettle();
 
-    expect(find.text('見積明細へ追加'), findsNWidgets(2));
+    expect(find.text('見積明細へ追加'), findsOneWidget);
     expect(find.byKey(const Key('saveEstimateChanges')), findsNothing);
     expect(
       tester
@@ -1201,7 +1215,11 @@ void main() {
       '根切り 追加分',
     );
     await tester.enterText(find.byKey(const Key('estimateQuantityField')), '3');
-    await tester.ensureVisible(find.byKey(const Key('addEstimateAndContinue')));
+    await tester.drag(
+      find.byKey(const Key('estimateItemEditor')),
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
     await tester.pumpAndSettle();
 
