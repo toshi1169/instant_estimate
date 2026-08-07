@@ -5,8 +5,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/slope_calculator.dart';
 
-enum _SlopeUseCase { drainage, road, face, roof }
-
 enum _SlopeField { horizontal, height, length, percent, ratio, angle }
 
 class SlopeCalculationScreen extends StatefulWidget {
@@ -25,25 +23,13 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
   final _controllers = <_SlopeField, TextEditingController>{
     for (final field in _SlopeField.values) field: TextEditingController(),
   };
-  final _extensionController = TextEditingController(text: '1.00');
+  final _extensionController = TextEditingController();
 
-  _SlopeUseCase _useCase = _SlopeUseCase.face;
-  final List<_SlopeField> _activeFields = [
-    _SlopeField.height,
-    _SlopeField.length,
-  ];
+  final List<_SlopeField> _activeFields = [];
   SlopeCalculationResult? _result;
   String? _errorMessage;
   bool _useMillimeters = false;
   bool _updatingControllers = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controllers[_SlopeField.height]!.text = '3.00';
-    _controllers[_SlopeField.length]!.text = '5.00';
-    _recalculate(notify: false);
-  }
 
   @override
   void dispose() {
@@ -69,6 +55,22 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
 
   void _recalculate({bool notify = true}) {
     if (_updatingControllers) return;
+    if (_activeFields.length < 2 ||
+        _activeFields.any(
+          (field) => _controllers[field]!.text.trim().isEmpty,
+        )) {
+      _clearCalculatedFields();
+      if (notify && mounted) {
+        setState(() {
+          _result = null;
+          _errorMessage = null;
+        });
+      } else {
+        _result = null;
+        _errorMessage = null;
+      }
+      return;
+    }
     try {
       final result = _calculateFromActiveFields();
       _applyResult(result);
@@ -210,9 +212,10 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
   void _activateField(_SlopeField field) {
     if (_activeFields.contains(field)) return;
     setState(() {
-      _activeFields
-        ..removeAt(0)
-        ..add(field);
+      if (_activeFields.length == 2) {
+        _activeFields.removeAt(0);
+      }
+      _activeFields.add(field);
       _errorMessage = null;
     });
     final controller = _controllers[field]!;
@@ -252,12 +255,10 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
     for (final controller in _controllers.values) {
       controller.clear();
     }
-    _extensionController.text = _useMillimeters ? '1000.00' : '1.00';
+    _extensionController.clear();
     _updatingControllers = false;
     setState(() {
-      _activeFields
-        ..clear()
-        ..addAll([_SlopeField.height, _SlopeField.length]);
+      _activeFields.clear();
       _result = null;
       _errorMessage = null;
     });
@@ -325,11 +326,6 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
           children: [
-            _UseCaseSelector(
-              selected: _useCase,
-              onChanged: (value) => setState(() => _useCase = value),
-            ),
-            const SizedBox(height: 14),
             Container(
               height: 300,
               decoration: BoxDecoration(
@@ -493,43 +489,6 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _UseCaseSelector extends StatelessWidget {
-  const _UseCaseSelector({required this.selected, required this.onChanged});
-
-  final _SlopeUseCase selected;
-  final ValueChanged<_SlopeUseCase> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const labels = {
-      _SlopeUseCase.drainage: '排水勾配',
-      _SlopeUseCase.road: '道路勾配',
-      _SlopeUseCase.face: '法面',
-      _SlopeUseCase.roof: '屋根勾配',
-    };
-    return Row(
-      children: [
-        for (final value in _SlopeUseCase.values)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: ChoiceChip(
-                label: SizedBox(
-                  width: double.infinity,
-                  child: Text(labels[value]!, textAlign: TextAlign.center),
-                ),
-                selected: selected == value,
-                onSelected: (_) => onChanged(value),
-                padding: EdgeInsets.zero,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

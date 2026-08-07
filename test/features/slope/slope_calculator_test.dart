@@ -143,11 +143,20 @@ void main() {
       of: find.byKey(const Key('slopeHorizontalDistance')),
       matching: find.byType(TextField),
     );
-    expect(tester.widget<TextField>(horizontalField).controller!.text, '4.00');
+    expect(tester.widget<TextField>(horizontalField).controller!.text, isEmpty);
 
+    expect(find.text('排水勾配'), findsNothing);
+    expect(find.text('道路勾配'), findsNothing);
+    expect(find.text('屋根勾配'), findsNothing);
     expect(find.text('入力方法'), findsNothing);
     expect(find.text('法勾配プリセット'), findsNothing);
     expect(find.text('見積へ追加'), findsNothing);
+
+    final extensionField = find.descendant(
+      of: find.byKey(const Key('slopeExtension')),
+      matching: find.byType(TextField),
+    );
+    expect(tester.widget<TextField>(extensionField).controller!.text, isEmpty);
 
     final percentField = find.descendant(
       of: find.byKey(const Key('slopePercent')),
