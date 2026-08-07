@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/domain/transport_vehicle.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/earthwork_calculator.dart';
 
 enum _EarthworkEstimateTarget { excavation, backfill, haul, dump }
 
 class EarthworkCalculationScreen extends StatefulWidget {
-  const EarthworkCalculationScreen({required this.onSendToEstimate, super.key});
+  const EarthworkCalculationScreen({
+    required this.onSendToEstimate,
+    this.settings = const AppSettings(),
+    this.onSettingsChanged,
+    super.key,
+  });
 
   final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
+  final AppSettings settings;
+  final ValueChanged<AppSettings>? onSettingsChanged;
 
   @override
   State<EarthworkCalculationScreen> createState() =>
@@ -25,10 +34,31 @@ class _EarthworkCalculationScreenState
   final _depthController = TextEditingController();
   final _structureController = TextEditingController(text: '0');
   final _factorController = TextEditingController(text: '1.25');
-  final _dumpCapacityController = TextEditingController(text: '4');
+  final _loadCapacityController = TextEditingController(text: '3');
+
+  String _selectedVehicleId = InitialTransportVehicles.defaultVehicleId;
+  late List<TransportVehicle> _customVehicles;
 
   EarthworkCalculationResult? _result;
   String? _errorMessage;
+
+  List<TransportVehicle> get _vehicles => <TransportVehicle>[
+    ...InitialTransportVehicles.all,
+    ..._customVehicles,
+  ];
+
+  TransportVehicle get _selectedVehicle => _vehicles.firstWhere(
+    (vehicle) => vehicle.id == _selectedVehicleId,
+    orElse: () => InitialTransportVehicles.standard.firstWhere(
+      (vehicle) => vehicle.id == InitialTransportVehicles.defaultVehicleId,
+    ),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _customVehicles = [...widget.settings.customTransportVehicles];
+  }
 
   @override
   void dispose() {
@@ -37,7 +67,7 @@ class _EarthworkCalculationScreenState
     _depthController.dispose();
     _structureController.dispose();
     _factorController.dispose();
-    _dumpCapacityController.dispose();
+    _loadCapacityController.dispose();
     super.dispose();
   }
 
@@ -51,7 +81,7 @@ class _EarthworkCalculationScreenState
         depthMeters: _parse(_depthController.text),
         structureVolumeCubicMeters: _parseOptional(_structureController.text),
         soilChangeFactor: _parse(_factorController.text),
-        dumpCapacityCubicMeters: _parse(_dumpCapacityController.text),
+        loadCapacityCubicMeters: _parse(_loadCapacityController.text),
       );
       setState(() {
         _result = result;
@@ -72,10 +102,116 @@ class _EarthworkCalculationScreenState
       _depthController.clear();
       _structureController.text = '0';
       _factorController.text = '1.25';
-      _dumpCapacityController.text = '4';
+      _selectedVehicleId = InitialTransportVehicles.defaultVehicleId;
+      _loadCapacityController.text = '3';
       _result = null;
       _errorMessage = null;
     });
+  }
+
+  void _selectVehicle(String? vehicleId) {
+    if (vehicleId == null) return;
+    if (vehicleId == '_add_vehicle') {
+      _showAddVehicleDialog();
+      return;
+    }
+    final vehicle = _vehicles.firstWhere((item) => item.id == vehicleId);
+    setState(() {
+      _selectedVehicleId = vehicle.id;
+      _loadCapacityController.text = _format(
+        vehicle.initialCapacityCubicMeters,
+      );
+      _result = null;
+      _errorMessage = null;
+    });
+  }
+
+  Future<void> _showAddVehicleDialog() async {
+    final nameController = TextEditingController();
+    final capacityController = TextEditingController();
+    final weightController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final vehicle = await showDialog<TransportVehicle>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('車両を追加'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  key: const Key('customVehicleName'),
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: '車両名'),
+                  textInputAction: TextInputAction.next,
+                  validator: (value) =>
+                      (value ?? '').trim().isEmpty ? '車両名を入力してください' : null,
+                ),
+                const SizedBox(height: 12),
+                _dialogNumberField(
+                  keyName: 'customVehicleCapacity',
+                  controller: capacityController,
+                  label: '積載容量',
+                  suffix: 'm³',
+                  required: true,
+                ),
+                const SizedBox(height: 12),
+                _dialogNumberField(
+                  keyName: 'customVehicleWeight',
+                  controller: weightController,
+                  label: '最大積載重量',
+                  suffix: 't',
+                  required: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            key: const Key('saveCustomVehicle'),
+            onPressed: () {
+              if (!(formKey.currentState?.validate() ?? false)) return;
+              final timestamp = DateTime.now().microsecondsSinceEpoch;
+              Navigator.of(dialogContext).pop(
+                TransportVehicle(
+                  id: 'custom_$timestamp',
+                  name: nameController.text.trim(),
+                  initialCapacityCubicMeters: _parse(capacityController.text),
+                  maximumPayloadTons: _parse(weightController.text),
+                  approximateCapacityLabel:
+                      '${_format(_parse(capacityController.text))}m³',
+                  isCustom: true,
+                ),
+              );
+            },
+            child: const Text('登録'),
+          ),
+        ],
+      ),
+    );
+    nameController.dispose();
+    capacityController.dispose();
+    weightController.dispose();
+    if (vehicle == null || !mounted) return;
+    setState(() {
+      _customVehicles = [..._customVehicles, vehicle];
+      _selectedVehicleId = vehicle.id;
+      _loadCapacityController.text = _format(
+        vehicle.initialCapacityCubicMeters,
+      );
+      _result = null;
+      _errorMessage = null;
+    });
+    widget.onSettingsChanged?.call(
+      widget.settings.copyWith(customTransportVehicles: _customVehicles),
+    );
   }
 
   Future<void> _sendToEstimate(_EarthworkEstimateTarget target) async {
@@ -132,17 +268,17 @@ class _EarthworkCalculationScreenState
       case _EarthworkEstimateTarget.dump:
         draft = EstimateItemDraft(
           trade: '土工',
-          name: 'ダンプ運搬',
+          name: '土砂運搬',
           specification:
-              '搬出土=${_format(result.haulVolume)}m³ '
-              '積載容量=${_format(result.dumpCapacityCubicMeters)}m³/台',
-          quantity: result.dumpTrips.toDouble(),
-          unit: '台',
+              '${_selectedVehicle.name} '
+              '積載容量=${_format(result.loadCapacityCubicMeters)}m³/回',
+          quantity: result.transportTrips.toDouble(),
+          unit: '回',
           calculationBasis:
               '${_format(result.haulVolume)} ÷ '
-              '${_format(result.dumpCapacityCubicMeters)} ＝ '
-              '${result.dumpTrips}台（切上げ）',
-          originalQuantity: result.dumpTrips.toDouble(),
+              '${_format(result.loadCapacityCubicMeters)} ＝ '
+              '${result.transportTrips}回（切上げ）',
+          originalQuantity: result.transportTrips.toDouble(),
         );
     }
     await widget.onSendToEstimate(draft);
@@ -174,6 +310,51 @@ class _EarthworkCalculationScreenState
     return text.replaceFirst(RegExp(r'\.?0+$'), '');
   }
 
+  DropdownMenuItem<String> _sectionItem(String label) {
+    return DropdownMenuItem<String>(
+      enabled: false,
+      value: '_section_$label',
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  DropdownMenuItem<String> _vehicleItem(TransportVehicle vehicle) {
+    final payload = vehicle.maximumPayloadTons == null
+        ? ''
+        : ' / ${_format(vehicle.maximumPayloadTons!)}t';
+    return DropdownMenuItem<String>(
+      value: vehicle.id,
+      child: Text(
+        '${vehicle.name}  ${vehicle.initialCapacityCubicMeters}m³$payload',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Widget _dialogNumberField({
+    required String keyName,
+    required TextEditingController controller,
+    required String label,
+    required String suffix,
+    required bool required,
+  }) {
+    return TextFormField(
+      key: Key(keyName),
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+      decoration: InputDecoration(labelText: label, suffixText: suffix),
+      validator: required ? _validatePositive : _validateNonNegative,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -187,7 +368,7 @@ class _EarthworkCalculationScreenState
           padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
           children: [
             Text(
-              '掘削寸法から、掘削・埋戻し・搬出土・ダンプ必要台数をまとめて計算します。',
+              '掘削寸法から、掘削・埋戻し・搬出土・運搬回数をまとめて計算します。',
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 18),
@@ -230,32 +411,54 @@ class _EarthworkCalculationScreenState
                   _numberField(
                     keyName: 'earthworkStructureVolume',
                     controller: _structureController,
-                    label: '構造物体積（埋戻し控除）',
+                    label: '控除する構造物体積（任意）',
                     suffix: 'm³',
+                    helperText: '埋戻し量を計算する場合に入力',
                     validator: _validateNonNegative,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _numberField(
-                          keyName: 'earthworkSoilFactor',
-                          controller: _factorController,
-                          label: '土量変化率',
-                          validator: _validatePositive,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _numberField(
-                          keyName: 'earthworkDumpCapacity',
-                          controller: _dumpCapacityController,
-                          label: '積載容量',
-                          suffix: 'm³/台',
-                          validator: _validatePositive,
+                  _numberField(
+                    keyName: 'earthworkSoilFactor',
+                    controller: _factorController,
+                    label: '土量変化率',
+                    validator: _validatePositive,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    key: const Key('earthworkVehicle'),
+                    initialValue: _selectedVehicleId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: '運搬車両'),
+                    items: [
+                      _sectionItem('通常車両'),
+                      ...InitialTransportVehicles.standard.map(_vehicleItem),
+                      _sectionItem('クローラータイプ'),
+                      ...InitialTransportVehicles.crawlers.map(_vehicleItem),
+                      if (_customVehicles.isNotEmpty) ...[
+                        _sectionItem('ユーザー登録車両'),
+                        ..._customVehicles.map(_vehicleItem),
+                      ],
+                      const DropdownMenuItem<String>(
+                        value: '_add_vehicle',
+                        child: Row(
+                          children: [
+                            Icon(Icons.add),
+                            SizedBox(width: 8),
+                            Text('車両を追加'),
+                          ],
                         ),
                       ),
                     ],
+                    onChanged: _selectVehicle,
+                  ),
+                  const SizedBox(height: 12),
+                  _numberField(
+                    keyName: 'earthworkLoadCapacity',
+                    controller: _loadCapacityController,
+                    label: '積載容量',
+                    suffix: 'm³/回',
+                    helperText: '※積載容量は車両・土質・積載条件により調整してください。',
+                    validator: _validatePositive,
                   ),
                 ],
               ),
@@ -309,9 +512,11 @@ class _EarthworkCalculationScreenState
               ),
               _ResultCard(
                 key: const Key('earthworkDumpResult'),
-                label: 'ダンプ必要台数',
-                value: '${result.dumpTrips} 台',
-                note: '端数切上げ',
+                label: '運搬回数',
+                value: '${result.transportTrips} 回',
+                note:
+                    '${_selectedVehicle.name} / '
+                    '${_format(result.loadCapacityCubicMeters)}m³/回 / 端数切上げ',
                 onSend: () => _sendToEstimate(_EarthworkEstimateTarget.dump),
               ),
             ],
@@ -327,13 +532,18 @@ class _EarthworkCalculationScreenState
     required String label,
     required String? Function(String?) validator,
     String? suffix,
+    String? helperText,
   }) {
     return TextFormField(
       key: Key(keyName),
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
-      decoration: InputDecoration(labelText: label, suffixText: suffix),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: suffix,
+        helperText: helperText,
+      ),
       validator: validator,
     );
   }

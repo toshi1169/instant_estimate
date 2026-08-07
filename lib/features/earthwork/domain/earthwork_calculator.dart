@@ -5,7 +5,7 @@ class EarthworkCalculationResult {
     required this.depthMeters,
     required this.structureVolumeCubicMeters,
     required this.soilChangeFactor,
-    required this.dumpCapacityCubicMeters,
+    required this.loadCapacityCubicMeters,
   });
 
   final double lengthMeters;
@@ -13,7 +13,7 @@ class EarthworkCalculationResult {
   final double depthMeters;
   final double structureVolumeCubicMeters;
   final double soilChangeFactor;
-  final double dumpCapacityCubicMeters;
+  final double loadCapacityCubicMeters;
 
   double get excavationVolume => lengthMeters * widthMeters * depthMeters;
 
@@ -21,7 +21,7 @@ class EarthworkCalculationResult {
 
   double get haulVolume => excavationVolume * soilChangeFactor;
 
-  int get dumpTrips => (haulVolume / dumpCapacityCubicMeters).ceil();
+  int get transportTrips => (haulVolume / loadCapacityCubicMeters).ceil();
 }
 
 abstract final class EarthworkCalculator {
@@ -31,14 +31,14 @@ abstract final class EarthworkCalculator {
     required double depthMeters,
     required double structureVolumeCubicMeters,
     required double soilChangeFactor,
-    required double dumpCapacityCubicMeters,
+    required double loadCapacityCubicMeters,
   }) {
     final requiredPositiveValues = [
       lengthMeters,
       widthMeters,
       depthMeters,
       soilChangeFactor,
-      dumpCapacityCubicMeters,
+      loadCapacityCubicMeters,
     ];
     if (requiredPositiveValues.any((value) => !value.isFinite || value <= 0)) {
       throw const FormatException('寸法・変化率・積載容量には0より大きい数値を入力してください');
@@ -54,7 +54,7 @@ abstract final class EarthworkCalculator {
       depthMeters: depthMeters,
       structureVolumeCubicMeters: structureVolumeCubicMeters,
       soilChangeFactor: soilChangeFactor,
-      dumpCapacityCubicMeters: dumpCapacityCubicMeters,
+      loadCapacityCubicMeters: loadCapacityCubicMeters,
     );
     if (structureVolumeCubicMeters > result.excavationVolume) {
       throw const FormatException('構造物体積が掘削量を超えています');

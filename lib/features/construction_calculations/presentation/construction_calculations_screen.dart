@@ -4,14 +4,19 @@ import '../../area/presentation/quadrilateral_area_screen.dart';
 import '../../density/presentation/weight_calculation_screen.dart';
 import '../../earthwork/presentation/earthwork_calculation_screen.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
+import '../../settings/domain/app_settings.dart';
 
 class ConstructionCalculationsScreen extends StatelessWidget {
   const ConstructionCalculationsScreen({
     required this.onSendToEstimate,
+    this.settings = const AppSettings(),
+    this.onSettingsChanged,
     super.key,
   });
 
   final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
+  final AppSettings settings;
+  final ValueChanged<AppSettings>? onSettingsChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -51,11 +56,13 @@ class ConstructionCalculationsScreen extends StatelessWidget {
               key: const Key('openEarthworkCalculation'),
               icon: Icons.landscape_outlined,
               title: '土量計算',
-              subtitle: '掘削・埋戻し・搬出土・ダンプ台数',
+              subtitle: '掘削・埋戻し・搬出土・運搬回数',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => EarthworkCalculationScreen(
                     onSendToEstimate: onSendToEstimate,
+                    settings: settings,
+                    onSettingsChanged: onSettingsChanged,
                   ),
                 ),
               ),

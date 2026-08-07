@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/angle_unit.dart';
+import '../../../core/domain/transport_vehicle.dart';
 
 enum AppThemeSelection { system, light, gray, dark }
 
@@ -16,6 +17,7 @@ class AppSettings {
     this.angleUnit = AngleUnit.degrees,
     this.historySortOrder = HistorySortOrder.ascending,
     this.confirmHistoryDeletion = true,
+    this.customTransportVehicles = const [],
   });
 
   final AppThemeSelection theme;
@@ -24,6 +26,7 @@ class AppSettings {
   final AngleUnit angleUnit;
   final HistorySortOrder historySortOrder;
   final bool confirmHistoryDeletion;
+  final List<TransportVehicle> customTransportVehicles;
 
   ThemeMode get themeMode => switch (theme) {
     AppThemeSelection.system => ThemeMode.system,
@@ -38,6 +41,7 @@ class AppSettings {
     AngleUnit? angleUnit,
     HistorySortOrder? historySortOrder,
     bool? confirmHistoryDeletion,
+    List<TransportVehicle>? customTransportVehicles,
   }) {
     return AppSettings(
       theme: theme ?? this.theme,
@@ -47,6 +51,8 @@ class AppSettings {
       historySortOrder: historySortOrder ?? this.historySortOrder,
       confirmHistoryDeletion:
           confirmHistoryDeletion ?? this.confirmHistoryDeletion,
+      customTransportVehicles:
+          customTransportVehicles ?? this.customTransportVehicles,
     );
   }
 
@@ -57,6 +63,9 @@ class AppSettings {
     'angleUnit': angleUnit.name,
     'historySortOrder': historySortOrder.name,
     'confirmHistoryDeletion': confirmHistoryDeletion,
+    'customTransportVehicles': customTransportVehicles
+        .map((vehicle) => vehicle.toJson())
+        .toList(growable: false),
   };
 
   factory AppSettings.fromJson(Map<String, Object?> json) {
@@ -90,6 +99,18 @@ class AppSettings {
       confirmHistoryDeletion: json['confirmHistoryDeletion'] is bool
           ? json['confirmHistoryDeletion']! as bool
           : true,
+      customTransportVehicles: switch (json['customTransportVehicles']) {
+        final List<Object?> values =>
+          values
+              .whereType<Map>()
+              .map(
+                (value) => TransportVehicle.fromJson(
+                  value.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .toList(growable: false),
+        _ => const [],
+      },
     );
   }
 }

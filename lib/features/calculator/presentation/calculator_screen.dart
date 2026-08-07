@@ -187,6 +187,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           MaterialPageRoute<void>(
             builder: (_) => ConstructionCalculationsScreen(
               onSendToEstimate: _sendDraftToEstimate,
+              settings: widget.settings,
+              onSettingsChanged: widget.onSettingsChanged,
             ),
           ),
         ),
