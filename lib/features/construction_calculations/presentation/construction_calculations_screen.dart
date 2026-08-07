@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../area/presentation/quadrilateral_area_screen.dart';
 import '../../density/presentation/weight_calculation_screen.dart';
+import '../../earthwork/presentation/earthwork_calculation_screen.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 
 class ConstructionCalculationsScreen extends StatelessWidget {
@@ -46,10 +47,18 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const _CalculationTile(
+            _CalculationTile(
+              key: const Key('openEarthworkCalculation'),
               icon: Icons.landscape_outlined,
               title: '土量計算',
-              subtitle: '今後追加',
+              subtitle: '掘削・埋戻し・搬出土・ダンプ台数',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => EarthworkCalculationScreen(
+                    onSendToEstimate: onSendToEstimate,
+                  ),
+                ),
+              ),
             ),
             const _CalculationTile(
               icon: Icons.show_chart,
