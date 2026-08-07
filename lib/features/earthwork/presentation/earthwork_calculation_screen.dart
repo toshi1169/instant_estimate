@@ -70,12 +70,17 @@ class _EarthworkCalculationScreenState
           child: TabBarView(
             children: [
               ExcavationHaulTab(
+                settings: widget.settings,
                 vehicles: _vehicles,
                 onAddVehicle: _addVehicle,
                 onSendToEstimate: widget.onSendToEstimate,
               ),
-              BackfillTab(onSendToEstimate: widget.onSendToEstimate),
+              BackfillTab(
+                settings: widget.settings,
+                onSendToEstimate: widget.onSendToEstimate,
+              ),
               EmbankmentTab(
+                settings: widget.settings,
                 vehicles: _vehicles,
                 onAddVehicle: _addVehicle,
                 onSendToEstimate: widget.onSendToEstimate,

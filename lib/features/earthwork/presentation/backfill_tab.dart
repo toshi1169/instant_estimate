@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../estimate/domain/estimate_item_draft.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/earthwork_calculator.dart';
 import 'earthwork_common_widgets.dart';
 
 class BackfillTab extends StatefulWidget {
-  const BackfillTab({required this.onSendToEstimate, super.key});
+  const BackfillTab({
+    required this.settings,
+    required this.onSendToEstimate,
+    super.key,
+  });
 
+  final AppSettings settings;
   final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
 
   @override
@@ -84,7 +90,7 @@ class _BackfillTabState extends State<BackfillTab> {
       EstimateItemDraft(
         trade: '土工',
         name: name,
-        quantity: quantity,
+        quantity: widget.settings.roundEstimateQuantity(quantity),
         originalQuantity: quantity,
         unit: 'm³',
         specification: specification,

@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../../../core/domain/transport_vehicle.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/earthwork_calculator.dart';
 import 'earthwork_common_widgets.dart';
 
 class EmbankmentTab extends StatefulWidget {
   const EmbankmentTab({
+    required this.settings,
     required this.vehicles,
     required this.onAddVehicle,
     required this.onSendToEstimate,
     super.key,
   });
 
+  final AppSettings settings;
   final List<TransportVehicle> vehicles;
   final Future<TransportVehicle?> Function() onAddVehicle;
   final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
@@ -122,7 +125,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
       EstimateItemDraft(
         trade: '土工',
         name: name,
-        quantity: quantity,
+        quantity: widget.settings.roundEstimateQuantity(quantity),
         originalQuantity: quantity,
         unit: unit,
         specification: specification,

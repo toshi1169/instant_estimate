@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../../../core/domain/transport_vehicle.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/earthwork_calculator.dart';
 import 'earthwork_common_widgets.dart';
 
 class ExcavationHaulTab extends StatefulWidget {
   const ExcavationHaulTab({
+    required this.settings,
     required this.vehicles,
     required this.onAddVehicle,
     required this.onSendToEstimate,
     super.key,
   });
 
+  final AppSettings settings;
   final List<TransportVehicle> vehicles;
   final Future<TransportVehicle?> Function() onAddVehicle;
   final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
@@ -185,7 +188,9 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
                   EstimateItemDraft(
                     trade: '土工',
                     name: '掘削',
-                    quantity: result.bankVolume,
+                    quantity: widget.settings.roundEstimateQuantity(
+                      result.bankVolume,
+                    ),
                     originalQuantity: result.bankVolume,
                     unit: 'm³',
                     specification: _dimensions,
@@ -206,7 +211,9 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
                   EstimateItemDraft(
                     trade: '土工',
                     name: '搬出土',
-                    quantity: result.looseVolume,
+                    quantity: widget.settings.roundEstimateQuantity(
+                      result.looseVolume,
+                    ),
                     originalQuantity: result.looseVolume,
                     unit: 'm³',
                     specification:
@@ -229,7 +236,9 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
                   EstimateItemDraft(
                     trade: '土工',
                     name: '土砂運搬',
-                    quantity: result.transportTrips.toDouble(),
+                    quantity: widget.settings.roundEstimateQuantity(
+                      result.transportTrips.toDouble(),
+                    ),
                     originalQuantity: result.transportTrips.toDouble(),
                     unit: '回',
                     specification:

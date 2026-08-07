@@ -4,6 +4,7 @@ import 'package:instant_estimate/core/domain/transport_vehicle.dart';
 import 'package:instant_estimate/features/earthwork/domain/earthwork_calculator.dart';
 import 'package:instant_estimate/features/earthwork/presentation/earthwork_calculation_screen.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 void main() {
   test('掘削・埋戻し・搬出土・運搬回数を計算する', () {
@@ -103,6 +104,25 @@ void main() {
     expect(result.completedVolume, 214);
   });
 
+  test('見積数量は設定した小数桁と丸め方法を反映する', () {
+    const halfUp = AppSettings(
+      decimalPlaces: 2,
+      roundingMode: CalculatorRoundingMode.halfUp,
+    );
+    const ceiling = AppSettings(
+      decimalPlaces: 2,
+      roundingMode: CalculatorRoundingMode.ceiling,
+    );
+    const floor = AppSettings(
+      decimalPlaces: 2,
+      roundingMode: CalculatorRoundingMode.floor,
+    );
+
+    expect(halfUp.roundEstimateQuantity(151.115), 151.12);
+    expect(ceiling.roundEstimateQuantity(151.11111111111111), 151.12);
+    expect(floor.roundEstimateQuantity(151.119), 151.11);
+  });
+
   test('初期車両には指定された通常車両とクローラーダンプを登録する', () {
     expect(InitialTransportVehicles.standard, hasLength(9));
     expect(InitialTransportVehicles.crawlers, hasLength(4));
@@ -157,6 +177,45 @@ void main() {
     expect(sentDraft?.quantity, 20);
     expect(sentDraft?.unit, 'm³');
     expect(sentDraft?.specification, contains('L=10m'));
+  });
+
+  testWidgets('土量結果を見積へ送る際に設定どおり数量を丸める', (tester) async {
+    EstimateItemDraft? sentDraft;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EarthworkCalculationScreen(
+          settings: const AppSettings(
+            decimalPlaces: 2,
+            roundingMode: CalculatorRoundingMode.ceiling,
+          ),
+          onSendToEstimate: (draft) async => sentDraft = draft,
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byKey(const Key('earthworkLength')), '1.111');
+    await tester.enterText(find.byKey(const Key('earthworkWidth')), '1');
+    await tester.enterText(find.byKey(const Key('earthworkDepth')), '1');
+    await tester.drag(find.byType(ListView).first, const Offset(0, -650));
+    await tester.pumpAndSettle();
+    final calculateButton = find.byKey(const Key('calculateEarthwork'));
+    await tester.ensureVisible(calculateButton);
+    await tester.pumpAndSettle();
+    await tester.tap(calculateButton);
+    await tester.pumpAndSettle();
+
+    final haulCard = find.byKey(const Key('earthworkExcavationResult'));
+    await tester.scrollUntilVisible(
+      haulCard,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: haulCard, matching: find.text('見積へ')));
+    await tester.pump();
+
+    expect(sentDraft?.quantity, 1.12);
+    expect(sentDraft?.originalQuantity, 1.111);
   });
 
   testWidgets('埋戻しと盛土をタブで切り替え、高い盛土では注意を表示する', (tester) async {

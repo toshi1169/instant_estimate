@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/angle_unit.dart';
@@ -33,6 +35,19 @@ class AppSettings {
     AppThemeSelection.dark => ThemeMode.dark,
     AppThemeSelection.light || AppThemeSelection.gray => ThemeMode.light,
   };
+
+  /// 計算元の値は変えず、見積数量へ渡す値だけ表示設定に合わせて丸める。
+  double roundEstimateQuantity(double value) {
+    final places = decimalPlaces.clamp(1, 5);
+    final factor = math.pow(10, places).toDouble();
+    final scaled = value * factor;
+    final rounded = switch (roundingMode) {
+      CalculatorRoundingMode.halfUp => scaled.roundToDouble(),
+      CalculatorRoundingMode.ceiling => scaled.ceilToDouble(),
+      CalculatorRoundingMode.floor => scaled.floorToDouble(),
+    };
+    return rounded / factor;
+  }
 
   AppSettings copyWith({
     AppThemeSelection? theme,
