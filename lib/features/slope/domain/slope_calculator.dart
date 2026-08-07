@@ -48,6 +48,26 @@ class SlopeCalculator {
     );
   }
 
+  static SlopeCalculationResult fromHorizontalAndSlopeLength({
+    required double horizontalDistanceMeters,
+    required double slopeLengthMeters,
+  }) {
+    _validateLength(horizontalDistanceMeters, '水平距離');
+    _validateLength(slopeLengthMeters, '法長');
+    if (slopeLengthMeters <= horizontalDistanceMeters) {
+      throw const FormatException('法長は水平距離より大きい数値を入力してください');
+    }
+    final heightDifference = math.sqrt(
+      slopeLengthMeters * slopeLengthMeters -
+          horizontalDistanceMeters * horizontalDistanceMeters,
+    );
+    return calculate(
+      horizontalDistanceMeters: horizontalDistanceMeters,
+      inputType: SlopeInputType.heightDifference,
+      inputValue: heightDifference,
+    );
+  }
+
   static SlopeCalculationResult fromSlopeLengthAndGradientRatio({
     required double slopeLengthMeters,
     required double gradientRatioDenominator,

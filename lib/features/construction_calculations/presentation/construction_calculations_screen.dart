@@ -75,10 +75,7 @@ class ConstructionCalculationsScreen extends StatelessWidget {
               subtitle: '排水・道路・法面・屋根の勾配と数量を算出',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => SlopeCalculationScreen(
-                    onSendToEstimate: onSendToEstimate,
-                    settings: settings,
-                  ),
+                  builder: (_) => SlopeCalculationScreen(settings: settings),
                 ),
               ),
             ),

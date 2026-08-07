@@ -2,29 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../estimate/domain/estimate_item_draft.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/slope_calculator.dart';
 
 enum _SlopeUseCase { drainage, road, face, roof }
 
-enum _SlopeInputMethod {
-  heightAndLength,
-  horizontalAndRatio,
-  heightAndHorizontal,
-  lengthAndRatio,
-}
-
 enum _SlopeField { horizontal, height, length, percent, ratio, angle }
 
 class SlopeCalculationScreen extends StatefulWidget {
   const SlopeCalculationScreen({
-    required this.onSendToEstimate,
     this.settings = const AppSettings(),
     super.key,
   });
 
-  final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
   final AppSettings settings;
 
   @override
@@ -38,7 +28,10 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
   final _extensionController = TextEditingController(text: '1.00');
 
   _SlopeUseCase _useCase = _SlopeUseCase.face;
-  _SlopeInputMethod _inputMethod = _SlopeInputMethod.heightAndLength;
+  final List<_SlopeField> _activeFields = [
+    _SlopeField.height,
+    _SlopeField.length,
+  ];
   SlopeCalculationResult? _result;
   String? _errorMessage;
   bool _useMillimeters = false;
@@ -61,22 +54,6 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
     super.dispose();
   }
 
-  Set<_SlopeField> get _editableFields => switch (_inputMethod) {
-    _SlopeInputMethod.heightAndLength => {
-      _SlopeField.height,
-      _SlopeField.length,
-    },
-    _SlopeInputMethod.horizontalAndRatio => {
-      _SlopeField.horizontal,
-      _SlopeField.ratio,
-    },
-    _SlopeInputMethod.heightAndHorizontal => {
-      _SlopeField.height,
-      _SlopeField.horizontal,
-    },
-    _SlopeInputMethod.lengthAndRatio => {_SlopeField.length, _SlopeField.ratio},
-  };
-
   double get _unitFactor => _useMillimeters ? 1000 : 1;
   String get _lengthUnit => _useMillimeters ? 'mm' : 'm';
 
@@ -93,33 +70,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
   void _recalculate({bool notify = true}) {
     if (_updatingControllers) return;
     try {
-      final result = switch (_inputMethod) {
-        _SlopeInputMethod.heightAndLength =>
-          SlopeCalculator.fromHeightAndSlopeLength(
-            heightDifferenceMeters:
-                _lengthInMeters(_SlopeField.height) ?? double.nan,
-            slopeLengthMeters:
-                _lengthInMeters(_SlopeField.length) ?? double.nan,
-          ),
-        _SlopeInputMethod.horizontalAndRatio => SlopeCalculator.calculate(
-          horizontalDistanceMeters:
-              _lengthInMeters(_SlopeField.horizontal) ?? double.nan,
-          inputType: SlopeInputType.gradientRatio,
-          inputValue: _number(_SlopeField.ratio) ?? double.nan,
-        ),
-        _SlopeInputMethod.heightAndHorizontal => SlopeCalculator.calculate(
-          horizontalDistanceMeters:
-              _lengthInMeters(_SlopeField.horizontal) ?? double.nan,
-          inputType: SlopeInputType.heightDifference,
-          inputValue: _lengthInMeters(_SlopeField.height) ?? double.nan,
-        ),
-        _SlopeInputMethod.lengthAndRatio =>
-          SlopeCalculator.fromSlopeLengthAndGradientRatio(
-            slopeLengthMeters:
-                _lengthInMeters(_SlopeField.length) ?? double.nan,
-            gradientRatioDenominator: _number(_SlopeField.ratio) ?? double.nan,
-          ),
-      };
+      final result = _calculateFromActiveFields();
       _applyResult(result);
       if (notify && mounted) {
         setState(() {
@@ -144,6 +95,92 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
     }
   }
 
+  SlopeCalculationResult _calculateFromActiveFields() {
+    final first = _activeFields.first;
+    final second = _activeFields.last;
+    final lengthFields = {first, second}.where(_isLengthField).toList();
+    final slopeFields = {first, second}.where(_isSlopeField).toList();
+
+    if (lengthFields.length == 2) {
+      final fields = lengthFields.toSet();
+      if (fields.contains(_SlopeField.horizontal) &&
+          fields.contains(_SlopeField.height)) {
+        return SlopeCalculator.calculate(
+          horizontalDistanceMeters:
+              _lengthInMeters(_SlopeField.horizontal) ?? double.nan,
+          inputType: SlopeInputType.heightDifference,
+          inputValue: _lengthInMeters(_SlopeField.height) ?? double.nan,
+        );
+      }
+      if (fields.contains(_SlopeField.horizontal) &&
+          fields.contains(_SlopeField.length)) {
+        return SlopeCalculator.fromHorizontalAndSlopeLength(
+          horizontalDistanceMeters:
+              _lengthInMeters(_SlopeField.horizontal) ?? double.nan,
+          slopeLengthMeters: _lengthInMeters(_SlopeField.length) ?? double.nan,
+        );
+      }
+      return SlopeCalculator.fromHeightAndSlopeLength(
+        heightDifferenceMeters:
+            _lengthInMeters(_SlopeField.height) ?? double.nan,
+        slopeLengthMeters: _lengthInMeters(_SlopeField.length) ?? double.nan,
+      );
+    }
+
+    if (lengthFields.length == 1 && slopeFields.length == 1) {
+      final lengthField = lengthFields.single;
+      final slopeField = slopeFields.single;
+      final inputType = _inputTypeFor(slopeField);
+      final inputValue = _number(slopeField) ?? double.nan;
+      if (lengthField == _SlopeField.horizontal) {
+        return SlopeCalculator.calculate(
+          horizontalDistanceMeters: _lengthInMeters(lengthField) ?? double.nan,
+          inputType: inputType,
+          inputValue: inputValue,
+        );
+      }
+
+      final reference = SlopeCalculator.calculate(
+        horizontalDistanceMeters: 1,
+        inputType: inputType,
+        inputValue: inputValue,
+      );
+      final length = _lengthInMeters(lengthField) ?? double.nan;
+      final horizontalDistance = switch (lengthField) {
+        _SlopeField.height =>
+          reference.heightDifferenceMeters == 0
+              ? double.nan
+              : length / reference.heightDifferenceMeters,
+        _SlopeField.length => length / reference.slopeLengthMeters,
+        _ => double.nan,
+      };
+      return SlopeCalculator.calculate(
+        horizontalDistanceMeters: horizontalDistance,
+        inputType: inputType,
+        inputValue: inputValue,
+      );
+    }
+
+    throw const FormatException('距離の項目と1つ以上組み合わせて入力してください');
+  }
+
+  bool _isLengthField(_SlopeField field) =>
+      field == _SlopeField.horizontal ||
+      field == _SlopeField.height ||
+      field == _SlopeField.length;
+
+  bool _isSlopeField(_SlopeField field) =>
+      field == _SlopeField.percent ||
+      field == _SlopeField.ratio ||
+      field == _SlopeField.angle;
+
+  SlopeInputType _inputTypeFor(_SlopeField field) => switch (field) {
+    _SlopeField.percent => SlopeInputType.gradientPercent,
+    _SlopeField.ratio => SlopeInputType.gradientRatio,
+    _SlopeField.angle => SlopeInputType.angleDegrees,
+    _ => throw const FormatException('勾配の入力項目を選択してください'),
+  };
+
   void _applyResult(SlopeCalculationResult result) {
     _updatingControllers = true;
     final values = <_SlopeField, double>{
@@ -155,7 +192,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
       _SlopeField.angle: result.angleDegrees,
     };
     for (final entry in values.entries) {
-      if (!_editableFields.contains(entry.key)) {
+      if (!_activeFields.contains(entry.key)) {
         _controllers[entry.key]!.text = _format(entry.value);
       }
     }
@@ -165,18 +202,24 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
   void _clearCalculatedFields() {
     _updatingControllers = true;
     for (final field in _SlopeField.values) {
-      if (!_editableFields.contains(field)) _controllers[field]!.clear();
+      if (!_activeFields.contains(field)) _controllers[field]!.clear();
     }
     _updatingControllers = false;
   }
 
-  void _changeInputMethod(_SlopeInputMethod method) {
-    final result = _result;
+  void _activateField(_SlopeField field) {
+    if (_activeFields.contains(field)) return;
     setState(() {
-      _inputMethod = method;
+      _activeFields
+        ..removeAt(0)
+        ..add(field);
       _errorMessage = null;
-      if (result != null) _applyResult(result);
     });
+    final controller = _controllers[field]!;
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
   }
 
   void _changeUnit(bool millimeters) {
@@ -212,6 +255,9 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
     _extensionController.text = _useMillimeters ? '1000.00' : '1.00';
     _updatingControllers = false;
     setState(() {
+      _activeFields
+        ..clear()
+        ..addAll([_SlopeField.height, _SlopeField.length]);
       _result = null;
       _errorMessage = null;
     });
@@ -225,7 +271,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
         child: Padding(
           padding: EdgeInsets.fromLTRB(24, 8, 24, 28),
           child: Text(
-            '入力方法から2項目の組合せを選び、白い入力欄へ数値を入力してください。'
+            '計算に使う2つの入力欄を順にタップし、数値を入力してください。'
             '残りの値は自動計算されます。法勾配 1:n は、縦1に対する水平距離nを表します。',
           ),
         ),
@@ -245,38 +291,6 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
   String _format(double value) {
     final rounded = widget.settings.roundEstimateQuantity(value);
     return rounded.toStringAsFixed(widget.settings.decimalPlaces);
-  }
-
-  String _compact(double value) {
-    final text = _format(value);
-    return text.replaceFirst(RegExp(r'\.?0+$'), '');
-  }
-
-  Future<void> _sendAreaToEstimate() async {
-    final result = _result;
-    if (result == null || _extensionMeters <= 0) return;
-    final area = _faceArea;
-    final name = switch (_useCase) {
-      _SlopeUseCase.drainage => '排水勾配施工',
-      _SlopeUseCase.road => '道路勾配施工',
-      _SlopeUseCase.face => '法面工',
-      _SlopeUseCase.roof => '屋根勾配施工',
-    };
-    await widget.onSendToEstimate(
-      EstimateItemDraft(
-        trade: '勾配・法面',
-        name: name,
-        specification:
-            '法勾配 1 : ${_compact(result.gradientRatioDenominator ?? 0)} / '
-            '角度 ${_compact(result.angleDegrees)}°',
-        quantity: widget.settings.roundEstimateQuantity(area),
-        unit: 'm²',
-        calculationBasis:
-            '法長 ${_compact(result.slopeLengthMeters)}m × '
-            '延長 ${_compact(_extensionMeters)}m',
-        originalQuantity: area,
-      ),
-    );
   }
 
   @override
@@ -343,7 +357,8 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                     label: '水平距離（H）',
                     controller: _controllers[_SlopeField.horizontal]!,
                     suffix: _lengthUnit,
-                    enabled: _editableFields.contains(_SlopeField.horizontal),
+                    selected: _activeFields.contains(_SlopeField.horizontal),
+                    onTap: () => _activateField(_SlopeField.horizontal),
                     onChanged: (_) => _recalculate(),
                   ),
                   _InputRow(
@@ -351,7 +366,8 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                     label: '高さ（V）',
                     controller: _controllers[_SlopeField.height]!,
                     suffix: _lengthUnit,
-                    enabled: _editableFields.contains(_SlopeField.height),
+                    selected: _activeFields.contains(_SlopeField.height),
+                    onTap: () => _activateField(_SlopeField.height),
                     onChanged: (_) => _recalculate(),
                   ),
                   _InputRow(
@@ -359,29 +375,36 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                     label: '法長（L）',
                     controller: _controllers[_SlopeField.length]!,
                     suffix: _lengthUnit,
-                    enabled: _editableFields.contains(_SlopeField.length),
+                    selected: _activeFields.contains(_SlopeField.length),
+                    onTap: () => _activateField(_SlopeField.length),
                     onChanged: (_) => _recalculate(),
                   ),
                   _InputRow(
+                    key: const Key('slopePercent'),
                     label: '勾配',
                     controller: _controllers[_SlopeField.percent]!,
                     suffix: '%',
-                    enabled: false,
-                    onChanged: (_) {},
-                  ),
-                  _InputRow(
-                    label: '法勾配',
-                    prefix: '1 :',
-                    controller: _controllers[_SlopeField.ratio]!,
-                    enabled: _editableFields.contains(_SlopeField.ratio),
+                    selected: _activeFields.contains(_SlopeField.percent),
+                    onTap: () => _activateField(_SlopeField.percent),
                     onChanged: (_) => _recalculate(),
                   ),
                   _InputRow(
+                    key: const Key('slopeRatio'),
+                    label: '法勾配',
+                    prefix: '1 :',
+                    controller: _controllers[_SlopeField.ratio]!,
+                    selected: _activeFields.contains(_SlopeField.ratio),
+                    onTap: () => _activateField(_SlopeField.ratio),
+                    onChanged: (_) => _recalculate(),
+                  ),
+                  _InputRow(
+                    key: const Key('slopeAngle'),
                     label: '角度（θ）',
                     controller: _controllers[_SlopeField.angle]!,
                     suffix: '°',
-                    enabled: false,
-                    onChanged: (_) {},
+                    selected: _activeFields.contains(_SlopeField.angle),
+                    onTap: () => _activateField(_SlopeField.angle),
+                    onChanged: (_) => _recalculate(),
                   ),
                 ],
               ),
@@ -442,7 +465,8 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                     label: '延長',
                     controller: _extensionController,
                     suffix: _lengthUnit,
-                    enabled: true,
+                    selected: false,
+                    onTap: () {},
                     onChanged: (_) => setState(() {}),
                   ),
                   _ResultLine(
@@ -452,82 +476,8 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                         : '${_format(_faceArea)} m²',
                     emphasize: true,
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      key: const Key('sendSlopeAreaToEstimate'),
-                      onPressed: _result == null || _extensionMeters <= 0
-                          ? null
-                          : _sendAreaToEstimate,
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: const Text('見積へ追加'),
-                    ),
-                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 18),
-            Text('入力方法', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _MethodChip(
-                  key: const Key('methodHeightLength'),
-                  label: '高さ＋法長',
-                  selected: _inputMethod == _SlopeInputMethod.heightAndLength,
-                  onTap: () =>
-                      _changeInputMethod(_SlopeInputMethod.heightAndLength),
-                ),
-                _MethodChip(
-                  label: '水平距離＋法勾配',
-                  selected:
-                      _inputMethod == _SlopeInputMethod.horizontalAndRatio,
-                  onTap: () =>
-                      _changeInputMethod(_SlopeInputMethod.horizontalAndRatio),
-                ),
-                _MethodChip(
-                  label: '高さ＋水平距離',
-                  selected:
-                      _inputMethod == _SlopeInputMethod.heightAndHorizontal,
-                  onTap: () =>
-                      _changeInputMethod(_SlopeInputMethod.heightAndHorizontal),
-                ),
-                _MethodChip(
-                  label: '法長＋法勾配',
-                  selected: _inputMethod == _SlopeInputMethod.lengthAndRatio,
-                  onTap: () =>
-                      _changeInputMethod(_SlopeInputMethod.lengthAndRatio),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Text('法勾配プリセット', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [
-                for (final ratio in [0.5, 1.0, 1.2, 1.5, 1.8, 2.0])
-                  ChoiceChip(
-                    label: Text('1:${ratio.toStringAsFixed(1)}'),
-                    selected:
-                        (_number(_SlopeField.ratio) ?? -1) == ratio &&
-                        _editableFields.contains(_SlopeField.ratio),
-                    onSelected: (_) {
-                      if (!_editableFields.contains(_SlopeField.ratio)) {
-                        _changeInputMethod(
-                          _SlopeInputMethod.horizontalAndRatio,
-                        );
-                      }
-                      _controllers[_SlopeField.ratio]!.text = ratio
-                          .toStringAsFixed(1);
-                      _recalculate();
-                    },
-                  ),
-              ],
             ),
             const SizedBox(height: 18),
             Text('単位', style: theme.textTheme.titleMedium),
@@ -621,7 +571,8 @@ class _InputRow extends StatelessWidget {
   const _InputRow({
     required this.label,
     required this.controller,
-    required this.enabled,
+    required this.selected,
+    required this.onTap,
     required this.onChanged,
     this.prefix,
     this.suffix,
@@ -630,7 +581,8 @@ class _InputRow extends StatelessWidget {
 
   final String label;
   final TextEditingController controller;
-  final bool enabled;
+  final bool selected;
+  final VoidCallback onTap;
   final ValueChanged<String> onChanged;
   final String? prefix;
   final String? suffix;
@@ -648,7 +600,6 @@ class _InputRow extends StatelessWidget {
             height: 42,
             child: TextField(
               controller: controller,
-              enabled: enabled,
               textAlign: TextAlign.right,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -656,12 +607,21 @@ class _InputRow extends StatelessWidget {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
-              decoration: const InputDecoration(
-                contentPadding: EdgeInsets.symmetric(
+              decoration: InputDecoration(
+                filled: selected,
+                fillColor: AppColors.accent.withValues(alpha: 0.08),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: selected ? AppColors.accent : Colors.grey,
+                    width: selected ? 1.5 : 1,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 8,
                 ),
               ),
+              onTap: onTap,
               onChanged: onChanged,
             ),
           ),
@@ -702,28 +662,6 @@ class _ResultLine extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MethodChip extends StatelessWidget {
-  const _MethodChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    super.key,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
     );
   }
 }

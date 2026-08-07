@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 import 'package:instant_estimate/features/slope/domain/slope_calculator.dart';
 import 'package:instant_estimate/features/slope/presentation/slope_calculation_screen.dart';
@@ -112,20 +111,27 @@ void main() {
         throwsFormatException,
       );
     });
+
+    test('水平距離4mと法長5mから高さ3mを計算する', () {
+      final result = SlopeCalculator.fromHorizontalAndSlopeLength(
+        horizontalDistanceMeters: 4,
+        slopeLengthMeters: 5,
+      );
+
+      expect(result.heightDifferenceMeters, closeTo(3, 0.000001));
+    });
   });
 
-  testWidgets('画面は3m・4m・5mの法面を自動計算し見積の丸めも反映する', (tester) async {
+  testWidgets('任意の入力欄を2つ選び法面を自動計算できる', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    EstimateItemDraft? sentDraft;
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: SlopeCalculationScreen(
-          settings: const AppSettings(
+          settings: AppSettings(
             decimalPlaces: 2,
-            roundingMode: CalculatorRoundingMode.ceiling,
+            roundingMode: CalculatorRoundingMode.halfUp,
           ),
-          onSendToEstimate: (draft) async => sentDraft = draft,
         ),
       ),
     );
@@ -139,24 +145,24 @@ void main() {
     );
     expect(tester.widget<TextField>(horizontalField).controller!.text, '4.00');
 
-    final extensionField = find.descendant(
-      of: find.byKey(const Key('slopeExtension')),
+    expect(find.text('入力方法'), findsNothing);
+    expect(find.text('法勾配プリセット'), findsNothing);
+    expect(find.text('見積へ追加'), findsNothing);
+
+    final percentField = find.descendant(
+      of: find.byKey(const Key('slopePercent')),
       matching: find.byType(TextField),
     );
-    await tester.enterText(extensionField, '1.111');
+    await tester.tap(horizontalField);
+    await tester.enterText(horizontalField, '10');
+    await tester.tap(percentField);
+    await tester.enterText(percentField, '10');
     await tester.pump();
 
-    final sendButton = find.byKey(const Key('sendSlopeAreaToEstimate'));
-    await tester.drag(find.byType(ListView), const Offset(0, -900));
-    await tester.pumpAndSettle();
-    await tester.tap(sendButton);
-    await tester.pumpAndSettle();
-
-    expect(sentDraft, isNotNull);
-    expect(sentDraft!.trade, '勾配・法面');
-    expect(sentDraft!.name, '法面工');
-    expect(sentDraft!.quantity, 5.56);
-    expect(sentDraft!.originalQuantity, closeTo(5.555, 0.000001));
-    expect(sentDraft!.unit, 'm²');
+    final heightField = find.descendant(
+      of: find.byKey(const Key('slopeHeight')),
+      matching: find.byType(TextField),
+    );
+    expect(tester.widget<TextField>(heightField).controller!.text, '1.00');
   });
 }
