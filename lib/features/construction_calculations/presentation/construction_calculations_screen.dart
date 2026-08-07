@@ -5,6 +5,7 @@ import '../../density/presentation/weight_calculation_screen.dart';
 import '../../earthwork/presentation/earthwork_calculation_screen.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../slope/presentation/slope_calculation_screen.dart';
 
 class ConstructionCalculationsScreen extends StatelessWidget {
   const ConstructionCalculationsScreen({
@@ -67,10 +68,19 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const _CalculationTile(
+            _CalculationTile(
+              key: const Key('openSlopeCalculation'),
               icon: Icons.show_chart,
               title: '勾配計算',
-              subtitle: '今後追加',
+              subtitle: '勾配・角度・高低差・距離を相互換算',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => SlopeCalculationScreen(
+                    onSendToEstimate: onSendToEstimate,
+                    settings: settings,
+                  ),
+                ),
+              ),
             ),
             const _CalculationTile(
               icon: Icons.terrain_outlined,
