@@ -197,23 +197,25 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     Navigator.of(context).pop();
 
     if (destination == CalculatorSideMenuDestination.settings) {
-      unawaited(_openSettings());
+      unawaited(_openFromSideMenu(_openSettings));
       return;
     }
     if (destination == CalculatorSideMenuDestination.instantEstimate) {
-      unawaited(_openEstimateDocuments());
+      unawaited(_openFromSideMenu(_openEstimateDocuments));
       return;
     }
     if (destination == CalculatorSideMenuDestination.unitPriceMaster) {
-      unawaited(_openUnitPriceMaster());
+      unawaited(_openFromSideMenu(_openUnitPriceMaster));
       return;
     }
     if (destination == CalculatorSideMenuDestination.productivityMaster) {
       unawaited(
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) =>
-                ProductivityMasterScreen(controller: _productivityController),
+        _openFromSideMenu(
+          () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  ProductivityMasterScreen(controller: _productivityController),
+            ),
           ),
         ),
       );
@@ -221,13 +223,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
     if (destination == CalculatorSideMenuDestination.constructionCalculations) {
       unawaited(
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => ConstructionCalculationsScreen(
-              onSendToEstimate: _sendDraftToEstimate,
-              productivityController: _productivityController,
-              settings: widget.settings,
-              onSettingsChanged: widget.onSettingsChanged,
+        _openFromSideMenu(
+          () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ConstructionCalculationsScreen(
+                onSendToEstimate: _sendDraftToEstimate,
+                productivityController: _productivityController,
+                settings: widget.settings,
+                onSettingsChanged: widget.onSettingsChanged,
+              ),
             ),
           ),
         ),
@@ -246,6 +250,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       CalculatorSideMenuDestination.productivityMaster => '歩掛・生産性マスタ',
     };
     _showMessage('$labelは今後の工程で追加します');
+  }
+
+  Future<void> _openFromSideMenu(Future<void> Function() openScreen) async {
+    await openScreen();
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scaffoldKey.currentState?.openDrawer();
+    });
   }
 
   Future<void> _openUnitPriceMaster() async {

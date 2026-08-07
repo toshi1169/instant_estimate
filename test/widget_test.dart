@@ -422,6 +422,12 @@ void main() {
 
     expect(find.text('設定'), findsOneWidget);
     expect(find.text('テーマ'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
+    expect(find.text('建築・土木系計算'), findsOneWidget);
   });
 
   testWidgets('メニューボタンの長押しで3列9行の関数一覧を開ける', (tester) async {
