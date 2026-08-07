@@ -71,8 +71,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openSlopeCalculation'),
               icon: Icons.show_chart,
-              title: '勾配計算',
-              subtitle: '勾配・角度・高低差・距離を相互換算',
+              title: '勾配・法面計算',
+              subtitle: '排水・道路・法面・屋根の勾配と数量を算出',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => SlopeCalculationScreen(

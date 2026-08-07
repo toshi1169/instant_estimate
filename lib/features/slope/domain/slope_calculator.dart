@@ -28,6 +28,43 @@ class SlopeCalculationResult {
 class SlopeCalculator {
   const SlopeCalculator._();
 
+  static SlopeCalculationResult fromHeightAndSlopeLength({
+    required double heightDifferenceMeters,
+    required double slopeLengthMeters,
+  }) {
+    _validateLength(heightDifferenceMeters, '高さ');
+    _validateLength(slopeLengthMeters, '法長');
+    if (slopeLengthMeters <= heightDifferenceMeters) {
+      throw const FormatException('法長は高さより大きい数値を入力してください');
+    }
+    final horizontalDistance = math.sqrt(
+      slopeLengthMeters * slopeLengthMeters -
+          heightDifferenceMeters * heightDifferenceMeters,
+    );
+    return calculate(
+      horizontalDistanceMeters: horizontalDistance,
+      inputType: SlopeInputType.heightDifference,
+      inputValue: heightDifferenceMeters,
+    );
+  }
+
+  static SlopeCalculationResult fromSlopeLengthAndGradientRatio({
+    required double slopeLengthMeters,
+    required double gradientRatioDenominator,
+  }) {
+    _validateLength(slopeLengthMeters, '法長');
+    if (!gradientRatioDenominator.isFinite || gradientRatioDenominator <= 0) {
+      throw const FormatException('法勾配は0より大きい数値を入力してください');
+    }
+    final angle = math.atan(1 / gradientRatioDenominator);
+    final horizontalDistance = slopeLengthMeters * math.cos(angle);
+    return calculate(
+      horizontalDistanceMeters: horizontalDistance,
+      inputType: SlopeInputType.gradientRatio,
+      inputValue: gradientRatioDenominator,
+    );
+  }
+
   static SlopeCalculationResult calculate({
     required double horizontalDistanceMeters,
     required SlopeInputType inputType,
@@ -65,5 +102,11 @@ class SlopeCalculator {
             heightDifference * heightDifference,
       ),
     );
+  }
+
+  static void _validateLength(double value, String label) {
+    if (!value.isFinite || value <= 0) {
+      throw FormatException('$labelは0より大きい数値を入力してください');
+    }
   }
 }
