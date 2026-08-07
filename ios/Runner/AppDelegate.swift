@@ -146,5 +146,28 @@ import UIKit
         result(FlutterMethodNotImplemented)
       }
     }
+
+    let productivityRecordsChannel = FlutterMethodChannel(
+      name: "jp.instant_estimate/productivity_records",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    productivityRecordsChannel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "loadProductivityRecords":
+        result(UserDefaults.standard.string(forKey: "productivityRecords"))
+      case "saveProductivityRecords":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let records = arguments["records"] as? String
+        else {
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Productivity records are required.", details: nil))
+          return
+        }
+        UserDefaults.standard.set(records, forKey: "productivityRecords")
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }

@@ -9,6 +9,8 @@ enum CalculatorSideMenuDestination {
   ultimate,
   constructionCalculations,
   instantEstimate,
+  unitPriceMaster,
+  productivityMaster,
 }
 
 class CalculatorSideMenu extends StatelessWidget {
@@ -61,7 +63,6 @@ class CalculatorSideMenu extends StatelessWidget {
               label: 'ヘルプ',
               onTap: () => onSelected(CalculatorSideMenuDestination.help),
             ),
-            const Divider(height: 24),
             _MenuTile(
               key: const Key('sideMenuPrime'),
               icon: Icons.block_outlined,
@@ -89,6 +90,21 @@ class CalculatorSideMenu extends StatelessWidget {
               label: 'インスタント見積',
               onTap: () =>
                   onSelected(CalculatorSideMenuDestination.instantEstimate),
+            ),
+            const Divider(height: 24),
+            _MenuTile(
+              key: const Key('sideMenuUnitPriceMaster'),
+              icon: Icons.price_change_outlined,
+              label: '単価マスタ',
+              onTap: () =>
+                  onSelected(CalculatorSideMenuDestination.unitPriceMaster),
+            ),
+            _MenuTile(
+              key: const Key('sideMenuProductivityMaster'),
+              icon: Icons.analytics_outlined,
+              label: '歩掛・生産性マスタ',
+              onTap: () =>
+                  onSelected(CalculatorSideMenuDestination.productivityMaster),
             ),
             const Divider(height: 24),
             Padding(

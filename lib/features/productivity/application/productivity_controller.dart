@@ -1,0 +1,63 @@
+import 'package:flutter/foundation.dart';
+import '../data/productivity_record_store.dart';
+import '../domain/productivity_record.dart';
+
+enum ProductivityAccessTier { free, ultimate }
+
+class ProductivityLimitException implements Exception {
+  const ProductivityLimitException(this.limit);
+  final int limit;
+}
+
+class ProductivityController extends ChangeNotifier {
+  ProductivityController({
+    ProductivityRecordStore? store,
+    this.accessTier = ProductivityAccessTier.free,
+  }) : store = store ?? MemoryProductivityRecordStore();
+  final ProductivityRecordStore store;
+  final ProductivityAccessTier accessTier;
+  final List<ProductivityRecord> _records = [];
+  bool _loaded = false;
+  int get recordLimit =>
+      accessTier == ProductivityAccessTier.ultimate ? 100 : 5;
+  bool get canAdd => _records.length < recordLimit;
+  bool get isLoaded => _loaded;
+  List<ProductivityRecord> get records => List.unmodifiable(_records);
+  List<ProductivitySummary> get summaries {
+    final grouped = <String, List<ProductivityRecord>>{};
+    for (final record in _records) {
+      grouped.putIfAbsent(record.groupKey, () => []).add(record);
+    }
+    return grouped.values.map(ProductivitySummary.fromRecords).toList()
+      ..sort((a, b) => a.trade.compareTo(b.trade));
+  }
+
+  Future<void> load() async {
+    if (_loaded) return;
+    _records
+      ..clear()
+      ..addAll(await store.load());
+    _loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> add(ProductivityRecord record) async {
+    if (!canAdd) throw ProductivityLimitException(recordLimit);
+    final updated = [..._records, record];
+    await store.save(updated);
+    _records
+      ..clear()
+      ..addAll(updated);
+    notifyListeners();
+  }
+
+  Future<void> delete(String id) async {
+    final updated = _records.where((record) => record.id != id).toList();
+    if (updated.length == _records.length) return;
+    await store.save(updated);
+    _records
+      ..clear()
+      ..addAll(updated);
+    notifyListeners();
+  }
+}

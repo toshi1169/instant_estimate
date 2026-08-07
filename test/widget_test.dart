@@ -413,6 +413,8 @@ void main() {
     expect(find.text('アルティメット'), findsOneWidget);
     expect(find.text('建築・土木系計算'), findsOneWidget);
     expect(find.text('インスタント見積'), findsWidgets);
+    expect(find.text('単価マスタ'), findsOneWidget);
+    expect(find.text('歩掛・生産性マスタ'), findsOneWidget);
     expect(find.byKey(const Key('sideMenuAdArea')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('sideMenuSettings')));

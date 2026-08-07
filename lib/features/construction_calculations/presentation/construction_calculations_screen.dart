@@ -6,16 +6,20 @@ import '../../earthwork/presentation/earthwork_calculation_screen.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../slope/presentation/slope_calculation_screen.dart';
+import '../../productivity/application/productivity_controller.dart';
+import '../../productivity/presentation/productivity_calculation_screen.dart';
 
 class ConstructionCalculationsScreen extends StatelessWidget {
   const ConstructionCalculationsScreen({
     required this.onSendToEstimate,
+    required this.productivityController,
     this.settings = const AppSettings(),
     this.onSettingsChanged,
     super.key,
   });
 
   final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
+  final ProductivityController productivityController;
   final AppSettings settings;
   final ValueChanged<AppSettings>? onSettingsChanged;
 
@@ -28,14 +32,16 @@ class ConstructionCalculationsScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
           children: [
             _CalculationTile(
-              key: const Key('openAreaCalculation'),
-              icon: Icons.square_foot_outlined,
-              title: '面積計算',
-              subtitle: '4辺と対角線から面積を算出',
+              key: const Key('openEarthworkCalculation'),
+              icon: Icons.landscape_outlined,
+              title: '土量計算',
+              subtitle: '掘削・埋戻し・搬出土・運搬回数',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => QuadrilateralAreaScreen(
+                  builder: (_) => EarthworkCalculationScreen(
                     onSendToEstimate: onSendToEstimate,
+                    settings: settings,
+                    onSettingsChanged: onSettingsChanged,
                   ),
                 ),
               ),
@@ -54,25 +60,10 @@ class ConstructionCalculationsScreen extends StatelessWidget {
               ),
             ),
             _CalculationTile(
-              key: const Key('openEarthworkCalculation'),
-              icon: Icons.landscape_outlined,
-              title: '土量計算',
-              subtitle: '掘削・埋戻し・搬出土・運搬回数',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => EarthworkCalculationScreen(
-                    onSendToEstimate: onSendToEstimate,
-                    settings: settings,
-                    onSettingsChanged: onSettingsChanged,
-                  ),
-                ),
-              ),
-            ),
-            _CalculationTile(
               key: const Key('openSlopeCalculation'),
               icon: Icons.show_chart,
-              title: '勾配・法面計算',
-              subtitle: '排水・道路・法面・屋根の勾配と数量を算出',
+              title: '勾配計算',
+              subtitle: '高さ・水平距離・法長・角度を算出',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => SlopeCalculationScreen(settings: settings),
@@ -80,14 +71,35 @@ class ConstructionCalculationsScreen extends StatelessWidget {
               ),
             ),
             const _CalculationTile(
-              icon: Icons.terrain_outlined,
-              title: '法面計算',
+              icon: Icons.compare_arrows_outlined,
+              title: '対比計算',
               subtitle: '今後追加',
             ),
-            const _CalculationTile(
+            _CalculationTile(
+              key: const Key('openAreaCalculation'),
+              icon: Icons.square_foot_outlined,
+              title: '面積計算',
+              subtitle: '4辺と対角線から面積を算出',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => QuadrilateralAreaScreen(
+                    onSendToEstimate: onSendToEstimate,
+                  ),
+                ),
+              ),
+            ),
+            _CalculationTile(
+              key: const Key('openProductivityCalculation'),
               icon: Icons.groups_outlined,
-              title: '歩掛・生産性',
-              subtitle: '今後追加',
+              title: '歩掛・生産性計算',
+              subtitle: '必要人工・必要日数・施工実績を計算',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ProductivityCalculationScreen(
+                    controller: productivityController,
+                  ),
+                ),
+              ),
             ),
           ],
         ),

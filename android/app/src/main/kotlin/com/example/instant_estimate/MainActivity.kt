@@ -9,6 +9,7 @@ class MainActivity : FlutterActivity() {
     private val historyChannelName = "jp.instant_estimate/calculator_history"
     private val settingsChannelName = "jp.instant_estimate/app_settings"
     private val estimateItemsChannelName = "jp.instant_estimate/estimate_items"
+    private val productivityRecordsChannelName = "jp.instant_estimate/productivity_records"
     private val preferencesName = "instant_estimate_preferences"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -105,6 +106,29 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGUMENT", "Estimate items are required.", null)
                     } else {
                         preferences.edit().putString("estimateItems", items).apply()
+                        result.success(null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            productivityRecordsChannelName,
+        ).setMethodCallHandler { call, result ->
+            val preferences = getSharedPreferences(preferencesName, MODE_PRIVATE)
+            when (call.method) {
+                "loadProductivityRecords" -> result.success(
+                    preferences.getString("productivityRecords", null),
+                )
+                "saveProductivityRecords" -> {
+                    val records = call.argument<String>("records")
+                    if (records == null) {
+                        result.error("INVALID_ARGUMENT", "Productivity records are required.", null)
+                    } else {
+                        preferences.edit().putString("productivityRecords", records).apply()
                         result.success(null)
                     }
                 }

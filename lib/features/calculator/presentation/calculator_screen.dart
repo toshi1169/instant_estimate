@@ -16,6 +16,10 @@ import '../../estimate/application/estimate_controller.dart';
 import '../../estimate/data/estimate_item_store.dart';
 import '../../estimate/presentation/estimate_items_screen.dart';
 import '../../estimate/presentation/estimate_documents_screen.dart';
+import '../../estimate/presentation/unit_price_master_screen.dart';
+import '../../productivity/application/productivity_controller.dart';
+import '../../productivity/data/productivity_record_store.dart';
+import '../../productivity/presentation/productivity_master_screen.dart';
 import '../../estimate/presentation/duplicate_estimate_item_dialog.dart';
 import '../../estimate/presentation/merge_estimate_quantity_dialog.dart';
 import 'calculator_history_screen.dart';
@@ -31,6 +35,8 @@ class CalculatorScreen extends StatefulWidget {
     this.onSettingsChanged,
     this.estimateItemStore,
     this.estimateController,
+    this.productivityRecordStore,
+    this.productivityController,
     super.key,
   });
 
@@ -40,6 +46,8 @@ class CalculatorScreen extends StatefulWidget {
   final ValueChanged<AppSettings>? onSettingsChanged;
   final EstimateItemStore? estimateItemStore;
   final EstimateController? estimateController;
+  final ProductivityRecordStore? productivityRecordStore;
+  final ProductivityController? productivityController;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -82,6 +90,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       widget.estimateController ??
       EstimateController(store: widget.estimateItemStore);
   late final bool _ownsEstimateController = widget.estimateController == null;
+  late final ProductivityController _productivityController =
+      widget.productivityController ??
+      ProductivityController(store: widget.productivityRecordStore);
+  late final bool _ownsProductivityController =
+      widget.productivityController == null;
 
   @override
   void initState() {
@@ -89,6 +102,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     _applyDisplaySettings();
     unawaited(_controller.loadHistory());
     unawaited(_loadEstimateItems());
+    unawaited(_loadProductivityRecords());
   }
 
   @override
@@ -109,6 +123,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   void dispose() {
     if (_ownsController) _controller.dispose();
     if (_ownsEstimateController) _estimateController.dispose();
+    if (_ownsProductivityController) _productivityController.dispose();
     super.dispose();
   }
 
@@ -117,6 +132,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       await _estimateController.load();
     } catch (_) {
       if (mounted) _showMessage('見積明細を読み込めませんでした');
+    }
+  }
+
+  Future<void> _loadProductivityRecords() async {
+    try {
+      await _productivityController.load();
+    } catch (_) {
+      if (mounted) _showMessage('歩掛・生産性実績を読み込めませんでした');
     }
   }
 
@@ -181,12 +204,28 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       unawaited(_openEstimateDocuments());
       return;
     }
+    if (destination == CalculatorSideMenuDestination.unitPriceMaster) {
+      unawaited(_openUnitPriceMaster());
+      return;
+    }
+    if (destination == CalculatorSideMenuDestination.productivityMaster) {
+      unawaited(
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                ProductivityMasterScreen(controller: _productivityController),
+          ),
+        ),
+      );
+      return;
+    }
     if (destination == CalculatorSideMenuDestination.constructionCalculations) {
       unawaited(
         Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => ConstructionCalculationsScreen(
               onSendToEstimate: _sendDraftToEstimate,
+              productivityController: _productivityController,
               settings: widget.settings,
               onSettingsChanged: widget.onSettingsChanged,
             ),
@@ -203,8 +242,25 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       CalculatorSideMenuDestination.ultimate => 'アルティメット',
       CalculatorSideMenuDestination.constructionCalculations => '建築・土木系計算',
       CalculatorSideMenuDestination.instantEstimate => 'インスタント見積',
+      CalculatorSideMenuDestination.unitPriceMaster => '単価マスタ',
+      CalculatorSideMenuDestination.productivityMaster => '歩掛・生産性マスタ',
     };
     _showMessage('$labelは今後の工程で追加します');
+  }
+
+  Future<void> _openUnitPriceMaster() async {
+    try {
+      await _estimateController.load();
+    } catch (_) {
+      if (mounted) _showMessage('単価マスタを読み込めませんでした');
+      return;
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => UnitPriceMasterScreen(controller: _estimateController),
+      ),
+    );
   }
 
   Future<void> _openEstimateDocuments() async {

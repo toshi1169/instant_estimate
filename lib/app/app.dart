@@ -10,6 +10,7 @@ import '../features/onboarding/presentation/occupation_selection_screen.dart';
 import '../features/settings/data/app_settings_store.dart';
 import '../features/settings/domain/app_settings.dart';
 import '../features/estimate/data/estimate_item_store.dart';
+import '../features/productivity/data/productivity_record_store.dart';
 
 class InstantEstimateApp extends StatefulWidget {
   const InstantEstimateApp({
@@ -17,6 +18,7 @@ class InstantEstimateApp extends StatefulWidget {
     this.calculationHistoryStore,
     this.appSettingsStore,
     this.estimateItemStore,
+    this.productivityRecordStore,
     super.key,
   });
 
@@ -24,6 +26,7 @@ class InstantEstimateApp extends StatefulWidget {
   final CalculationHistoryStore? calculationHistoryStore;
   final AppSettingsStore? appSettingsStore;
   final EstimateItemStore? estimateItemStore;
+  final ProductivityRecordStore? productivityRecordStore;
 
   @override
   State<InstantEstimateApp> createState() => _InstantEstimateAppState();
@@ -80,6 +83,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
         onboardingPreferences: widget.onboardingPreferences,
         calculationHistoryStore: widget.calculationHistoryStore,
         estimateItemStore: widget.estimateItemStore,
+        productivityRecordStore: widget.productivityRecordStore,
         settings: _settings,
         onSettingsChanged: _changeSettings,
       ),
@@ -92,6 +96,7 @@ class _StartupGate extends StatefulWidget {
     required this.onboardingPreferences,
     required this.calculationHistoryStore,
     required this.estimateItemStore,
+    required this.productivityRecordStore,
     required this.settings,
     required this.onSettingsChanged,
   });
@@ -99,6 +104,7 @@ class _StartupGate extends StatefulWidget {
   final OnboardingPreferences onboardingPreferences;
   final CalculationHistoryStore? calculationHistoryStore;
   final EstimateItemStore? estimateItemStore;
+  final ProductivityRecordStore? productivityRecordStore;
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
 
@@ -123,6 +129,7 @@ class _StartupGateState extends State<_StartupGate> {
           return CalculatorScreen(
             historyStore: widget.calculationHistoryStore,
             estimateItemStore: widget.estimateItemStore,
+            productivityRecordStore: widget.productivityRecordStore,
             settings: widget.settings,
             onSettingsChanged: widget.onSettingsChanged,
           );
@@ -137,6 +144,7 @@ class _StartupGateState extends State<_StartupGate> {
                 builder: (_) => CalculatorScreen(
                   historyStore: widget.calculationHistoryStore,
                   estimateItemStore: widget.estimateItemStore,
+                  productivityRecordStore: widget.productivityRecordStore,
                   settings: widget.settings,
                   onSettingsChanged: widget.onSettingsChanged,
                 ),
