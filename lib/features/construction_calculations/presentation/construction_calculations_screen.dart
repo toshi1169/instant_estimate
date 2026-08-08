@@ -8,6 +8,7 @@ import '../../settings/domain/app_settings.dart';
 import '../../slope/presentation/slope_calculation_screen.dart';
 import '../../productivity/application/productivity_controller.dart';
 import '../../productivity/presentation/productivity_calculation_screen.dart';
+import '../../ratio/presentation/ratio_calculation_screen.dart';
 
 class ConstructionCalculationsScreen extends StatelessWidget {
   const ConstructionCalculationsScreen({
@@ -70,10 +71,16 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const _CalculationTile(
+            _CalculationTile(
+              key: const Key('openRatioCalculation'),
               icon: Icons.compare_arrows_outlined,
               title: '対比計算',
-              subtitle: '今後追加',
+              subtitle: '3つの値から残りの比率を算出',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => RatioCalculationScreen(settings: settings),
+                ),
+              ),
             ),
             _CalculationTile(
               key: const Key('openAreaCalculation'),
