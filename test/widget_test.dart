@@ -408,6 +408,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
+    expect(find.byIcon(Icons.calculate_outlined), findsNothing);
     expect(find.text('ヘルプ'), findsOneWidget);
     expect(find.text('プライム（広告非表示）'), findsOneWidget);
     expect(find.text('アルティメット'), findsOneWidget);

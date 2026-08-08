@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_colors.dart';
-
 enum CalculatorSideMenuDestination {
   settings,
   help,
@@ -30,28 +28,6 @@ class CalculatorSideMenu extends StatelessWidget {
           key: const Key('calculatorSideMenu'),
           padding: const EdgeInsets.only(bottom: 20),
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.calculate_outlined,
-                    color: AppColors.accent,
-                    size: 34,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'インスタント見積',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
             _MenuTile(
               key: const Key('sideMenuSettings'),
               icon: Icons.settings_outlined,
