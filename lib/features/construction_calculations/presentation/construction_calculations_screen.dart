@@ -27,7 +27,7 @@ class ConstructionCalculationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('建築・土木系計算')),
+      appBar: AppBar(title: const Text('便利計算一覧')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -72,17 +72,6 @@ class ConstructionCalculationsScreen extends StatelessWidget {
               ),
             ),
             _CalculationTile(
-              key: const Key('openRatioCalculation'),
-              icon: Icons.compare_arrows_outlined,
-              title: '対比計算',
-              subtitle: '3つの値から残りの比率を算出',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => RatioCalculationScreen(settings: settings),
-                ),
-              ),
-            ),
-            _CalculationTile(
               key: const Key('openAreaCalculation'),
               icon: Icons.square_foot_outlined,
               title: '面積計算',
@@ -92,6 +81,17 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                   builder: (_) => QuadrilateralAreaScreen(
                     onSendToEstimate: onSendToEstimate,
                   ),
+                ),
+              ),
+            ),
+            _CalculationTile(
+              key: const Key('openRatioCalculation'),
+              icon: Icons.compare_arrows_outlined,
+              title: '対比計算',
+              subtitle: '3つの値から残りの比率を算出',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => RatioCalculationScreen(settings: settings),
                 ),
               ),
             ),

@@ -411,7 +411,7 @@ void main() {
     expect(find.text('ヘルプ'), findsOneWidget);
     expect(find.text('プライム（広告非表示）'), findsOneWidget);
     expect(find.text('アルティメット'), findsOneWidget);
-    expect(find.text('建築・土木系計算'), findsOneWidget);
+    expect(find.text('便利計算一覧'), findsOneWidget);
     expect(find.text('インスタント見積'), findsWidgets);
     expect(find.text('単価マスタ'), findsOneWidget);
     expect(find.text('歩掛・生産性マスタ'), findsOneWidget);
@@ -427,7 +427,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
-    expect(find.text('建築・土木系計算'), findsOneWidget);
+    expect(find.text('便利計算一覧'), findsOneWidget);
+  });
+
+  testWidgets('ヘルプを開き戻るとサイドメニューへ戻る', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sideMenuHelp')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('helpScreen')), findsOneWidget);
+    expect(find.text('電卓の基本操作'), findsOneWidget);
+    expect(find.text('インスタント見積'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
+    expect(find.text('便利計算一覧'), findsOneWidget);
   });
 
   testWidgets('メニューボタンの長押しで3列9行の関数一覧を開ける', (tester) async {

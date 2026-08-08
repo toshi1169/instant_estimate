@@ -79,7 +79,7 @@ class CalculatorSideMenu extends StatelessWidget {
             _MenuTile(
               key: const Key('sideMenuConstructionCalculations'),
               icon: Icons.engineering_outlined,
-              label: '建築・土木系計算',
+              label: '便利計算一覧',
               onTap: () => onSelected(
                 CalculatorSideMenuDestination.constructionCalculations,
               ),

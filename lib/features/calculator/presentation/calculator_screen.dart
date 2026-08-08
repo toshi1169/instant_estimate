@@ -25,6 +25,7 @@ import '../../estimate/presentation/merge_estimate_quantity_dialog.dart';
 import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
 import '../../construction_calculations/presentation/construction_calculations_screen.dart';
+import '../../help/presentation/help_screen.dart';
 import 'function_list_dialog.dart';
 
 class CalculatorScreen extends StatefulWidget {
@@ -200,6 +201,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       unawaited(_openFromSideMenu(_openSettings));
       return;
     }
+    if (destination == CalculatorSideMenuDestination.help) {
+      unawaited(
+        _openFromSideMenu(
+          () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const HelpScreen())),
+        ),
+      );
+      return;
+    }
     if (destination == CalculatorSideMenuDestination.instantEstimate) {
       unawaited(_openFromSideMenu(_openEstimateDocuments));
       return;
@@ -244,7 +255,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       CalculatorSideMenuDestination.help => 'ヘルプ',
       CalculatorSideMenuDestination.prime => 'プライム',
       CalculatorSideMenuDestination.ultimate => 'アルティメット',
-      CalculatorSideMenuDestination.constructionCalculations => '建築・土木系計算',
+      CalculatorSideMenuDestination.constructionCalculations => '便利計算一覧',
       CalculatorSideMenuDestination.instantEstimate => 'インスタント見積',
       CalculatorSideMenuDestination.unitPriceMaster => '単価マスタ',
       CalculatorSideMenuDestination.productivityMaster => '歩掛・生産性マスタ',
