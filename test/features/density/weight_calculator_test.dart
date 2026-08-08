@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/density/domain/weight_calculator.dart';
 import 'package:instant_estimate/features/density/presentation/weight_calculation_screen.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 void main() {
   test('体積と比重からtとkgの重量を計算する', () {
@@ -61,5 +62,41 @@ void main() {
     expect(sentDraft?.unit, 't');
     expect(sentDraft?.specification, contains('体積=2m³'));
     expect(sentDraft?.calculationBasis, '2 × 2.4 ＝ 4.8t');
+  });
+
+  testWidgets('追加した材料を選択して設定へ保存できる', (tester) async {
+    AppSettings? savedSettings;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WeightCalculationScreen(
+          onSendToEstimate: (_) async {},
+          onSettingsChanged: (settings) => savedSettings = settings,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('densityMaterial')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('材料を追加').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('newDensityMaterialName')),
+      '再生砕石',
+    );
+    await tester.enterText(
+      find.byKey(const Key('newDensityMaterialValue')),
+      '1.65',
+    );
+    await tester.tap(find.byKey(const Key('saveDensityMaterial')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('再生砕石（登録）'), findsOneWidget);
+    final densityField = tester.widget<TextFormField>(
+      find.byKey(const Key('densityValue')),
+    );
+    expect(densityField.controller?.text, '1.65');
+    expect(savedSettings?.customDensityMaterials.single.name, '再生砕石');
+    expect(savedSettings?.customDensityMaterials.single.density, 1.65);
   });
 }

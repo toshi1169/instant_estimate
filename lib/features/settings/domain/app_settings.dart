@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/domain/angle_unit.dart';
 import '../../../core/domain/transport_vehicle.dart';
+import '../../density/domain/weight_calculator.dart';
 
 enum AppThemeSelection { system, light, gray, dark }
 
@@ -20,6 +21,7 @@ class AppSettings {
     this.historySortOrder = HistorySortOrder.ascending,
     this.confirmHistoryDeletion = true,
     this.customTransportVehicles = const [],
+    this.customDensityMaterials = const [],
   });
 
   final AppThemeSelection theme;
@@ -29,6 +31,7 @@ class AppSettings {
   final HistorySortOrder historySortOrder;
   final bool confirmHistoryDeletion;
   final List<TransportVehicle> customTransportVehicles;
+  final List<DensityMaterialPreset> customDensityMaterials;
 
   ThemeMode get themeMode => switch (theme) {
     AppThemeSelection.system => ThemeMode.system,
@@ -57,6 +60,7 @@ class AppSettings {
     HistorySortOrder? historySortOrder,
     bool? confirmHistoryDeletion,
     List<TransportVehicle>? customTransportVehicles,
+    List<DensityMaterialPreset>? customDensityMaterials,
   }) {
     return AppSettings(
       theme: theme ?? this.theme,
@@ -68,6 +72,8 @@ class AppSettings {
           confirmHistoryDeletion ?? this.confirmHistoryDeletion,
       customTransportVehicles:
           customTransportVehicles ?? this.customTransportVehicles,
+      customDensityMaterials:
+          customDensityMaterials ?? this.customDensityMaterials,
     );
   }
 
@@ -80,6 +86,9 @@ class AppSettings {
     'confirmHistoryDeletion': confirmHistoryDeletion,
     'customTransportVehicles': customTransportVehicles
         .map((vehicle) => vehicle.toJson())
+        .toList(growable: false),
+    'customDensityMaterials': customDensityMaterials
+        .map((material) => material.toJson())
         .toList(growable: false),
   };
 
@@ -120,6 +129,18 @@ class AppSettings {
               .whereType<Map>()
               .map(
                 (value) => TransportVehicle.fromJson(
+                  value.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .toList(growable: false),
+        _ => const [],
+      },
+      customDensityMaterials: switch (json['customDensityMaterials']) {
+        final List<Object?> values =>
+          values
+              .whereType<Map>()
+              .map(
+                (value) => DensityMaterialPreset.fromJson(
                   value.map((key, value) => MapEntry(key.toString(), value)),
                 ),
               )

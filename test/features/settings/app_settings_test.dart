@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/core/domain/transport_vehicle.dart';
+import 'package:instant_estimate/features/density/domain/weight_calculator.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 void main() {
@@ -24,5 +25,19 @@ void main() {
     );
     expect(restored.customTransportVehicles.single.maximumPayloadTons, 5);
     expect(restored.customTransportVehicles.single.isCustom, isTrue);
+  });
+
+  test('ユーザー登録材料を設定データに保存・復元できる', () {
+    const settings = AppSettings(
+      customDensityMaterials: [
+        DensityMaterialPreset(name: '再生砕石', density: 1.65),
+      ],
+    );
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.customDensityMaterials, hasLength(1));
+    expect(restored.customDensityMaterials.single.name, '再生砕石');
+    expect(restored.customDensityMaterials.single.density, 1.65);
   });
 }

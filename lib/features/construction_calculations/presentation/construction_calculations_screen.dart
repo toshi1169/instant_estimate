@@ -58,6 +58,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                 MaterialPageRoute<void>(
                   builder: (_) => WeightCalculationScreen(
                     onSendToEstimate: onSendToEstimate,
+                    settings: settings,
+                    onSettingsChanged: onSettingsChanged,
                   ),
                 ),
               ),

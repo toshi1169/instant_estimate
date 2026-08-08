@@ -36,6 +36,24 @@ class DensityMaterialPreset {
 
   final String name;
   final double density;
+
+  Map<String, Object> toJson() => <String, Object>{
+    'name': name,
+    'density': density,
+  };
+
+  factory DensityMaterialPreset.fromJson(Map<String, Object?> json) {
+    final name = json['name'];
+    final density = json['density'];
+    if (name is! String || name.trim().isEmpty || density is! num) {
+      throw const FormatException('材料データを読み込めません');
+    }
+    final densityValue = density.toDouble();
+    if (!densityValue.isFinite || densityValue <= 0) {
+      throw const FormatException('材料の比重が正しくありません');
+    }
+    return DensityMaterialPreset(name: name.trim(), density: densityValue);
+  }
 }
 
 const densityMaterialPresets = <DensityMaterialPreset>[
