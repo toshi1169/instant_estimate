@@ -9,6 +9,7 @@ import '../../slope/presentation/slope_calculation_screen.dart';
 import '../../productivity/application/productivity_controller.dart';
 import '../../productivity/presentation/productivity_calculation_screen.dart';
 import '../../ratio/presentation/ratio_calculation_screen.dart';
+import '../../unit_conversion/presentation/unit_conversion_screen.dart';
 
 class ConstructionCalculationsScreen extends StatelessWidget {
   const ConstructionCalculationsScreen({
@@ -105,6 +106,17 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                   builder: (_) => ProductivityCalculationScreen(
                     controller: productivityController,
                   ),
+                ),
+              ),
+            ),
+            _CalculationTile(
+              key: const Key('openUnitConversion'),
+              icon: Icons.swap_horiz_outlined,
+              title: '単位変換',
+              subtitle: '長さ・面積・重量・勾配・土量などを変換',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => UnitConversionScreen(settings: settings),
                 ),
               ),
             ),

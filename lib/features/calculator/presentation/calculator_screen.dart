@@ -26,6 +26,7 @@ import 'calculator_history_screen.dart';
 import 'calculator_side_menu.dart';
 import '../../construction_calculations/presentation/construction_calculations_screen.dart';
 import '../../help/presentation/help_screen.dart';
+import '../../unit_conversion/presentation/unit_conversion_screen.dart';
 import 'function_list_dialog.dart';
 
 class CalculatorScreen extends StatefulWidget {
@@ -249,6 +250,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       );
       return;
     }
+    if (destination == CalculatorSideMenuDestination.unitConversion) {
+      unawaited(
+        _openFromSideMenu(
+          () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => UnitConversionScreen(settings: widget.settings),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
 
     final label = switch (destination) {
       CalculatorSideMenuDestination.settings => '設定',
@@ -256,6 +269,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       CalculatorSideMenuDestination.prime => 'プライム',
       CalculatorSideMenuDestination.ultimate => 'アルティメット',
       CalculatorSideMenuDestination.constructionCalculations => '便利計算一覧',
+      CalculatorSideMenuDestination.unitConversion => '単位変換',
       CalculatorSideMenuDestination.instantEstimate => 'インスタント見積',
       CalculatorSideMenuDestination.unitPriceMaster => '単価マスタ',
       CalculatorSideMenuDestination.productivityMaster => '歩掛・生産性マスタ',

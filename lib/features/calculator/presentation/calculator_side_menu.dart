@@ -8,6 +8,7 @@ enum CalculatorSideMenuDestination {
   prime,
   ultimate,
   constructionCalculations,
+  unitConversion,
   instantEstimate,
   unitPriceMaster,
   productivityMaster,
@@ -83,6 +84,13 @@ class CalculatorSideMenu extends StatelessWidget {
               onTap: () => onSelected(
                 CalculatorSideMenuDestination.constructionCalculations,
               ),
+            ),
+            _MenuTile(
+              key: const Key('sideMenuUnitConversion'),
+              icon: Icons.swap_horiz_outlined,
+              label: '単位変換',
+              onTap: () =>
+                  onSelected(CalculatorSideMenuDestination.unitConversion),
             ),
             _MenuTile(
               key: const Key('sideMenuInstantEstimate'),
