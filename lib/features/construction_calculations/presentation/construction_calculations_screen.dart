@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../area/presentation/polygon_area_screen.dart';
 import '../../area/presentation/quadrilateral_area_screen.dart';
 import '../../density/presentation/weight_calculation_screen.dart';
 import '../../earthwork/presentation/earthwork_calculation_screen.dart';
@@ -82,6 +83,18 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                   builder: (_) => QuadrilateralAreaScreen(
                     onSendToEstimate: onSendToEstimate,
                   ),
+                ),
+              ),
+            ),
+            _CalculationTile(
+              key: const Key('openPolygonAreaCalculation'),
+              icon: Icons.polyline_outlined,
+              title: '5辺以上の面積計算',
+              subtitle: '外周と対角線から三角形へ分割して自動合算',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      PolygonAreaScreen(onSendToEstimate: onSendToEstimate),
                 ),
               ),
             ),
