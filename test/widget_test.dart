@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
 import 'package:instant_estimate/core/domain/app_access_plan.dart';
 import 'package:instant_estimate/core/domain/angle_unit.dart';
+import 'package:instant_estimate/core/localization/app_language.dart';
 import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
@@ -38,6 +39,37 @@ class FakeOnboardingPreferences implements OnboardingPreferences {
   Future<void> saveOccupation(String occupation) async {
     savedOccupation = occupation;
     hasSelected = true;
+  }
+}
+
+class FakeLanguageOnboardingPreferences
+    implements OnboardingPreferences, LanguageOnboardingPreferences {
+  FakeLanguageOnboardingPreferences({
+    required this.hasSelected,
+    required this.hasSelectedLanguageValue,
+  });
+
+  bool hasSelected;
+  bool hasSelectedLanguageValue;
+  String? savedOccupation;
+  String? savedLanguage;
+
+  @override
+  Future<bool> hasSelectedOccupation() async => hasSelected;
+
+  @override
+  Future<void> saveOccupation(String occupation) async {
+    savedOccupation = occupation;
+    hasSelected = true;
+  }
+
+  @override
+  Future<bool> hasSelectedLanguage() async => hasSelectedLanguageValue;
+
+  @override
+  Future<void> saveLanguage(String language) async {
+    savedLanguage = language;
+    hasSelectedLanguageValue = true;
   }
 }
 
@@ -396,6 +428,71 @@ void main() {
     expect(find.text('建築監督'), findsOneWidget);
   });
 
+  testWidgets('新規利用者は言語選択後に選択言語の業種画面へ進む', (tester) async {
+    final preferences = FakeLanguageOnboardingPreferences(
+      hasSelected: false,
+      hasSelectedLanguageValue: false,
+    );
+    final settingsStore = FakeAppSettingsStore();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: preferences,
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('言語を選択'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('languageEnglish')));
+    await tester.tap(find.byKey(const Key('completeLanguageSelection')));
+    await tester.pumpAndSettle();
+
+    expect(preferences.savedLanguage, AppLanguage.english.name);
+    expect(settingsStore.settings.language, AppLanguage.english);
+    expect(find.text('Choose occupation'), findsOneWidget);
+
+    await tester.tap(find.text('Civil supervisor'));
+    await tester.pump();
+    await tester.tap(find.text('Start with this occupation'));
+    await tester.pumpAndSettle();
+
+    expect(preferences.savedOccupation, '土木監督');
+    expect(find.byKey(const Key('historyPanel')), findsOneWidget);
+  });
+
+  testWidgets('設定から英語へ変更し日本語とローマ字の技術用語解説を表示できる', (tester) async {
+    final settingsStore = FakeAppSettingsStore();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('languageSetting')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English').last);
+    await tester.pumpAndSettle();
+
+    expect(settingsStore.settings.language, AppLanguage.english);
+    expect(find.text('Settings'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text('歩掛：BUGAKARI'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('technicalTermInfo-歩掛：BUGAKARI')));
+    await tester.pumpAndSettle();
+    expect(find.text('歩掛：BUGAKARI'), findsWidgets);
+    expect(find.textContaining('Japanese construction term'), findsOneWidget);
+  });
+
   testWidgets('選択済みの通常起動では電卓を表示する', (tester) async {
     final preferences = FakeOnboardingPreferences(hasSelected: true);
     await tester.pumpWidget(
@@ -442,7 +539,7 @@ void main() {
     expect(find.text('設定'), findsOneWidget);
     expect(find.text('テーマ'), findsOneWidget);
 
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
@@ -470,7 +567,7 @@ void main() {
     expect(find.text('¥300（買い切り）'), findsOneWidget);
     expect(find.text('見積は5件まで保存'), findsOneWidget);
 
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sideMenuFull')));
     await tester.pumpAndSettle();
@@ -576,7 +673,7 @@ void main() {
 
     expect(find.text('100.00 cm'), findsOneWidget);
 
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
   });
@@ -604,7 +701,7 @@ void main() {
     expect(find.text('電卓の基本操作'), findsOneWidget);
     expect(find.text('インスタント見積'), findsOneWidget);
 
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);

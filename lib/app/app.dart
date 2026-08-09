@@ -1,17 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/domain/app_access_plan.dart';
+import '../core/localization/app_localizations.dart';
 import '../core/theme/app_theme.dart';
-import '../features/calculator/presentation/calculator_screen.dart';
 import '../features/calculator/data/calculation_history_store.dart';
+import '../features/calculator/presentation/calculator_screen.dart';
+import '../features/estimate/data/estimate_item_store.dart';
 import '../features/onboarding/data/onboarding_preferences.dart';
+import '../features/onboarding/presentation/language_selection_screen.dart';
 import '../features/onboarding/presentation/occupation_selection_screen.dart';
+import '../features/productivity/data/productivity_record_store.dart';
 import '../features/settings/data/app_settings_store.dart';
 import '../features/settings/domain/app_settings.dart';
-import '../features/estimate/data/estimate_item_store.dart';
-import '../features/productivity/data/productivity_record_store.dart';
 import '../features/subscription/data/app_access_state_store.dart';
 
 class InstantEstimateApp extends StatefulWidget {
@@ -42,6 +45,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   AppSettings _settings = const AppSettings();
   late AppAccessPlan _accessPlan = widget.accessPlan;
   late bool _isAccessStateReady = widget.accessStateStore == null;
+  late bool _isSettingsReady = widget.appSettingsStore == null;
 
   @override
   void initState() {
@@ -70,12 +74,17 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   Future<void> _loadSettings() async {
     final store = widget.appSettingsStore;
     if (store == null) return;
+    var loadedSettings = const AppSettings();
     try {
-      final settings = await store.load();
-      if (mounted) setState(() => _settings = settings);
+      loadedSettings = await store.load();
     } catch (_) {
       // 保存値を読めない場合は、安全な初期設定のまま起動する。
     }
+    if (!mounted) return;
+    setState(() {
+      _settings = loadedSettings;
+      _isSettingsReady = true;
+    });
   }
 
   void _changeSettings(AppSettings settings) {
@@ -98,14 +107,22 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'インスタント見積',
+      title: 'Instant Estimate',
       debugShowCheckedModeBanner: false,
+      locale: _settings.language.locale,
+      supportedLocales: const [Locale('ja'), Locale('en')],
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: _settings.theme == AppThemeSelection.gray
           ? AppTheme.gray
           : AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: _settings.themeMode,
-      home: _isAccessStateReady
+      home: _isAccessStateReady && _isSettingsReady
           ? _StartupGate(
               onboardingPreferences: widget.onboardingPreferences,
               calculationHistoryStore: widget.calculationHistoryStore,
@@ -144,19 +161,56 @@ class _StartupGate extends StatefulWidget {
 }
 
 class _StartupGateState extends State<_StartupGate> {
-  late final Future<bool> _hasSelectedOccupation = widget.onboardingPreferences
-      .hasSelectedOccupation();
+  late Future<_StartupStatus> _startupStatus = _loadStartupStatus();
+
+  Future<_StartupStatus> _loadStartupStatus() async {
+    final preferences = widget.onboardingPreferences;
+    final hasSelectedLanguage = preferences is LanguageOnboardingPreferences
+        ? await (preferences as LanguageOnboardingPreferences)
+              .hasSelectedLanguage()
+        : true;
+    final hasSelectedOccupation = await preferences.hasSelectedOccupation();
+    return _StartupStatus(
+      hasSelectedLanguage: hasSelectedLanguage,
+      hasSelectedOccupation: hasSelectedOccupation,
+    );
+  }
+
+  void _replaceStatus(_StartupStatus status) {
+    setState(() {
+      _startupStatus = Future.value(status);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _hasSelectedOccupation,
+    return FutureBuilder<_StartupStatus>(
+      future: _startupStatus,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const ColoredBox(color: Colors.transparent);
         }
 
-        if (snapshot.data!) {
+        final status = snapshot.data!;
+        if (!status.hasSelectedLanguage) {
+          return LanguageSelectionScreen(
+            selectedLanguage: widget.settings.language,
+            onCompleted: (language) async {
+              widget.onSettingsChanged(
+                widget.settings.copyWith(language: language),
+              );
+              final preferences = widget.onboardingPreferences;
+              if (preferences is LanguageOnboardingPreferences) {
+                await (preferences as LanguageOnboardingPreferences)
+                    .saveLanguage(language.name);
+              }
+              if (!mounted) return;
+              _replaceStatus(status.copyWith(hasSelectedLanguage: true));
+            },
+          );
+        }
+
+        if (status.hasSelectedOccupation) {
           return CalculatorScreen(
             historyStore: widget.calculationHistoryStore,
             estimateItemStore: widget.estimateItemStore,
@@ -170,22 +224,32 @@ class _StartupGateState extends State<_StartupGate> {
         return OccupationSelectionScreen(
           onCompleted: (occupation) async {
             await widget.onboardingPreferences.saveOccupation(occupation);
-            if (!context.mounted) return;
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute<void>(
-                builder: (_) => CalculatorScreen(
-                  historyStore: widget.calculationHistoryStore,
-                  estimateItemStore: widget.estimateItemStore,
-                  productivityRecordStore: widget.productivityRecordStore,
-                  accessPlan: widget.accessPlan,
-                  settings: widget.settings,
-                  onSettingsChanged: widget.onSettingsChanged,
-                ),
-              ),
-            );
+            if (!mounted) return;
+            _replaceStatus(status.copyWith(hasSelectedOccupation: true));
           },
         );
       },
+    );
+  }
+}
+
+class _StartupStatus {
+  const _StartupStatus({
+    required this.hasSelectedLanguage,
+    required this.hasSelectedOccupation,
+  });
+
+  final bool hasSelectedLanguage;
+  final bool hasSelectedOccupation;
+
+  _StartupStatus copyWith({
+    bool? hasSelectedLanguage,
+    bool? hasSelectedOccupation,
+  }) {
+    return _StartupStatus(
+      hasSelectedLanguage: hasSelectedLanguage ?? this.hasSelectedLanguage,
+      hasSelectedOccupation:
+          hasSelectedOccupation ?? this.hasSelectedOccupation,
     );
   }
 }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/widgets/technical_term_info.dart';
+
 enum CalculatorSideMenuDestination {
   settings,
   help,
@@ -25,6 +28,7 @@ class CalculatorSideMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final strings = AppLocalizations.of(context);
 
     return Drawer(
       width: MediaQuery.sizeOf(context).width * 0.82,
@@ -36,32 +40,32 @@ class CalculatorSideMenu extends StatelessWidget {
             _MenuTile(
               key: const Key('sideMenuSettings'),
               icon: Icons.settings_outlined,
-              label: '設定',
+              label: strings.settings,
               onTap: () => onSelected(CalculatorSideMenuDestination.settings),
             ),
             _MenuTile(
               key: const Key('sideMenuHelp'),
               icon: Icons.help_outline,
-              label: 'ヘルプ',
+              label: strings.help,
               onTap: () => onSelected(CalculatorSideMenuDestination.help),
             ),
             _MenuTile(
               key: const Key('sideMenuAdFree'),
               icon: Icons.block_outlined,
-              label: '広告なし版（買い切り）',
+              label: strings.adFreePlan,
               onTap: () => onSelected(CalculatorSideMenuDestination.adFree),
             ),
             _MenuTile(
               key: const Key('sideMenuFull'),
               icon: Icons.workspace_premium_outlined,
-              label: '完全版（月額）',
+              label: strings.fullPlan,
               onTap: () => onSelected(CalculatorSideMenuDestination.full),
             ),
             const Divider(height: 24),
             _MenuTile(
               key: const Key('sideMenuConstructionCalculations'),
               icon: Icons.engineering_outlined,
-              label: '便利計算一覧',
+              label: strings.convenientCalculations,
               onTap: () => onSelected(
                 CalculatorSideMenuDestination.constructionCalculations,
               ),
@@ -69,14 +73,14 @@ class CalculatorSideMenu extends StatelessWidget {
             _MenuTile(
               key: const Key('sideMenuUnitConversion'),
               icon: Icons.swap_horiz_outlined,
-              label: '単位変換',
+              label: strings.unitConversion,
               onTap: () =>
                   onSelected(CalculatorSideMenuDestination.unitConversion),
             ),
             _MenuTile(
               key: const Key('sideMenuInstantEstimate'),
               icon: Icons.request_quote_outlined,
-              label: 'インスタント見積',
+              label: strings.instantEstimate,
               onTap: () =>
                   onSelected(CalculatorSideMenuDestination.instantEstimate),
             ),
@@ -84,14 +88,20 @@ class CalculatorSideMenu extends StatelessWidget {
             _MenuTile(
               key: const Key('sideMenuUnitPriceMaster'),
               icon: Icons.price_change_outlined,
-              label: '単価マスタ',
+              label: strings.unitPriceMaster,
               onTap: () =>
                   onSelected(CalculatorSideMenuDestination.unitPriceMaster),
             ),
             _MenuTile(
               key: const Key('sideMenuProductivityMaster'),
               icon: Icons.analytics_outlined,
-              label: '歩掛・生産性マスタ',
+              label: strings.productivityMaster,
+              infoTitle: strings.isEnglish
+                  ? strings.productivityTermTitle
+                  : null,
+              infoExplanation: strings.isEnglish
+                  ? strings.productivityTermExplanation
+                  : null,
               onTap: () =>
                   onSelected(CalculatorSideMenuDestination.productivityMaster),
             ),
@@ -109,7 +119,7 @@ class CalculatorSideMenu extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    '広告エリア',
+                    strings.adArea,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -137,19 +147,29 @@ class _MenuTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.infoTitle,
+    this.infoExplanation,
     super.key,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final String? infoTitle;
+  final String? infoExplanation;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       minTileHeight: 54,
       leading: Icon(icon),
-      title: Text(label),
+      title: Row(
+        children: [
+          Flexible(child: Text(label)),
+          if (infoTitle != null && infoExplanation != null)
+            TechnicalTermInfo(title: infoTitle!, explanation: infoExplanation!),
+        ],
+      ),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );

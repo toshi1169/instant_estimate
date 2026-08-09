@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
+
 class OccupationSelectionScreen extends StatefulWidget {
   const OccupationSelectionScreen({required this.onCompleted, super.key});
 
@@ -35,8 +37,9 @@ class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('業種を選択')),
+      appBar: AppBar(title: Text(strings.occupationTitle)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -44,12 +47,12 @@ class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'あなたの主な業種を選んでください',
+                strings.occupationPrompt,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
               Text(
-                '表示する計算機能や見積項目の初期設定に使用します。後から設定で変更できます。',
+                strings.occupationGuidance,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 20),
@@ -68,7 +71,7 @@ class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
                       final occupation = _occupations[index];
                       return RadioListTile<String>(
                         value: occupation,
-                        title: Text(occupation),
+                        title: Text(strings.occupation(occupation)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(
@@ -91,7 +94,7 @@ class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
                           strokeWidth: 2,
                         ),
                       )
-                    : const Text('この業種で始める'),
+                    : Text(strings.startWithOccupation),
               ),
             ],
           ),

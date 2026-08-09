@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/domain/angle_unit.dart';
 import '../../../core/domain/transport_vehicle.dart';
+import '../../../core/localization/app_language.dart';
 import '../../density/domain/weight_calculator.dart';
 
 enum AppThemeSelection { system, light, gray, dark }
@@ -14,6 +15,7 @@ enum HistorySortOrder { ascending, descending }
 
 class AppSettings {
   const AppSettings({
+    this.language = AppLanguage.japanese,
     this.theme = AppThemeSelection.light,
     this.decimalPlaces = 2,
     this.roundingMode = CalculatorRoundingMode.halfUp,
@@ -24,6 +26,7 @@ class AppSettings {
     this.customDensityMaterials = const [],
   });
 
+  final AppLanguage language;
   final AppThemeSelection theme;
   final int decimalPlaces;
   final CalculatorRoundingMode roundingMode;
@@ -53,6 +56,7 @@ class AppSettings {
   }
 
   AppSettings copyWith({
+    AppLanguage? language,
     AppThemeSelection? theme,
     int? decimalPlaces,
     CalculatorRoundingMode? roundingMode,
@@ -63,6 +67,7 @@ class AppSettings {
     List<DensityMaterialPreset>? customDensityMaterials,
   }) {
     return AppSettings(
+      language: language ?? this.language,
       theme: theme ?? this.theme,
       decimalPlaces: decimalPlaces ?? this.decimalPlaces,
       roundingMode: roundingMode ?? this.roundingMode,
@@ -78,6 +83,7 @@ class AppSettings {
   }
 
   Map<String, Object> toJson() => <String, Object>{
+    'language': language.name,
     'theme': theme.name,
     'decimalPlaces': decimalPlaces,
     'roundingMode': roundingMode.name,
@@ -99,6 +105,7 @@ class AppSettings {
 
     final places = json['decimalPlaces'];
     return AppSettings(
+      language: appLanguageFromStorageName(json['language']),
       theme: enumValue(
         AppThemeSelection.values,
         json['theme'],

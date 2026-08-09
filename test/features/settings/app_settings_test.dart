@@ -1,9 +1,20 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/core/domain/transport_vehicle.dart';
+import 'package:instant_estimate/core/localization/app_language.dart';
 import 'package:instant_estimate/features/density/domain/weight_calculator.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 void main() {
+  test('言語設定を保存・復元し、旧データは日本語として扱う', () {
+    const settings = AppSettings(language: AppLanguage.english);
+
+    final restored = AppSettings.fromJson(settings.toJson());
+    final restoredLegacy = AppSettings.fromJson(const {});
+
+    expect(restored.language, AppLanguage.english);
+    expect(restoredLegacy.language, AppLanguage.japanese);
+  });
+
   test('ユーザー登録車両を設定データに保存・復元できる', () {
     const vehicle = TransportVehicle(
       id: 'custom_test',

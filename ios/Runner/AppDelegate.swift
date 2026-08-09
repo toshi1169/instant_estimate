@@ -19,6 +19,28 @@ import UIKit
     )
     channel.setMethodCallHandler { call, result in
       switch call.method {
+      case "hasSelectedLanguage":
+        // 既存利用者は業種選択済みなら、更新後も日本語でそのまま起動する。
+        result(
+          UserDefaults.standard.object(forKey: "appLanguage") != nil
+            || UserDefaults.standard.object(forKey: "occupation") != nil
+        )
+      case "saveLanguage":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let language = arguments["language"] as? String
+        else {
+          result(
+            FlutterError(
+              code: "INVALID_ARGUMENT",
+              message: "Language is required.",
+              details: nil
+            )
+          )
+          return
+        }
+        UserDefaults.standard.set(language, forKey: "appLanguage")
+        result(nil)
       case "hasSelectedOccupation":
         result(UserDefaults.standard.object(forKey: "occupation") != nil)
       case "saveOccupation":

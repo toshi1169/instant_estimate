@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/angle_unit.dart';
+import '../../../core/localization/app_language.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../domain/app_settings.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -69,26 +71,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _selectTheme(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
     final value = await _selectValue<AppThemeSelection>(
       context,
-      title: 'テーマ',
+      title: strings.theme,
       selected: _settings.theme,
-      choices: const [
-        (AppThemeSelection.system, '端末に合わせる'),
-        (AppThemeSelection.light, '白'),
-        (AppThemeSelection.gray, 'グレー'),
-        (AppThemeSelection.dark, '黒'),
+      choices: [
+        (AppThemeSelection.system, strings.systemTheme),
+        (AppThemeSelection.light, strings.whiteTheme),
+        (AppThemeSelection.gray, strings.grayTheme),
+        (AppThemeSelection.dark, strings.blackTheme),
       ],
     );
     if (value != null) _update(_settings.copyWith(theme: value));
   }
 
   Future<void> _selectDecimalPlaces(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
     final value = await _selectValue<int>(
       context,
-      title: '小数点以下の表示桁数',
+      title: strings.decimalPlaces,
       selected: _settings.decimalPlaces,
-      choices: const [(1, '1桁'), (2, '2桁'), (3, '3桁'), (4, '4桁'), (5, '5桁')],
+      choices: [
+        for (var count = 1; count <= 5; count++) (count, strings.digits(count)),
+      ],
     );
     if (value != null) {
       _update(_settings.copyWith(decimalPlaces: value));
@@ -96,14 +102,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _selectRoundingMode(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
     final value = await _selectValue<CalculatorRoundingMode>(
       context,
-      title: '丸め方法',
+      title: strings.roundingMethod,
       selected: _settings.roundingMode,
-      choices: const [
-        (CalculatorRoundingMode.halfUp, '四捨五入'),
-        (CalculatorRoundingMode.ceiling, '切上げ'),
-        (CalculatorRoundingMode.floor, '切捨て'),
+      choices: [
+        (CalculatorRoundingMode.halfUp, strings.roundHalfUp),
+        (CalculatorRoundingMode.ceiling, strings.roundUp),
+        (CalculatorRoundingMode.floor, strings.roundDown),
       ],
     );
     if (value != null) {
@@ -112,32 +119,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _selectAngleUnit(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
     final value = await _selectValue<AngleUnit>(
       context,
-      title: '角度単位',
+      title: strings.angleUnit,
       selected: _settings.angleUnit,
-      choices: const [
-        (AngleUnit.degrees, '度（DEG）'),
-        (AngleUnit.radians, 'ラジアン（RAD）'),
+      choices: [
+        (AngleUnit.degrees, strings.degrees),
+        (AngleUnit.radians, strings.radians),
       ],
     );
     if (value != null) _update(_settings.copyWith(angleUnit: value));
   }
 
+  Future<void> _selectLanguage(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
+    final value = await _selectValue<AppLanguage>(
+      context,
+      title: strings.language,
+      selected: _settings.language,
+      choices: [
+        (AppLanguage.japanese, strings.japanese),
+        (AppLanguage.english, strings.english),
+      ],
+    );
+    if (value != null) _update(_settings.copyWith(language: value));
+  }
+
   Future<void> _confirmClearHistory(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('履歴をすべて削除'),
-        content: const Text('スター付き以外の計算履歴をすべて削除します。よろしいですか？'),
+        title: Text(strings.clearAllHistory),
+        content: Text(strings.clearHistoryQuestion),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('キャンセル'),
+            child: Text(strings.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('削除'),
+            child: Text(strings.delete),
           ),
         ],
       ),
@@ -147,27 +170,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!context.mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('計算履歴をすべて削除しました')));
+    ).showSnackBar(SnackBar(content: Text(strings.historyCleared)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('設定')),
+      appBar: AppBar(title: Text(strings.settings)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          Text('表示・計算', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            strings.displayAndCalculation,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           Card(
             margin: EdgeInsets.zero,
             child: Column(
               children: [
                 ListTile(
+                  key: const Key('languageSetting'),
+                  leading: const Icon(Icons.language_outlined),
+                  title: Text(strings.language),
+                  subtitle: Text(
+                    _settings.language == AppLanguage.japanese
+                        ? '日本語'
+                        : 'English',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _selectLanguage(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
                   key: const Key('themeSetting'),
                   leading: const Icon(Icons.palette_outlined),
-                  title: const Text('テーマ'),
-                  subtitle: Text(_themeLabel(_settings.theme)),
+                  title: Text(strings.theme),
+                  subtitle: Text(_themeLabel(_settings.theme, strings)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectTheme(context),
                 ),
@@ -175,8 +215,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   key: const Key('decimalPlacesSetting'),
                   leading: const Icon(Icons.pin_outlined),
-                  title: const Text('小数点以下の表示桁数'),
-                  subtitle: Text('${_settings.decimalPlaces}桁'),
+                  title: Text(strings.decimalPlaces),
+                  subtitle: Text(strings.digits(_settings.decimalPlaces)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectDecimalPlaces(context),
                 ),
@@ -184,8 +224,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   key: const Key('roundingModeSetting'),
                   leading: const Icon(Icons.functions),
-                  title: const Text('丸め方法'),
-                  subtitle: Text(_roundingLabel(_settings.roundingMode)),
+                  title: Text(strings.roundingMethod),
+                  subtitle: Text(
+                    _roundingLabel(_settings.roundingMode, strings),
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectRoundingMode(context),
                 ),
@@ -193,11 +235,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   key: const Key('angleUnitSetting'),
                   leading: const Icon(Icons.straighten_outlined),
-                  title: const Text('角度単位'),
+                  title: Text(strings.angleUnit),
                   subtitle: Text(
                     _settings.angleUnit == AngleUnit.degrees
-                        ? '度（DEG）'
-                        : 'ラジアン（RAD）',
+                        ? strings.degrees
+                        : strings.radians,
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectAngleUnit(context),
@@ -206,7 +248,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          Text('計算履歴', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            strings.calculationHistory,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 8),
           Card(
             margin: EdgeInsets.zero,
@@ -215,11 +260,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SwitchListTile(
                   key: const Key('historySortSwitch'),
                   secondary: const Icon(Icons.sort),
-                  title: const Text('履歴を昇順で表示'),
+                  title: Text(strings.ascendingHistory),
                   subtitle: Text(
                     _settings.historySortOrder == HistorySortOrder.ascending
-                        ? '昇順（古い順）'
-                        : '降順（新しい順）',
+                        ? strings.ascendingOldest
+                        : strings.descendingNewest,
                   ),
                   value:
                       _settings.historySortOrder == HistorySortOrder.ascending,
@@ -235,7 +280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SwitchListTile(
                   key: const Key('historyDeleteConfirmationSwitch'),
                   secondary: const Icon(Icons.help_outline),
-                  title: const Text('履歴削除時に確認する'),
+                  title: Text(strings.confirmHistoryDeletion),
                   value: _settings.confirmHistoryDeletion,
                   onChanged: (value) => _update(
                     _settings.copyWith(confirmHistoryDeletion: value),
@@ -249,7 +294,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Theme.of(context).colorScheme.error,
                   ),
                   title: Text(
-                    '履歴をすべて削除',
+                    strings.clearAllHistory,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -265,15 +310,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-String _themeLabel(AppThemeSelection value) => switch (value) {
-  AppThemeSelection.system => '端末に合わせる',
-  AppThemeSelection.light => '白',
-  AppThemeSelection.gray => 'グレー',
-  AppThemeSelection.dark => '黒',
-};
+String _themeLabel(AppThemeSelection value, AppLocalizations strings) =>
+    switch (value) {
+      AppThemeSelection.system => strings.systemTheme,
+      AppThemeSelection.light => strings.whiteTheme,
+      AppThemeSelection.gray => strings.grayTheme,
+      AppThemeSelection.dark => strings.blackTheme,
+    };
 
-String _roundingLabel(CalculatorRoundingMode value) => switch (value) {
-  CalculatorRoundingMode.halfUp => '四捨五入',
-  CalculatorRoundingMode.ceiling => '切上げ',
-  CalculatorRoundingMode.floor => '切捨て',
-};
+String _roundingLabel(CalculatorRoundingMode value, AppLocalizations strings) =>
+    switch (value) {
+      CalculatorRoundingMode.halfUp => strings.roundHalfUp,
+      CalculatorRoundingMode.ceiling => strings.roundUp,
+      CalculatorRoundingMode.floor => strings.roundDown,
+    };

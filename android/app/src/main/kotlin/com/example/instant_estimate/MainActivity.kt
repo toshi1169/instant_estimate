@@ -22,6 +22,21 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             val preferences = getSharedPreferences(preferencesName, MODE_PRIVATE)
             when (call.method) {
+                "hasSelectedLanguage" -> {
+                    result.success(
+                        preferences.contains("appLanguage") ||
+                            preferences.contains("occupation"),
+                    )
+                }
+                "saveLanguage" -> {
+                    val language = call.argument<String>("language")
+                    if (language == null) {
+                        result.error("INVALID_ARGUMENT", "Language is required.", null)
+                    } else {
+                        preferences.edit().putString("appLanguage", language).apply()
+                        result.success(null)
+                    }
+                }
                 "hasSelectedOccupation" -> {
                     result.success(preferences.contains("occupation"))
                 }
