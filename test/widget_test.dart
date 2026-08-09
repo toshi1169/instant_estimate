@@ -1054,6 +1054,44 @@ void main() {
     expect(find.text('¥ 2,400'), findsOneWidget);
   });
 
+  testWidgets('電卓の見積数量へ小数桁と丸め設定を反映する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = CalculatorController();
+    controller.pasteAtCaret('1÷3');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalculatorScreen(
+          controller: controller,
+          settings: const AppSettings(
+            decimalPlaces: 2,
+            roundingMode: CalculatorRoundingMode.floor,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('見積へ送る'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateDestinationSelector')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('数量').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateTransferNext')));
+    await tester.pumpAndSettle();
+
+    final quantity = tester.widget<TextFormField>(
+      find.byKey(const Key('estimateQuantityField')),
+    );
+    expect(quantity.controller?.text, '0.33');
+  });
+
   testWidgets('見積明細を保存して一覧と合計を表示できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

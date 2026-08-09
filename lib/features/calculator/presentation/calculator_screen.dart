@@ -384,6 +384,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       _EstimateContent.result => result,
       _EstimateContent.expressionAndResult => '$expression = $result',
     };
+    final estimateQuantity = quantity == null
+        ? null
+        : widget.settings.roundEstimateQuantity(quantity);
     final draft = EstimateItemDraft(
       name: request.destination == _EstimateDestination.name
           ? transferText
@@ -392,7 +395,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           ? transferText
           : '',
       quantity: request.destination == _EstimateDestination.quantity
-          ? quantity
+          ? estimateQuantity
           : null,
       description: request.destination == _EstimateDestination.description
           ? transferText
