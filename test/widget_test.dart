@@ -937,6 +937,36 @@ void main() {
     expect(find.text('見積へ送る'), findsOneWidget);
   });
 
+  testWidgets('英語設定で電卓広告と計算スペースメニューを英語表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        appSettingsStore: FakeAppSettingsStore(
+          settings: const AppSettings(language: AppLanguage.english),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ad space'), findsOneWidget);
+    expect(find.text('Remove ads with Ad-free!'), findsOneWidget);
+    expect(find.text('Upgrade\nnow'), findsOneWidget);
+
+    await tester.longPress(find.byKey(const Key('calculationSpace')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Copy'), findsOneWidget);
+    expect(find.text('Cut'), findsOneWidget);
+    expect(find.text('Paste'), findsOneWidget);
+    expect(find.text('Clear'), findsOneWidget);
+    expect(find.text('Send to estimate'), findsOneWidget);
+  });
+
   testWidgets('a/bボタンから分数枠を入力して計算できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

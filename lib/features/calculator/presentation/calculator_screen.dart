@@ -766,6 +766,7 @@ class _AdBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final strings = AppLocalizations.of(context);
     return SizedBox(
       height: height,
       child: DecoratedBox(
@@ -783,25 +784,28 @@ class _AdBanner extends StatelessWidget {
                 borderRadius: BorderRadius.horizontal(left: Radius.circular(6)),
               ),
               alignment: Alignment.center,
-              child: const Text(
-                '広告\nスペース',
+              child: Text(
+                strings.text('広告スペース'),
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   height: 1.15,
                   fontSize: 13,
                 ),
               ),
             ),
-            const Expanded(
+            Expanded(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
-                  '広告なし版で非表示に！',
+                  strings.text('広告なし版で非表示に！'),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -818,10 +822,10 @@ class _AdBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(7),
                   ),
                 ),
-                child: const Text(
-                  '今すぐ\nアップグレード',
+                child: Text(
+                  strings.text('今すぐ\nアップグレード'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, height: 1.1),
+                  style: const TextStyle(fontSize: 11, height: 1.1),
                 ),
               ),
             ),
@@ -1099,6 +1103,7 @@ class _CalculationMenuSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     const items = <(_CalculationMenuAction, IconData, String)>[
       (_CalculationMenuAction.copy, Icons.copy_outlined, 'コピー'),
       (_CalculationMenuAction.cut, Icons.content_cut, 'カット'),
@@ -1118,7 +1123,7 @@ class _CalculationMenuSheet extends StatelessWidget {
           for (final item in items)
             ListTile(
               leading: Icon(item.$2),
-              title: Text(item.$3),
+              title: Text(strings.text(item.$3)),
               onTap: () => Navigator.of(context).pop(item.$1),
             ),
         ],
