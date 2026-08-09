@@ -999,7 +999,7 @@ class _ResultLine extends StatelessWidget {
     final theme = Theme.of(context);
     if (controller.state == CalculatorState.error) {
       return Text(
-        controller.errorMessage!,
+        AppLocalizations.of(context).text(controller.errorMessage!),
         key: const Key('resultText'),
         maxLines: 1,
         style: theme.textTheme.displaySmall?.copyWith(

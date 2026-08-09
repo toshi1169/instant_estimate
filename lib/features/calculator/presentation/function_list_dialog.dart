@@ -68,7 +68,7 @@ class _FunctionListDialogState extends State<FunctionListDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '関数一覧',
+                strings.text('関数一覧'),
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),

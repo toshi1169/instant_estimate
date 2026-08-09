@@ -802,6 +802,36 @@ void main() {
     expect(find.byKey(const Key('functionListDialog')), findsOneWidget);
   });
 
+  testWidgets('英語設定で関数一覧と計算エラーを英語表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        appSettingsStore: FakeAppSettingsStore(
+          settings: const AppSettings(language: AppLanguage.english),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.bySemanticsLabel('メニュー'));
+    await tester.pumpAndSettle();
+    expect(find.text('Functions'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('cancelFunctionList')));
+    await tester.pumpAndSettle();
+    for (final key in ['1', '÷', '0', '=']) {
+      await tester.tap(find.text(key));
+      await tester.pump();
+    }
+
+    expect(find.text('Cannot divide by zero'), findsOneWidget);
+  });
+
   testWidgets('関数一覧から角度単位を変更して保存できる', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
