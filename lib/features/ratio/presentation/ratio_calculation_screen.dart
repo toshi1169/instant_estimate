@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/localization/app_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../../settings/domain/app_settings.dart';
@@ -89,11 +90,12 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('対比計算'),
+        title: Text(strings.text('対比計算')),
         actions: [
-          TextButton(onPressed: _clear, child: const Text('クリア')),
+          TextButton(onPressed: _clear, child: Text(strings.text('クリア'))),
           const SizedBox(width: 8),
         ],
       ),
@@ -113,7 +115,7 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '4項目のうち3項目を入力すると、\n空欄の値を自動計算します。',
+                      strings.text('4項目のうち3項目を入力すると、\n空欄の値を自動計算します。'),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -153,10 +155,12 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
             if (_result != null) _resultCard(_result!),
             if (_error != null) _errorCard(_error!),
             if (_result == null && _error == null)
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(18),
-                  child: Text('例：A＝2、B＝5、C＝8 と入力すると、D＝20 を算出します。'),
+                  padding: const EdgeInsets.all(18),
+                  child: Text(
+                    strings.text('例：A＝2、B＝5、C＝8 と入力すると、D＝20 を算出します。'),
+                  ),
                 ),
               ),
           ],
@@ -166,6 +170,7 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
   }
 
   Widget _field(RatioTerm term) {
+    final strings = AppLocalizations.of(context);
     final calculated = _result != null && _result!.missingTerm == term
         ? _format(_result!.value)
         : null;
@@ -177,14 +182,14 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
       textAlign: TextAlign.center,
       decoration: InputDecoration(
         labelText: term.name.toUpperCase(),
-        hintText: calculated ?? '入力',
+        hintText: calculated ?? strings.text('入力'),
         hintStyle: calculated == null
             ? null
             : TextStyle(
                 color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.w700,
               ),
-        helperText: calculated == null ? null : '自動計算',
+        helperText: calculated == null ? null : strings.text('自動計算'),
       ),
     );
   }
@@ -198,7 +203,10 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('計算結果', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context).text('計算結果'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 10),
             Text(
               '$label ＝ ${_format(result.value)}',
@@ -222,7 +230,7 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Text(
-          message,
+          AppLocalizations.of(context).text(message),
           style: TextStyle(
             color: Theme.of(context).colorScheme.onErrorContainer,
           ),

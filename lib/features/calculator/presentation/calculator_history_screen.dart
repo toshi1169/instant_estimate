@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
 import '../../settings/domain/app_settings.dart';
@@ -63,6 +64,7 @@ class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
+        final strings = AppLocalizations.of(context);
         final history = _filteredHistory(widget.controller.history);
         return Scaffold(
           appBar: AppBar(
@@ -72,13 +74,16 @@ class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
                 SizedBox(
                   width: 46,
                   child: Text(
-                    '${widget.controller.history.length}件',
+                    strings.itemCount(widget.controller.history.length),
                     key: const Key('historyCount'),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
-                const Expanded(
-                  child: Text('計算履歴', textAlign: TextAlign.center),
+                Expanded(
+                  child: Text(
+                    strings.text('計算履歴'),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
@@ -86,19 +91,19 @@ class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
               PopupMenuButton<HistorySortOrder>(
                 key: const Key('historySortMenu'),
                 initialValue: _sortOrder,
-                tooltip: '履歴の並び順',
+                tooltip: strings.text('履歴の並び順'),
                 onSelected: (value) {
                   setState(() => _sortOrder = value);
                   widget.onSortOrderChanged(value);
                 },
-                itemBuilder: (context) => const [
+                itemBuilder: (context) => [
                   PopupMenuItem(
                     value: HistorySortOrder.ascending,
-                    child: Text('昇順'),
+                    child: Text(strings.text('昇順')),
                   ),
                   PopupMenuItem(
                     value: HistorySortOrder.descending,
-                    child: Text('降順'),
+                    child: Text(strings.text('降順')),
                   ),
                 ],
                 child: Padding(
@@ -106,7 +111,11 @@ class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
                   child: Row(
                     children: [
                       Text(
-                        _sortOrder == HistorySortOrder.descending ? '降順' : '昇順',
+                        strings.text(
+                          _sortOrder == HistorySortOrder.descending
+                              ? '降順'
+                              : '昇順',
+                        ),
                         key: const Key('historySortLabel'),
                       ),
                       const Icon(Icons.arrow_drop_down),
@@ -127,12 +136,12 @@ class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
                     controller: _searchController,
                     onChanged: (value) => setState(() => _query = value),
                     decoration: InputDecoration(
-                      hintText: '計算式・解を検索',
+                      hintText: strings.text('計算式・解を検索'),
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _query.isEmpty
                           ? null
                           : IconButton(
-                              tooltip: '検索を消去',
+                              tooltip: strings.text('検索を消去'),
                               onPressed: () {
                                 _searchController.clear();
                                 setState(() => _query = '');
@@ -176,7 +185,9 @@ class _EmptyHistory extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        hasQuery ? '一致する履歴がありません' : '計算履歴はまだありません',
+        AppLocalizations.of(
+          context,
+        ).text(hasQuery ? '一致する履歴がありません' : '計算履歴はまだありません'),
         style: Theme.of(context).textTheme.bodyLarge,
       ),
     );
@@ -197,9 +208,10 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final strings = AppLocalizations.of(context);
     final fractionRows = <(String, String?)>[
-      ('仮分数', entry.improperFractionResult),
-      ('帯分数', entry.mixedFractionResult),
+      (strings.text('仮分数'), entry.improperFractionResult),
+      (strings.text('帯分数'), entry.mixedFractionResult),
     ].where((row) => row.$2 != null).toList(growable: false);
 
     return Card(
@@ -221,13 +233,13 @@ class _HistoryCard extends StatelessWidget {
                 ),
                 IconButton(
                   key: Key('fullHistoryMenuButton$index'),
-                  tooltip: '履歴メニュー',
+                  tooltip: strings.text('履歴メニュー'),
                   onPressed: () => onMenuPressed(entry),
                   icon: const Icon(Icons.more_vert),
                 ),
               ],
             ),
-            _ResultRow(label: '小数', value: entry.decimalResult),
+            _ResultRow(label: strings.text('小数'), value: entry.decimalResult),
             for (final row in fractionRows)
               _ResultRow(label: row.$1, value: row.$2!),
             Padding(

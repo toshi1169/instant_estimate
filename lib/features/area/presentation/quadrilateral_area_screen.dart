@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/localization/app_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -112,18 +113,21 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('4辺面積計算'),
-        actions: [TextButton(onPressed: _clear, child: const Text('クリア'))],
+        title: Text(strings.text('4辺面積計算')),
+        actions: [
+          TextButton(onPressed: _clear, child: Text(strings.text('クリア'))),
+        ],
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
           children: [
             Text(
-              '四角形を対角線で2つの三角形に分け、ヘロンの公式で面積を求めます。',
+              strings.text('四角形を対角線で2つの三角形に分け、ヘロンの公式で面積を求めます。'),
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 18),
@@ -135,21 +139,21 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: _lengthField(0, '辺A')),
+                      Expanded(child: _lengthField(0, strings.text('辺A'))),
                       const SizedBox(width: 12),
-                      Expanded(child: _lengthField(1, '辺B')),
+                      Expanded(child: _lengthField(1, strings.text('辺B'))),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: _lengthField(2, '辺C')),
+                      Expanded(child: _lengthField(2, strings.text('辺C'))),
                       const SizedBox(width: 12),
-                      Expanded(child: _lengthField(3, '辺D')),
+                      Expanded(child: _lengthField(3, strings.text('辺D'))),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _lengthField(4, '対角線'),
+                  _lengthField(4, strings.text('対角線')),
                 ],
               ),
             ),
@@ -158,7 +162,7 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
               key: const Key('calculateQuadrilateralArea'),
               onPressed: _calculate,
               icon: const Icon(Icons.calculate_outlined),
-              label: const Text('面積を計算'),
+              label: Text(strings.text('面積を計算')),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 16),
@@ -188,7 +192,10 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('計算結果', style: theme.textTheme.titleMedium),
+                    Text(
+                      strings.text('計算結果'),
+                      style: theme.textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 10),
                     Text(
                       '${_format(result.totalArea)} m²',
@@ -200,8 +207,11 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                     ),
                     const Divider(height: 26),
                     Text(
-                      '三角形① ${_format(result.firstTriangleArea)} m²'
-                      '  ＋  三角形② ${_format(result.secondTriangleArea)} m²',
+                      strings.isEnglish
+                          ? 'Triangle 1 ${_format(result.firstTriangleArea)} m²'
+                                '  +  Triangle 2 ${_format(result.secondTriangleArea)} m²'
+                          : '三角形① ${_format(result.firstTriangleArea)} m²'
+                                '  ＋  三角形② ${_format(result.secondTriangleArea)} m²',
                       textAlign: TextAlign.right,
                       style: theme.textTheme.bodyMedium,
                     ),
@@ -213,7 +223,7 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                 key: const Key('sendQuadrilateralAreaToEstimate'),
                 onPressed: _sendToEstimate,
                 icon: const Icon(Icons.request_quote_outlined),
-                label: const Text('見積明細へ追加'),
+                label: Text(strings.text('見積明細へ追加')),
               ),
             ],
           ],

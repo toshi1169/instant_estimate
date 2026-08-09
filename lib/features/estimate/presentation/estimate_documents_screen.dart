@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../application/estimate_controller.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
@@ -16,13 +17,14 @@ class EstimateDocumentsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('インスタント見積'),
+        title: Text(strings.instantEstimate),
         actions: [
           IconButton(
             key: const Key('openUnitPriceMaster'),
-            tooltip: '単価マスタ',
+            tooltip: strings.unitPriceMaster,
             icon: const Icon(Icons.price_change_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -47,14 +49,19 @@ class EstimateDocumentsScreen extends StatelessWidget {
                     children: [
                       Text(
                         controller.estimateLimit == null
-                            ? '${controller.estimates.length}件'
-                            : '${controller.estimates.length} / ${controller.estimateLimit}件',
+                            ? strings.itemCount(controller.estimates.length)
+                            : strings.itemCountWithLimit(
+                                controller.estimates.length,
+                                controller.estimateLimit!,
+                              ),
                       ),
                       const Spacer(),
                       Text(
                         controller.estimateLimit == null
-                            ? '完全版：件数制限なし'
-                            : '現在の保存上限：${controller.estimateLimit}件',
+                            ? strings.text('完全版：件数制限なし')
+                            : strings.currentSaveLimit(
+                                controller.estimateLimit!,
+                              ),
                       ),
                     ],
                   ),
@@ -88,7 +95,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
         key: const Key('createEstimateDocument'),
         onPressed: () => _createEstimate(context),
         icon: const Icon(Icons.add),
-        label: const Text('新しい見積'),
+        label: Text(strings.text('新しい見積')),
       ),
     );
   }
@@ -101,25 +108,33 @@ class EstimateDocumentsScreen extends StatelessWidget {
     switch (action) {
       case _EstimateDocumentAction.duplicate:
         if (!controller.canCreateEstimate) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('無料版では見積を5件まで保存できます')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).freeEstimateLimit),
+            ),
+          );
           return;
         }
         try {
           await controller.duplicateEstimate(estimate.info.id);
         } catch (_) {
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積を複製できませんでした')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context).text('見積を複製できませんでした'),
+                ),
+              ),
+            );
           }
           return;
         }
         if (!context.mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('見積を複製しました')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).text('見積を複製しました')),
+          ),
+        );
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => EstimateItemsScreen(controller: controller),
@@ -127,26 +142,30 @@ class EstimateDocumentsScreen extends StatelessWidget {
         );
       case _EstimateDocumentAction.delete:
         if (controller.estimates.length <= 1) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('最後の見積は削除できません')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).text('最後の見積は削除できません')),
+            ),
+          );
           return;
         }
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('見積を削除'),
+            title: Text(AppLocalizations.of(context).text('見積を削除')),
             content: Text(
-              '「${estimate.info.displayName}」を削除しますか？\n含まれる明細もすべて削除されます。',
+              AppLocalizations.of(
+                context,
+              ).deleteEstimateQuestion(estimate.info.displayName),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('キャンセル'),
+                child: Text(AppLocalizations.of(context).cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('削除'),
+                child: Text(AppLocalizations.of(context).delete),
               ),
             ],
           ),
@@ -155,15 +174,21 @@ class EstimateDocumentsScreen extends StatelessWidget {
         try {
           await controller.deleteEstimate(estimate.info.id);
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積を削除しました')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context).text('見積を削除しました')),
+              ),
+            );
           }
         } catch (_) {
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積を削除できませんでした')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context).text('見積を削除できませんでした'),
+                ),
+              ),
+            );
           }
         }
     }
@@ -171,9 +196,9 @@ class EstimateDocumentsScreen extends StatelessWidget {
 
   Future<void> _createEstimate(BuildContext context) async {
     if (!controller.canCreateEstimate) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('無料版では見積を5件まで保存できます')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).freeEstimateLimit)),
+      );
       return;
     }
     final info = await Navigator.of(context).push<EstimateInfo>(
@@ -188,9 +213,13 @@ class EstimateDocumentsScreen extends StatelessWidget {
       await controller.createEstimate(info);
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('新しい見積を作成できませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).text('新しい見積を作成できませんでした'),
+            ),
+          ),
+        );
       }
       return;
     }
@@ -210,9 +239,11 @@ class EstimateDocumentsScreen extends StatelessWidget {
       await controller.selectEstimate(estimate.info.id);
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('見積を開けませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).text('見積を開けませんでした')),
+          ),
+        );
       }
       return;
     }
@@ -242,6 +273,7 @@ class _EstimateDocumentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Card(
       key: Key('estimateDocument$index'),
       child: ListTile(
@@ -251,9 +283,9 @@ class _EstimateDocumentCard extends StatelessWidget {
           children: [
             Expanded(child: Text(estimate.info.displayName)),
             if (isActive)
-              const Chip(
+              Chip(
                 key: Key('activeEstimateDocument'),
-                label: Text('追加先'),
+                label: Text(strings.text('追加先')),
                 visualDensity: VisualDensity.compact,
               ),
           ],
@@ -263,8 +295,8 @@ class _EstimateDocumentCard extends StatelessWidget {
           child: Text(
             [
               if (estimate.info.siteName.isNotEmpty) estimate.info.siteName,
-              '${estimate.items.length}明細',
-              '税込 ¥ ${_money(estimate.grandTotalAmount.toDouble())}',
+              strings.estimateDetails(estimate.items.length),
+              '${strings.text('税込')} ¥ ${_money(estimate.grandTotalAmount.toDouble())}',
             ].join('　'),
           ),
         ),
@@ -273,21 +305,21 @@ class _EstimateDocumentCard extends StatelessWidget {
           children: [
             PopupMenuButton<_EstimateDocumentAction>(
               key: Key('estimateDocumentMenu$index'),
-              tooltip: '見積メニュー',
+              tooltip: strings.text('見積メニュー'),
               onSelected: onAction,
-              itemBuilder: (_) => const [
+              itemBuilder: (_) => [
                 PopupMenuItem(
                   value: _EstimateDocumentAction.duplicate,
                   child: ListTile(
-                    leading: Icon(Icons.copy_outlined),
-                    title: Text('複製'),
+                    leading: const Icon(Icons.copy_outlined),
+                    title: Text(strings.text('複製')),
                   ),
                 ),
                 PopupMenuItem(
                   value: _EstimateDocumentAction.delete,
                   child: ListTile(
-                    leading: Icon(Icons.delete_outline),
-                    title: Text('削除'),
+                    leading: const Icon(Icons.delete_outline),
+                    title: Text(strings.delete),
                   ),
                 ),
               ],

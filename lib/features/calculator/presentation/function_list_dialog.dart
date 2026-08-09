@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/angle_unit.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 
 class FunctionListDialog extends StatefulWidget {
@@ -53,6 +54,7 @@ class _FunctionListDialogState extends State<FunctionListDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final strings = AppLocalizations.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Dialog(
@@ -124,24 +126,24 @@ class _FunctionListDialogState extends State<FunctionListDialog> {
                 ),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        '角度単位',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                        strings.text('角度単位'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                     DropdownButtonHideUnderline(
                       child: DropdownButton<AngleUnit>(
                         key: const Key('functionAngleUnitDropdown'),
                         value: _angleUnit,
-                        items: const [
+                        items: [
                           DropdownMenuItem(
                             value: AngleUnit.degrees,
-                            child: Text('DEG（度）'),
+                            child: Text(strings.text('DEG（度）')),
                           ),
                           DropdownMenuItem(
                             value: AngleUnit.radians,
-                            child: Text('RAD（ラジアン）'),
+                            child: Text(strings.text('RAD（ラジアン）')),
                           ),
                         ],
                         onChanged: (value) {
@@ -160,7 +162,7 @@ class _FunctionListDialogState extends State<FunctionListDialog> {
                 child: OutlinedButton(
                   key: const Key('cancelFunctionList'),
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('キャンセル'),
+                  child: Text(strings.text('キャンセル')),
                 ),
               ),
             ],

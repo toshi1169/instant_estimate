@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/unit_converter.dart';
 
@@ -136,13 +137,14 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final units = _converter.unitsFor(_category);
     return Scaffold(
       key: const Key('unitConversionScreen'),
       appBar: AppBar(
-        title: const Text('単位変換'),
+        title: Text(strings.unitConversion),
         actions: [
-          TextButton(onPressed: _clear, child: const Text('クリア')),
+          TextButton(onPressed: _clear, child: Text(strings.text('クリア'))),
           const SizedBox(width: 8),
         ],
       ),
@@ -157,15 +159,15 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                 child: DropdownButtonFormField<UnitConversionCategory>(
                   key: const Key('unitConversionCategory'),
                   initialValue: _category,
-                  decoration: const InputDecoration(
-                    labelText: '変換する種類',
-                    prefixIcon: Icon(Icons.swap_horiz),
+                  decoration: InputDecoration(
+                    labelText: strings.text('変換する種類'),
+                    prefixIcon: const Icon(Icons.swap_horiz),
                   ),
                   items: [
                     for (final category in UnitConversionCategory.values)
                       DropdownMenuItem(
                         value: category,
-                        child: Text(category.label),
+                        child: Text(strings.text(category.label)),
                       ),
                   ],
                   onChanged: _changeCategory,
@@ -189,9 +191,9 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]')),
                       ],
-                      decoration: const InputDecoration(
-                        labelText: '変換する値',
-                        hintText: '数値を入力',
+                      decoration: InputDecoration(
+                        labelText: strings.text('変換する値'),
+                        hintText: strings.text('数値を入力'),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -200,7 +202,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                         Expanded(
                           child: _unitDropdown(
                             key: const Key('unitConversionFrom'),
-                            label: '変換前',
+                            label: strings.text('変換前'),
                             value: _fromUnitId,
                             units: units,
                             onChanged: (value) {
@@ -214,7 +216,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 6),
                           child: IconButton.filledTonal(
                             key: const Key('swapConversionUnits'),
-                            tooltip: '単位を入れ替える',
+                            tooltip: strings.text('単位を入れ替える'),
                             onPressed: _swapUnits,
                             icon: const Icon(Icons.swap_horiz),
                           ),
@@ -222,7 +224,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                         Expanded(
                           child: _unitDropdown(
                             key: const Key('unitConversionTo'),
-                            label: '変換後',
+                            label: strings.text('変換後'),
                             value: _toUnitId,
                             units: units,
                             onChanged: (value) {
@@ -241,7 +243,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                           Expanded(
                             child: _factorField(
                               key: const Key('loosenFactor'),
-                              label: 'ほぐし係数',
+                              label: strings.text('ほぐし係数'),
                               controller: _loosenFactorController,
                             ),
                           ),
@@ -249,7 +251,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                           Expanded(
                             child: _factorField(
                               key: const Key('compactionFactor'),
-                              label: '締固め係数',
+                              label: strings.text('締固め係数'),
                               controller: _compactionFactorController,
                             ),
                           ),
@@ -284,7 +286,13 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
       decoration: InputDecoration(labelText: label),
       items: [
         for (final unit in units)
-          DropdownMenuItem(value: unit.id, child: Text(unit.label)),
+          DropdownMenuItem(
+            value: unit.id,
+            child: Text(
+              AppLocalizations.of(context).specializedUnit(unit.id, unit.label),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
       ],
       onChanged: onChanged,
     );
@@ -326,7 +334,10 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('変換結果', style: theme.textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context).text('変換結果'),
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: 10),
             Text(
               _result == null ? '—' : _resultText(_result!),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../domain/estimate_info.dart';
 
 class EstimateInfoEditorScreen extends StatefulWidget {
@@ -67,8 +68,9 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('見積基本情報')),
+      appBar: AppBar(title: Text(strings.text('見積基本情報'))),
       body: SafeArea(
         child: ListView(
           key: const Key('estimateInfoEditor'),
@@ -76,26 +78,30 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
           children: [
             _field(
               _estimateName,
-              '見積名',
-              hint: '例：○○邸 外構工事',
+              strings.text('見積名'),
+              hint: strings.text('例：○○邸 外構工事'),
               key: const Key('estimateInfoNameField'),
             ),
-            _field(_siteName, '現場名', key: const Key('estimateInfoSiteField')),
+            _field(
+              _siteName,
+              strings.text('現場名'),
+              key: const Key('estimateInfoSiteField'),
+            ),
             _field(
               _clientName,
-              '宛名',
+              strings.text('宛名'),
               key: const Key('estimateInfoClientField'),
             ),
             _field(
               _estimateNumber,
-              '見積番号',
+              strings.text('見積番号'),
               key: const Key('estimateInfoNumberField'),
             ),
             ListTile(
               key: const Key('estimateInfoDateField'),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12),
               shape: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              title: const Text('作成日'),
+              title: Text(strings.text('作成日')),
               subtitle: Text(_date(_createdDate)),
               trailing: const Icon(Icons.calendar_month_outlined),
               onTap: _selectDate,
@@ -103,7 +109,7 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
             const SizedBox(height: 12),
             _field(
               _notes,
-              '備考',
+              strings.text('備考'),
               key: const Key('estimateInfoNotesField'),
               maxLines: 4,
             ),
@@ -112,7 +118,7 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
               key: const Key('saveEstimateInfo'),
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: const Text('基本情報を保存'),
+              label: Text(strings.text('基本情報を保存')),
             ),
           ],
         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/localization/app_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -127,22 +128,27 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('5辺以上面積計算'),
-        actions: [TextButton(onPressed: _clear, child: const Text('クリア'))],
+        title: Text(strings.text('5辺以上面積計算')),
+        actions: [
+          TextButton(onPressed: _clear, child: Text(strings.text('クリア'))),
+        ],
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
           children: [
-            const Text('頂点Aから対角線を引いて三角形に分割し、ヘロンの公式で面積を自動合算します。'),
+            Text(strings.text('頂点Aから対角線を引いて三角形に分割し、ヘロンの公式で面積を自動合算します。')),
             const SizedBox(height: 14),
             Row(
               children: [
                 Text(
-                  '${_outerControllers.length}辺',
+                  strings.isEnglish
+                      ? '${_outerControllers.length} sides'
+                      : '${_outerControllers.length}辺',
                   key: const Key('polygonSideCount'),
                   style: theme.textTheme.titleMedium,
                 ),
@@ -150,13 +156,13 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                 IconButton(
                   key: const Key('removePolygonSide'),
                   onPressed: _outerControllers.length > 5 ? _removeSide : null,
-                  tooltip: '辺を減らす',
+                  tooltip: strings.text('辺を減らす'),
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
                 IconButton(
                   key: const Key('addPolygonSide'),
                   onPressed: _outerControllers.length < 20 ? _addSide : null,
-                  tooltip: '辺を増やす',
+                  tooltip: strings.text('辺を増やす'),
                   icon: const Icon(Icons.add_circle_outline),
                 ),
               ],
@@ -167,7 +173,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('外周の辺', style: theme.textTheme.titleSmall),
+                  Text(strings.text('外周の辺'), style: theme.textTheme.titleSmall),
                   const SizedBox(height: 8),
                   for (
                     var index = 0;
@@ -177,12 +183,17 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     _lengthField(
                       controller: _outerControllers[index],
                       fieldKey: Key('polygonOuterSide$index'),
-                      label: '辺 ${_vertexName(index)}${_vertexName(index + 1)}',
+                      label: strings.isEnglish
+                          ? 'Side ${_vertexName(index)}${_vertexName(index + 1)}'
+                          : '辺 ${_vertexName(index)}${_vertexName(index + 1)}',
                     ),
                     const SizedBox(height: 10),
                   ],
                   const SizedBox(height: 4),
-                  Text('頂点Aからの対角線', style: theme.textTheme.titleSmall),
+                  Text(
+                    strings.text('頂点Aからの対角線'),
+                    style: theme.textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   for (
                     var index = 0;
@@ -192,7 +203,9 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     _lengthField(
                       controller: _diagonalControllers[index],
                       fieldKey: Key('polygonDiagonal$index'),
-                      label: '対角線 A${_vertexName(index + 2)}',
+                      label: strings.isEnglish
+                          ? 'Diagonal A${_vertexName(index + 2)}'
+                          : '対角線 A${_vertexName(index + 2)}',
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -204,7 +217,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
               key: const Key('calculatePolygonArea'),
               onPressed: _calculate,
               icon: const Icon(Icons.calculate_outlined),
-              label: const Text('面積を計算'),
+              label: Text(strings.text('面積を計算')),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 16),
@@ -234,7 +247,10 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('計算結果', style: theme.textTheme.titleMedium),
+                    Text(
+                      strings.text('計算結果'),
+                      style: theme.textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 10),
                     Text(
                       '${_format(result.totalArea)} m²',
@@ -248,7 +264,9 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     const Divider(height: 26),
                     for (final (index, area) in result.triangleAreas.indexed)
                       Text(
-                        '三角形${index + 1}　${_format(area)} m²',
+                        strings.isEnglish
+                            ? 'Triangle ${index + 1}  ${_format(area)} m²'
+                            : '三角形${index + 1}　${_format(area)} m²',
                         textAlign: TextAlign.right,
                       ),
                   ],
@@ -259,7 +277,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                 key: const Key('sendPolygonAreaToEstimate'),
                 onPressed: _sendToEstimate,
                 icon: const Icon(Icons.request_quote_outlined),
-                label: const Text('見積明細へ追加'),
+                label: Text(strings.text('見積明細へ追加')),
               ),
             ],
           ],

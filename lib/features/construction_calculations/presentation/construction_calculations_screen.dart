@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
+
 import '../../area/presentation/polygon_area_screen.dart';
 import '../../area/presentation/quadrilateral_area_screen.dart';
 import '../../density/presentation/weight_calculation_screen.dart';
@@ -28,8 +30,9 @@ class ConstructionCalculationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('便利計算一覧')),
+      appBar: AppBar(title: Text(strings.convenientCalculations)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -37,8 +40,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openEarthworkCalculation'),
               icon: Icons.landscape_outlined,
-              title: '土量計算',
-              subtitle: '掘削・埋戻し・搬出土・運搬回数',
+              title: strings.text('土量計算'),
+              subtitle: strings.text('掘削・埋戻し・搬出土・運搬回数'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => EarthworkCalculationScreen(
@@ -52,8 +55,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openWeightCalculation'),
               icon: Icons.scale_outlined,
-              title: '比重・重量計算',
-              subtitle: '材料と体積から重量を算出',
+              title: strings.text('比重・重量計算'),
+              subtitle: strings.text('材料と体積から重量を算出'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => WeightCalculationScreen(
@@ -67,8 +70,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openSlopeCalculation'),
               icon: Icons.show_chart,
-              title: '勾配計算',
-              subtitle: '高さ・水平距離・法長・角度を算出',
+              title: strings.text('勾配計算'),
+              subtitle: strings.text('高さ・水平距離・法長・角度を算出'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => SlopeCalculationScreen(settings: settings),
@@ -78,8 +81,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openAreaCalculation'),
               icon: Icons.square_foot_outlined,
-              title: '面積計算',
-              subtitle: '4辺と対角線から面積を算出',
+              title: strings.text('面積計算'),
+              subtitle: strings.text('4辺と対角線から面積を算出'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => QuadrilateralAreaScreen(
@@ -92,8 +95,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openPolygonAreaCalculation'),
               icon: Icons.polyline_outlined,
-              title: '5辺以上の面積計算',
-              subtitle: '外周と対角線から三角形へ分割して自動合算',
+              title: strings.text('5辺以上の面積計算'),
+              subtitle: strings.text('外周と対角線から三角形へ分割して自動合算'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => PolygonAreaScreen(
@@ -106,8 +109,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openRatioCalculation'),
               icon: Icons.compare_arrows_outlined,
-              title: '対比計算',
-              subtitle: '3つの値から残りの比率を算出',
+              title: strings.text('対比計算'),
+              subtitle: strings.text('3つの値から残りの比率を算出'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => RatioCalculationScreen(settings: settings),
@@ -117,8 +120,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openProductivityCalculation'),
               icon: Icons.groups_outlined,
-              title: '歩掛・生産性計算',
-              subtitle: '必要人工・必要日数・施工実績を計算',
+              title: strings.text('歩掛・生産性計算'),
+              subtitle: strings.text('必要人工・必要日数・施工実績を計算'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => ProductivityCalculationScreen(
@@ -130,8 +133,8 @@ class ConstructionCalculationsScreen extends StatelessWidget {
             _CalculationTile(
               key: const Key('openUnitConversion'),
               icon: Icons.swap_horiz_outlined,
-              title: '単位変換',
-              subtitle: '長さ・面積・重量・勾配・土量などを変換',
+              title: strings.unitConversion,
+              subtitle: strings.text('長さ・面積・重量・勾配・土量などを変換'),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => UnitConversionScreen(settings: settings),

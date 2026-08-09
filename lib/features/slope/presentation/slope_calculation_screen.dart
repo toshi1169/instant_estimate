@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/localization/app_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -296,15 +297,16 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('勾配・法面計算'),
+        title: Text(strings.text('勾配・法面計算')),
         backgroundColor: AppColors.accent,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: '入力方法',
+            tooltip: strings.text('入力方法'),
             onPressed: _showHelp,
             icon: const Icon(Icons.help_outline),
           ),
@@ -317,7 +319,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                 side: const BorderSide(color: Colors.white70),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
-              child: const Text('クリア'),
+              child: Text(strings.text('クリア')),
             ),
           ),
         ],
@@ -345,12 +347,12 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
             ),
             const SizedBox(height: 12),
             _SectionCard(
-              title: '入力項目（選択した2つから自動計算）',
+              title: strings.text('入力項目（選択した2つから自動計算）'),
               child: Column(
                 children: [
                   _InputRow(
                     key: const Key('slopeHorizontalDistance'),
-                    label: '水平距離（H）',
+                    label: strings.text('水平距離（H）'),
                     controller: _controllers[_SlopeField.horizontal]!,
                     suffix: _lengthUnit,
                     selected: _activeFields.contains(_SlopeField.horizontal),
@@ -359,7 +361,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                   ),
                   _InputRow(
                     key: const Key('slopeHeight'),
-                    label: '高さ（V）',
+                    label: strings.text('高さ（V）'),
                     controller: _controllers[_SlopeField.height]!,
                     suffix: _lengthUnit,
                     selected: _activeFields.contains(_SlopeField.height),
@@ -368,7 +370,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                   ),
                   _InputRow(
                     key: const Key('slopeLength'),
-                    label: '法長（L）',
+                    label: strings.text('法長（L）'),
                     controller: _controllers[_SlopeField.length]!,
                     suffix: _lengthUnit,
                     selected: _activeFields.contains(_SlopeField.length),
@@ -377,7 +379,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                   ),
                   _InputRow(
                     key: const Key('slopePercent'),
-                    label: '勾配',
+                    label: strings.text('勾配'),
                     controller: _controllers[_SlopeField.percent]!,
                     suffix: '%',
                     selected: _activeFields.contains(_SlopeField.percent),
@@ -386,7 +388,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                   ),
                   _InputRow(
                     key: const Key('slopeRatio'),
-                    label: '法勾配',
+                    label: strings.text('法勾配'),
                     prefix: '1 :',
                     controller: _controllers[_SlopeField.ratio]!,
                     selected: _activeFields.contains(_SlopeField.ratio),
@@ -395,7 +397,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                   ),
                   _InputRow(
                     key: const Key('slopeAngle'),
-                    label: '角度（θ）',
+                    label: strings.text('角度（θ）'),
                     controller: _controllers[_SlopeField.angle]!,
                     suffix: '°',
                     selected: _activeFields.contains(_SlopeField.angle),
@@ -408,7 +410,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
             if (_errorMessage != null) ...[
               const SizedBox(height: 10),
               Text(
-                _errorMessage!,
+                strings.text(_errorMessage!),
                 key: const Key('slopeCalculationError'),
                 style: TextStyle(color: theme.colorScheme.error),
               ),
@@ -416,23 +418,23 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
             const SizedBox(height: 12),
             _SectionCard(
               key: const Key('slopeCalculationResult'),
-              title: '計算結果',
+              title: strings.text('計算結果'),
               child: Column(
                 children: [
                   _ResultLine(
-                    label: '勾配（%）',
+                    label: strings.text('勾配（%）'),
                     value: _result == null
                         ? '—'
                         : '${_format(_result!.gradientPercent)} %',
                   ),
                   _ResultLine(
-                    label: '法勾配',
+                    label: strings.text('法勾配'),
                     value: _result == null
                         ? '—'
                         : '1 : ${_format(_result!.gradientRatioDenominator ?? 0)}',
                   ),
                   _ResultLine(
-                    label: '角度（θ）',
+                    label: strings.text('角度（θ）'),
                     value: _result == null
                         ? '—'
                         : '${_format(_result!.angleDegrees)} °',
@@ -441,7 +443,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Expanded(child: Text('法面積（延長1mあたり）')),
+                      Expanded(child: Text(strings.text('法面積（延長1mあたり）'))),
                       Text(
                         _result == null
                             ? '—'
@@ -458,7 +460,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                   const Divider(height: 24),
                   _InputRow(
                     key: const Key('slopeExtension'),
-                    label: '延長',
+                    label: strings.text('延長'),
                     controller: _extensionController,
                     suffix: _lengthUnit,
                     selected: false,
@@ -466,7 +468,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                     onChanged: (_) => setState(() {}),
                   ),
                   _ResultLine(
-                    label: '法面積（延長分）',
+                    label: strings.text('法面積（延長分）'),
                     value: _result == null || _extensionMeters <= 0
                         ? '—'
                         : '${_format(_faceArea)} m²',
@@ -476,7 +478,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
               ),
             ),
             const SizedBox(height: 18),
-            Text('単位', style: theme.textTheme.titleMedium),
+            Text(strings.text('単位'), style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             SegmentedButton<bool>(
               segments: const [

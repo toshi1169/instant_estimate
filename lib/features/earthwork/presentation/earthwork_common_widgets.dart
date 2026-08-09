@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/domain/transport_vehicle.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 
 double parseEarthworkNumber(String text) {
@@ -86,6 +87,7 @@ class EarthworkResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
@@ -115,7 +117,7 @@ class EarthworkResultCard extends StatelessWidget {
             TextButton.icon(
               onPressed: onSend,
               icon: const Icon(Icons.request_quote_outlined),
-              label: const Text('見積へ'),
+              label: Text(l10n.text('見積へ')),
             ),
           ],
         ),
@@ -129,11 +131,13 @@ class EarthworkReferenceNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Text(
-        '※ 土量変化率・積載容量・法勾配等は、土質・車両・現場条件・設計条件等により異なります。'
-        '表示値は初期値・参考値として扱い、実際の条件に合わせて変更してください。',
+        l10n.text(
+          '※ 土量変化率・積載容量・法勾配等は、土質・車両・現場条件・設計条件等により異なります。表示値は初期値・参考値として扱い、実際の条件に合わせて変更してください。',
+        ),
         style: Theme.of(context).textTheme.bodySmall,
       ),
     );
@@ -162,6 +166,7 @@ class TransportVehicleFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final standard = vehicles.where(
       (vehicle) => !vehicle.isCrawler && !vehicle.isCustom,
     );
@@ -173,20 +178,24 @@ class TransportVehicleFields extends StatelessWidget {
           key: Key(vehicleKeyName),
           initialValue: selectedVehicleId,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: '運搬車両'),
+          decoration: InputDecoration(labelText: l10n.text('運搬車両')),
           items: [
-            _sectionItem(context, '通常車両'),
-            ...standard.map((vehicle) => _vehicleItem(vehicle)),
-            _sectionItem(context, 'クローラータイプ'),
-            ...crawlers.map((vehicle) => _vehicleItem(vehicle)),
+            _sectionItem(context, l10n.text('通常車両')),
+            ...standard.map((vehicle) => _vehicleItem(vehicle, l10n)),
+            _sectionItem(context, l10n.text('クローラータイプ')),
+            ...crawlers.map((vehicle) => _vehicleItem(vehicle, l10n)),
             if (customs.isNotEmpty) ...[
-              _sectionItem(context, 'ユーザー登録車両'),
-              ...customs.map((vehicle) => _vehicleItem(vehicle)),
+              _sectionItem(context, l10n.text('ユーザー登録車両')),
+              ...customs.map((vehicle) => _vehicleItem(vehicle, l10n)),
             ],
-            const DropdownMenuItem<String>(
+            DropdownMenuItem<String>(
               value: '_add_vehicle',
               child: Row(
-                children: [Icon(Icons.add), SizedBox(width: 8), Text('車両を追加')],
+                children: [
+                  const Icon(Icons.add),
+                  const SizedBox(width: 8),
+                  Text(l10n.text('車両を追加')),
+                ],
               ),
             ),
           ],
@@ -206,23 +215,26 @@ class TransportVehicleFields extends StatelessWidget {
         EarthworkNumberField(
           keyName: capacityKeyName,
           controller: capacityController,
-          label: '積載容量',
+          label: l10n.text('積載容量'),
           suffix: 'm³/回',
-          helperText: '※積載容量は車両・土質・積載条件により調整してください。',
+          helperText: l10n.text('※積載容量は車両・土質・積載条件により調整してください。'),
           validator: validatePositiveEarthworkNumber,
         ),
       ],
     );
   }
 
-  DropdownMenuItem<String> _vehicleItem(TransportVehicle vehicle) {
+  DropdownMenuItem<String> _vehicleItem(
+    TransportVehicle vehicle,
+    AppLocalizations l10n,
+  ) {
     final payload = vehicle.maximumPayloadTons == null
         ? ''
         : ' / ${formatEarthworkNumber(vehicle.maximumPayloadTons!)}t';
     return DropdownMenuItem<String>(
       value: vehicle.id,
       child: Text(
-        '${vehicle.name}  '
+        '${vehicle.isCustom ? vehicle.name : l10n.text(vehicle.name)}  '
         '${formatEarthworkNumber(vehicle.initialCapacityCubicMeters)}m³$payload',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -248,6 +260,7 @@ class TransportVehicleFields extends StatelessWidget {
 Future<TransportVehicle?> showAddTransportVehicleDialog(
   BuildContext context,
 ) async {
+  final l10n = AppLocalizations.of(context);
   final nameController = TextEditingController();
   final capacityController = TextEditingController();
   final weightController = TextEditingController();
@@ -255,7 +268,7 @@ Future<TransportVehicle?> showAddTransportVehicleDialog(
   final vehicle = await showDialog<TransportVehicle>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('車両を追加'),
+      title: Text(l10n.text('車両を追加')),
       content: Form(
         key: formKey,
         child: SingleChildScrollView(
@@ -265,16 +278,17 @@ Future<TransportVehicle?> showAddTransportVehicleDialog(
               TextFormField(
                 key: const Key('customVehicleName'),
                 controller: nameController,
-                decoration: const InputDecoration(labelText: '車両名'),
+                decoration: InputDecoration(labelText: l10n.text('車両名')),
                 textInputAction: TextInputAction.next,
-                validator: (value) =>
-                    (value ?? '').trim().isEmpty ? '車両名を入力してください' : null,
+                validator: (value) => (value ?? '').trim().isEmpty
+                    ? l10n.text('車両名を入力してください')
+                    : null,
               ),
               const SizedBox(height: 12),
               EarthworkNumberField(
                 keyName: 'customVehicleCapacity',
                 controller: capacityController,
-                label: '積載容量',
+                label: l10n.text('積載容量'),
                 suffix: 'm³',
                 validator: validatePositiveEarthworkNumber,
               ),
@@ -282,7 +296,7 @@ Future<TransportVehicle?> showAddTransportVehicleDialog(
               EarthworkNumberField(
                 keyName: 'customVehicleWeight',
                 controller: weightController,
-                label: '最大積載重量',
+                label: l10n.text('最大積載重量'),
                 suffix: 't',
                 validator: validatePositiveEarthworkNumber,
               ),
@@ -293,7 +307,7 @@ Future<TransportVehicle?> showAddTransportVehicleDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('キャンセル'),
+          child: Text(l10n.text('キャンセル')),
         ),
         FilledButton(
           key: const Key('saveCustomVehicle'),
@@ -313,7 +327,7 @@ Future<TransportVehicle?> showAddTransportVehicleDialog(
               ),
             );
           },
-          child: const Text('登録'),
+          child: Text(l10n.text('登録')),
         ),
       ],
     ),

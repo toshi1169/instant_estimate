@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/transport_vehicle.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/earthwork_calculator.dart';
@@ -105,6 +106,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
   @override
   Widget build(BuildContext context) {
     final result = _result;
+    final l10n = AppLocalizations.of(context);
     return Form(
       key: _formKey,
       child: ListView(
@@ -114,18 +116,18 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
             children: [
               Expanded(
                 child: Text(
-                  '掘削後のほぐし土量と運搬回数を算出します。',
+                  l10n.text('掘削後のほぐし土量と運搬回数を算出します。'),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
-              TextButton(onPressed: _clear, child: const Text('入力を消去')),
+              TextButton(onPressed: _clear, child: Text(l10n.text('入力を消去'))),
             ],
           ),
           const SizedBox(height: 12),
           EarthworkNumberField(
             keyName: 'earthworkLength',
             controller: _lengthController,
-            label: '長さ',
+            label: l10n.text('長さ'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -133,7 +135,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
           EarthworkNumberField(
             keyName: 'earthworkWidth',
             controller: _widthController,
-            label: '幅',
+            label: l10n.text('幅'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -141,7 +143,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
           EarthworkNumberField(
             keyName: 'earthworkDepth',
             controller: _depthController,
-            label: '深さ',
+            label: l10n.text('深さ'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -149,8 +151,8 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
           EarthworkNumberField(
             keyName: 'earthworkLooseFactor',
             controller: _looseFactorController,
-            label: 'ほぐし係数',
-            helperText: '初期参考値 1.25（現場条件に合わせて変更可能）',
+            label: l10n.text('ほぐし係数'),
+            helperText: l10n.text('初期参考値 1.25（現場条件に合わせて変更可能）'),
             validator: validatePositiveEarthworkNumber,
           ),
           const SizedBox(height: 16),
@@ -168,7 +170,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
             key: const Key('calculateEarthwork'),
             onPressed: _calculate,
             icon: const Icon(Icons.calculate_outlined),
-            label: const Text('計算する'),
+            label: Text(l10n.text('計算する')),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -182,7 +184,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
             KeyedSubtree(
               key: const Key('earthworkExcavationResult'),
               child: EarthworkResultCard(
-                label: '地山掘削量',
+                label: l10n.text('地山掘削量'),
                 value: '${formatEarthworkNumber(result.bankVolume)} m³',
                 onSend: () => widget.onSendToEstimate(
                   EstimateItemDraft(
@@ -203,7 +205,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
             KeyedSubtree(
               key: const Key('earthworkHaulResult'),
               child: EarthworkResultCard(
-                label: 'ほぐし土量（搬出土量）',
+                label: l10n.text('ほぐし土量（搬出土量）'),
                 value: '${formatEarthworkNumber(result.looseVolume)} m³',
                 note:
                     '地山掘削量 × ほぐし係数 ${formatEarthworkNumber(result.looseFactor)}',
@@ -229,9 +231,9 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
             KeyedSubtree(
               key: const Key('earthworkDumpResult'),
               child: EarthworkResultCard(
-                label: '必要運搬回数',
+                label: l10n.text('必要運搬回数'),
                 value: '${result.transportTrips} 回',
-                note: '端数切り上げ',
+                note: l10n.text('端数切り上げ'),
                 onSend: () => widget.onSendToEstimate(
                   EstimateItemDraft(
                     trade: '土工',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../application/productivity_controller.dart';
 import '../domain/productivity_calculator.dart';
 import '../domain/productivity_record.dart';
@@ -108,17 +109,27 @@ class _ProductivityCalculationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('歩掛・生産性計算')),
+      appBar: AppBar(title: Text(strings.text('歩掛・生産性計算'))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
             SegmentedButton<_Mode>(
-              segments: const [
-                ButtonSegment(value: _Mode.labor, label: Text('必要人工')),
-                ButtonSegment(value: _Mode.days, label: Text('必要日数')),
-                ButtonSegment(value: _Mode.actual, label: Text('生産性・実績')),
+              segments: [
+                ButtonSegment(
+                  value: _Mode.labor,
+                  label: Text(strings.text('必要人工')),
+                ),
+                ButtonSegment(
+                  value: _Mode.days,
+                  label: Text(strings.text('必要日数')),
+                ),
+                ButtonSegment(
+                  value: _Mode.actual,
+                  label: Text(strings.text('生産性・実績')),
+                ),
               ],
               selected: {_mode},
               showSelectedIcon: false,
@@ -127,12 +138,12 @@ class _ProductivityCalculationScreenState
             ),
             const SizedBox(height: 16),
             _Section(
-              title: '作業情報',
+              title: strings.text('作業情報'),
               children: [
                 DropdownButtonFormField<String>(
                   key: const Key('productivityTrade'),
                   initialValue: _trade,
-                  decoration: const InputDecoration(labelText: '工種'),
+                  decoration: InputDecoration(labelText: strings.text('工種')),
                   items: _trades
                       .map(
                         (value) =>
@@ -141,12 +152,12 @@ class _ProductivityCalculationScreenState
                       .toList(),
                   onChanged: (value) => setState(() => _trade = value),
                 ),
-                _field(_task, '作業名称'),
+                _field(_task, strings.text('作業名称')),
                 if (_mode == _Mode.actual) ...[
-                  _field(_site, '現場名'),
+                  _field(_site, strings.text('現場名')),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('施工日'),
+                    title: Text(strings.text('施工日')),
                     subtitle: Text(_date(_workDate)),
                     trailing: const Icon(Icons.calendar_month_outlined),
                     onTap: _pickDate,
@@ -157,13 +168,19 @@ class _ProductivityCalculationScreenState
                   children: [
                     Expanded(
                       flex: 2,
-                      child: _field(_quantity, '施工数量', numeric: true),
+                      child: _field(
+                        _quantity,
+                        strings.text('施工数量'),
+                        numeric: true,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _unit,
-                        decoration: const InputDecoration(labelText: '単位'),
+                        decoration: InputDecoration(
+                          labelText: strings.text('単位'),
+                        ),
                         items: _units
                             .map(
                               (value) => DropdownMenuItem(
@@ -179,25 +196,29 @@ class _ProductivityCalculationScreenState
                 ),
                 _field(
                   _standard,
-                  _mode == _Mode.actual ? '基準歩掛（任意・人工/単位）' : '基準歩掛（人工/単位）',
+                  strings.text(
+                    _mode == _Mode.actual ? '基準歩掛（任意・人工/単位）' : '基準歩掛（人工/単位）',
+                  ),
                   numeric: true,
                 ),
                 _field(
                   _workers,
-                  _mode == _Mode.labor ? '作業人数（任意）' : '作業人数',
+                  strings.text(_mode == _Mode.labor ? '作業人数（任意）' : '作業人数'),
                   numeric: true,
                 ),
                 if (_mode == _Mode.labor)
-                  _field(_days, '作業日数（任意・小数可）', numeric: true),
+                  _field(_days, strings.text('作業日数（任意・小数可）'), numeric: true),
                 if (_mode == _Mode.actual)
-                  _field(_days, '作業日数（小数可）', numeric: true),
+                  _field(_days, strings.text('作業日数（小数可）'), numeric: true),
                 _field(
                   _hours,
-                  _mode == _Mode.actual ? '実作業時間（任意）' : '1日の作業時間（任意）',
+                  strings.text(
+                    _mode == _Mode.actual ? '実作業時間（任意）' : '1日の作業時間（任意）',
+                  ),
                   numeric: true,
                 ),
                 if (_mode == _Mode.actual)
-                  _field(_conditions, '施工条件・備考（任意）', maxLines: 3),
+                  _field(_conditions, strings.text('施工条件・備考（任意）'), maxLines: 3),
               ],
             ),
             const SizedBox(height: 14),
@@ -227,50 +248,64 @@ class _ProductivityCalculationScreenState
   );
 
   Widget _planResult() {
+    final strings = AppLocalizations.of(context);
     final result = _plan;
     return _Section(
-      title: '計算結果',
+      title: strings.text('計算結果'),
       children: result == null
-          ? [const Text('施工数量と基準歩掛を入力してください')]
+          ? [Text(strings.text('施工数量と基準歩掛を入力してください'))]
           : [
-              _resultRow('必要人工', '${_f(result.requiredLabor, 2)} 人工'),
+              _resultRow(
+                strings.text('必要人工'),
+                '${_f(result.requiredLabor, 2)} ${strings.isEnglish ? 'labor-days' : '人工'}',
+              ),
               if (result.requiredDays != null)
-                _resultRow('必要日数', '${_f(result.requiredDays!, 2)} 日'),
+                _resultRow(
+                  strings.text('必要日数'),
+                  '${_f(result.requiredDays!, 2)} ${strings.isEnglish ? 'days' : '日'}',
+                ),
               if (_mode == _Mode.days && result.totalWorkHours != null)
-                _resultRow('延べ作業時間', '${_f(result.totalWorkHours!, 2)} 時間'),
+                _resultRow(
+                  strings.text('延べ作業時間'),
+                  '${_f(result.totalWorkHours!, 2)} ${strings.isEnglish ? 'hours' : '時間'}',
+                ),
             ],
     );
   }
 
   Widget _actualResult() {
+    final strings = AppLocalizations.of(context);
     final result = _actual;
     return _Section(
-      title: '計算結果',
+      title: strings.text('計算結果'),
       children: [
         if (result == null)
-          const Text('施工数量・作業人数・作業日数を入力してください')
+          Text(strings.text('施工数量・作業人数・作業日数を入力してください'))
         else ...[
-          _resultRow('実人工', '${_f(result.actualLabor, 2)} 人工'),
           _resultRow(
-            '実績歩掛',
+            strings.text('実人工'),
+            '${_f(result.actualLabor, 2)} ${strings.isEnglish ? 'labor-days' : '人工'}',
+          ),
+          _resultRow(
+            strings.text('実績歩掛'),
             '${_f(result.actualLaborRate, 3)} 人工/${_unit ?? '単位'}',
           ),
           _resultRow(
-            '1人工生産性',
+            strings.text('1人工生産性'),
             '${_f(result.productivityPerLabor, 2)} ${_unit ?? '単位'}/人工',
           ),
           if (result.laborRateDifference != null) ...[
             const Divider(),
             _resultRow(
-              '基準歩掛',
+              strings.text('基準歩掛'),
               '${_f(_number(_standard)!, 3)} 人工/${_unit ?? '単位'}',
             ),
             _resultRow(
-              '差',
+              strings.text('差'),
               '${result.laborRateDifference! >= 0 ? '+' : ''}${_f(result.laborRateDifference!, 3)} 人工/${_unit ?? '単位'}',
             ),
             _resultRow(
-              '効率差',
+              strings.text('効率差'),
               '${result.efficiencyDifferencePercent! >= 0 ? '+' : ''}${_f(result.efficiencyDifferencePercent!, 1)} %',
             ),
           ],
@@ -281,7 +316,7 @@ class _ProductivityCalculationScreenState
               key: const Key('saveProductivityRecord'),
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: const Text('実績として保存'),
+              label: Text(strings.text('実績として保存')),
             ),
           ),
         ],
@@ -310,13 +345,18 @@ class _ProductivityCalculationScreenState
   }
 
   Future<void> _save() async {
+    final strings = AppLocalizations.of(context);
     final result = _actual;
     if (result == null ||
         _trade == null ||
         _task.text.trim().isEmpty ||
         _site.text.trim().isEmpty ||
         _unit == null) {
-      _message('工種・作業名称・現場名・数量・単位・人数・日数を入力してください');
+      _message(
+        AppLocalizations.of(context).isEnglish
+            ? 'Enter category, work name, site, quantity, unit, workers and days'
+            : '工種・作業名称・現場名・数量・単位・人数・日数を入力してください',
+      );
       return;
     }
     final now = DateTime.now();
@@ -340,26 +380,28 @@ class _ProductivityCalculationScreenState
     );
     try {
       await widget.controller.add(record);
-      if (mounted) _message('歩掛・生産性マスタへ保存しました');
+      if (mounted) {
+        _message(strings.text('歩掛・生産性マスタへ保存しました'));
+      }
     } on ProductivityLimitException catch (error) {
       if (!mounted) return;
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('保存上限に達しました'),
+          title: Text(AppLocalizations.of(context).text('保存上限に達しました')),
           content: Text(
             '現在のプランでは最大${error.limit}件まで保存できます。アルティメット版では100件まで保存できます。',
           ),
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('閉じる'),
+              child: Text(AppLocalizations.of(context).text('閉じる')),
             ),
           ],
         ),
       );
     } catch (_) {
-      _message('実績を保存できませんでした');
+      _message(strings.text('実績を保存できませんでした'));
     }
   }
 

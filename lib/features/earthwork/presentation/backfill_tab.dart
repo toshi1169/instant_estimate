@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/earthwork_calculator.dart';
@@ -102,6 +103,7 @@ class _BackfillTabState extends State<BackfillTab> {
   @override
   Widget build(BuildContext context) {
     final result = _result;
+    final l10n = AppLocalizations.of(context);
     return Form(
       key: _formKey,
       child: ListView(
@@ -111,18 +113,18 @@ class _BackfillTabState extends State<BackfillTab> {
             children: [
               Expanded(
                 child: Text(
-                  '構造物施工後に戻す土量を算出します。',
+                  l10n.text('構造物施工後に戻す土量を算出します。'),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
-              TextButton(onPressed: _clear, child: const Text('入力を消去')),
+              TextButton(onPressed: _clear, child: Text(l10n.text('入力を消去'))),
             ],
           ),
           const SizedBox(height: 12),
           EarthworkNumberField(
             keyName: 'backfillLength',
             controller: _lengthController,
-            label: '長さ',
+            label: l10n.text('長さ'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -130,7 +132,7 @@ class _BackfillTabState extends State<BackfillTab> {
           EarthworkNumberField(
             keyName: 'backfillWidth',
             controller: _widthController,
-            label: '幅',
+            label: l10n.text('幅'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -138,7 +140,7 @@ class _BackfillTabState extends State<BackfillTab> {
           EarthworkNumberField(
             keyName: 'backfillDepth',
             controller: _depthController,
-            label: '深さ',
+            label: l10n.text('深さ'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -146,17 +148,17 @@ class _BackfillTabState extends State<BackfillTab> {
           EarthworkNumberField(
             keyName: 'earthworkStructureVolume',
             controller: _structureController,
-            label: '控除する構造物体積（任意）',
+            label: l10n.text('控除する構造物体積（任意）'),
             suffix: 'm³',
-            helperText: '入力しない場合は0m³',
+            helperText: l10n.text('入力しない場合は0m³'),
             validator: validateNonNegativeEarthworkNumber,
           ),
           const SizedBox(height: 12),
           EarthworkNumberField(
             keyName: 'backfillCompactionFactor',
             controller: _compactionController,
-            label: '締固め係数',
-            helperText: '初期参考値 0.90（現場条件に合わせて変更可能）',
+            label: l10n.text('締固め係数'),
+            helperText: l10n.text('初期参考値 0.90（現場条件に合わせて変更可能）'),
             validator: validatePositiveEarthworkNumber,
           ),
           const SizedBox(height: 18),
@@ -164,7 +166,7 @@ class _BackfillTabState extends State<BackfillTab> {
             key: const Key('calculateBackfill'),
             onPressed: _calculate,
             icon: const Icon(Icons.calculate_outlined),
-            label: const Text('計算する'),
+            label: Text(l10n.text('計算する')),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -176,7 +178,7 @@ class _BackfillTabState extends State<BackfillTab> {
           if (result != null) ...[
             const SizedBox(height: 20),
             EarthworkResultCard(
-              label: '掘削体積',
+              label: l10n.text('掘削体積'),
               value: '${formatEarthworkNumber(result.excavationVolume)} m³',
               onSend: () => _send(
                 name: '掘削',
@@ -187,7 +189,7 @@ class _BackfillTabState extends State<BackfillTab> {
               ),
             ),
             EarthworkResultCard(
-              label: '埋戻し対象体積',
+              label: l10n.text('埋戻し対象体積'),
               value: '${formatEarthworkNumber(result.backfillTargetVolume)} m³',
               note: '掘削体積 − 控除する構造物体積',
               onSend: () => _send(
@@ -202,7 +204,7 @@ class _BackfillTabState extends State<BackfillTab> {
               ),
             ),
             EarthworkResultCard(
-              label: '必要土量',
+              label: l10n.text('必要土量'),
               value: '${formatEarthworkNumber(result.requiredBankVolume)} m³',
               note:
                   '埋戻し対象体積 ÷ 締固め係数 ${formatEarthworkNumber(result.compactionFactor)}',
@@ -218,7 +220,7 @@ class _BackfillTabState extends State<BackfillTab> {
               ),
             ),
             EarthworkResultCard(
-              label: result.hasSurplus ? '余剰土量' : '不足土量',
+              label: l10n.text(result.hasSurplus ? '余剰土量' : '不足土量'),
               value: '${formatEarthworkNumber(result.balanceVolume.abs())} m³',
               onSend: () => _send(
                 name: result.hasSurplus ? '余剰土' : '不足土',

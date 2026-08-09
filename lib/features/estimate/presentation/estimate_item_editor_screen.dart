@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
@@ -141,6 +142,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   }
 
   Future<void> _selectEstimate() async {
+    final l10n = AppLocalizations.of(context);
     final selected = await showModalBottomSheet<EstimateDocument>(
       context: context,
       showDragHandle: true,
@@ -153,11 +155,11 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
               child: Row(
                 children: [
                   Text(
-                    '追加先の見積を選択',
+                    l10n.text('追加先の見積を選択'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const Spacer(),
-                  Text('${widget.estimates.length}件'),
+                  Text(l10n.itemCount(widget.estimates.length)),
                 ],
               ),
             ),
@@ -180,7 +182,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                     title: Text(estimate.info.displayName),
                     subtitle: Text(
                       estimate.info.siteName.isEmpty
-                          ? '${estimate.items.length}件の明細'
+                          ? l10n.estimateDetails(estimate.items.length)
                           : estimate.info.siteName,
                     ),
                     onTap: () => Navigator.of(context).pop(estimate),
@@ -200,6 +202,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   }
 
   Future<void> _selectUnitPriceMaster() async {
+    final l10n = AppLocalizations.of(context);
     var filtered = widget.unitPriceMasters;
     final selected = await showModalBottomSheet<UnitPriceMaster>(
       context: context,
@@ -216,12 +219,12 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   child: Row(
                     children: [
                       Text(
-                        '単価マスタから選択',
+                        l10n.text('単価マスタから選択'),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const Spacer(),
                       Text(
-                        '${filtered.length} / ${widget.unitPriceMasters.length}件',
+                        '${filtered.length} / ${l10n.itemCount(widget.unitPriceMasters.length)}',
                       ),
                     ],
                   ),
@@ -241,17 +244,17 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                             .toList(growable: false);
                       });
                     },
-                    decoration: const InputDecoration(
-                      hintText: '単価を検索',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: l10n.text('単価を検索'),
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
                 const Divider(height: 1),
                 Expanded(
                   child: filtered.isEmpty
-                      ? const Center(child: Text('一致する単価がありません'))
+                      ? Center(child: Text(l10n.text('一致する単価がありません')))
                       : ListView.separated(
                           key: const Key('selectUnitPriceMasterList'),
                           padding: const EdgeInsets.all(12),
@@ -272,7 +275,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                               ),
                               trailing: Text(
                                 price.unitPrice == null
-                                    ? '未入力'
+                                    ? l10n.text('未入力')
                                     : '¥ ${_displayAmount(price.unitPrice!)}',
                               ),
                               onTap: () => Navigator.of(context).pop(price),
@@ -298,6 +301,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   }
 
   Future<void> _selectPastUnitPrice() async {
+    final l10n = AppLocalizations.of(context);
     final allCandidates = _pastUnitPrices;
     var filtered = allCandidates;
     final selected = await showModalBottomSheet<_PastUnitPriceCandidate>(
@@ -315,11 +319,13 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   child: Row(
                     children: [
                       Text(
-                        '過去の見積から選択',
+                        l10n.text('過去の見積から選択'),
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const Spacer(),
-                      Text('${filtered.length} / ${allCandidates.length}件'),
+                      Text(
+                        '${filtered.length} / ${l10n.itemCount(allCandidates.length)}',
+                      ),
                     ],
                   ),
                 ),
@@ -335,17 +341,17 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                             .toList(growable: false);
                       });
                     },
-                    decoration: const InputDecoration(
-                      hintText: '過去の名称・工種・現場などを検索',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: l10n.text('過去の名称・工種・現場などを検索'),
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
                 const Divider(height: 1),
                 Expanded(
                   child: filtered.isEmpty
-                      ? const Center(child: Text('一致する過去明細がありません'))
+                      ? Center(child: Text(l10n.text('一致する過去明細がありません')))
                       : ListView.separated(
                           key: const Key('selectPastUnitPriceList'),
                           padding: const EdgeInsets.all(12),
@@ -388,8 +394,11 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.isEditing ? '見積明細を編集' : '見積明細へ追加')),
+      appBar: AppBar(
+        title: Text(l10n.text(widget.isEditing ? '見積明細を編集' : '見積明細へ追加')),
+      ),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -400,7 +409,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.description_outlined),
-                  title: const Text('追加先'),
+                  title: Text(l10n.text('追加先')),
                   subtitle: Text(
                     _selectedEstimateTitle,
                     key: const Key('selectedEstimateDestination'),
@@ -410,16 +419,24 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                     onPressed: !widget.isEditing && widget.estimates.length > 1
                         ? _selectEstimate
                         : null,
-                    child: const Text('変更'),
+                    child: Text(l10n.text('変更')),
                   ),
                 ),
               ),
               const SizedBox(height: 12),
-              _field(_trade, '工種', key: const Key('estimateTradeField')),
-              _field(_name, '名称', key: const Key('estimateNameField')),
+              _field(
+                _trade,
+                l10n.text('工種'),
+                key: const Key('estimateTradeField'),
+              ),
+              _field(
+                _name,
+                l10n.text('名称'),
+                key: const Key('estimateNameField'),
+              ),
               _field(
                 _specification,
-                '仕様',
+                l10n.text('仕様'),
                 key: const Key('estimateSpecificationField'),
                 maxLines: 2,
               ),
@@ -430,7 +447,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                     flex: 2,
                     child: _numberField(
                       _quantity,
-                      '数量',
+                      l10n.text('数量'),
                       key: const Key('estimateQuantityField'),
                     ),
                   ),
@@ -438,7 +455,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   Expanded(
                     child: _field(
                       _unit,
-                      '単位',
+                      l10n.text('単位'),
                       key: const Key('estimateUnitField'),
                     ),
                   ),
@@ -452,7 +469,9 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 icon: const Icon(Icons.price_check_outlined),
                 label: Text(
                   widget.unitPriceMasters.isEmpty
-                      ? '単価マスタ（登録なし）'
+                      ? l10n.text('単価マスタ（登録なし）')
+                      : l10n.isEnglish
+                      ? 'Select from unit price master (${widget.unitPriceMasters.length})'
                       : '単価マスタから選択（${widget.unitPriceMasters.length}件）',
                 ),
               ),
@@ -465,23 +484,25 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 icon: const Icon(Icons.history),
                 label: Text(
                   _pastUnitPrices.isEmpty
-                      ? '過去の見積（履歴なし）'
+                      ? l10n.text('過去の見積（履歴なし）')
+                      : l10n.isEnglish
+                      ? 'Select from past estimates (${_pastUnitPrices.length})'
                       : '過去の見積から選択（${_pastUnitPrices.length}件）',
                 ),
               ),
               const SizedBox(height: 12),
               _numberField(
                 _unitPrice,
-                '単価',
+                l10n.text('単価'),
                 key: const Key('estimateUnitPriceField'),
                 prefixText: '¥ ',
               ),
               ListenableBuilder(
                 listenable: Listenable.merge([_quantity, _unitPrice]),
                 builder: (context, _) => InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: '金額（数量 × 単価）',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.text('金額（数量 × 単価）'),
+                    border: const OutlineInputBorder(),
                   ),
                   child: Text(
                     _amount == null ? '—' : '¥ ${_displayAmount(_amount!)}',
@@ -506,9 +527,11 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                             () => _saveToUnitPriceMaster = value ?? false,
                           )
                         : null,
-                    title: const Text('この内容を単価マスタへ登録'),
+                    title: Text(l10n.text('この内容を単価マスタへ登録')),
                     subtitle: Text(
-                      canSave ? '次回から単価マスタで検索・選択できます' : '名称と単価を入力すると登録できます',
+                      l10n.text(
+                        canSave ? '次回から単価マスタで検索・選択できます' : '名称と単価を入力すると登録できます',
+                      ),
                     ),
                   );
                 },
@@ -516,7 +539,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
               const SizedBox(height: 16),
               _field(
                 _description,
-                '摘要',
+                l10n.text('摘要'),
                 key: const Key('estimateDescriptionField'),
                 maxLines: 3,
               ),
@@ -524,7 +547,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 ExpansionTile(
                   key: const Key('calculationBasisTile'),
                   tilePadding: EdgeInsets.zero,
-                  title: const Text('計算根拠'),
+                  title: Text(l10n.text('計算根拠')),
                   children: [
                     Align(
                       alignment: Alignment.centerLeft,
@@ -539,7 +562,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   key: const Key('saveEstimateChanges'),
                   onPressed: () =>
                       _complete(EstimateItemEditorAction.continueCalculating),
-                  child: const Text('変更を保存'),
+                  child: Text(l10n.text('変更を保存')),
                 )
               else ...[
                 FilledButton(
@@ -547,7 +570,9 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   onPressed: () =>
                       _complete(EstimateItemEditorAction.continueCalculating),
                   child: Text(
-                    widget.showOpenEstimateAction ? '追加して続ける' : '見積明細へ追加',
+                    l10n.text(
+                      widget.showOpenEstimateAction ? '追加して続ける' : '見積明細へ追加',
+                    ),
                   ),
                 ),
                 if (widget.showOpenEstimateAction) ...[
@@ -556,7 +581,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                     key: const Key('addEstimateAndOpen'),
                     onPressed: () =>
                         _complete(EstimateItemEditorAction.openEstimate),
-                    child: const Text('追加して見積を開く'),
+                    child: Text(l10n.text('追加して見積を開く')),
                   ),
                 ],
               ],

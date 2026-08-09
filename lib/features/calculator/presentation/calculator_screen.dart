@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/domain/app_access_plan.dart';
 import '../../../core/domain/angle_unit.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
@@ -587,19 +588,20 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   Future<bool> _confirmHistoryDeletion() async {
     if (!widget.settings.confirmHistoryDeletion) return true;
+    final strings = AppLocalizations.of(context);
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('履歴を削除'),
-            content: const Text('この計算履歴を削除しますか？'),
+            title: Text(strings.text('履歴を削除')),
+            content: Text(strings.text('この計算履歴を削除しますか？')),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('キャンセル'),
+                child: Text(strings.text('キャンセル')),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('削除'),
+                child: Text(strings.text('削除')),
               ),
             ],
           ),
@@ -625,10 +627,14 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   void _showMessage(String message) {
     if (!mounted) return;
+    final localizedMessage = AppLocalizations.of(context).text(message);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+        SnackBar(
+          content: Text(localizedMessage),
+          duration: const Duration(seconds: 2),
+        ),
       );
   }
 
@@ -649,13 +655,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                   messenger.hideCurrentSnackBar();
                   unawaited(_openActiveEstimate());
                 },
-                child: const Text('見積を開く'),
+                child: Text(AppLocalizations.of(context).text('見積を開く')),
               ),
             ],
           ),
           action: SnackBarAction(
             key: const Key('undoEstimateItemAdd'),
-            label: '元に戻す',
+            label: AppLocalizations.of(context).text('元に戻す'),
             onPressed: () async {
               try {
                 await _estimateController.delete(itemId);
@@ -1177,6 +1183,7 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -1189,15 +1196,21 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('見積へ送る', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              strings.text('見積へ送る'),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
-            const Text('送信内容'),
+            Text(strings.text('送信内容')),
             const SizedBox(height: 8),
             SegmentedButton<_EstimateContent>(
               key: const Key('estimateContentSelector'),
               segments: [
                 for (final content in _EstimateContent.values)
-                  ButtonSegment(value: content, label: Text(content.label)),
+                  ButtonSegment(
+                    value: content,
+                    label: Text(strings.text(content.label)),
+                  ),
               ],
               selected: {_content},
               onSelectionChanged: (selection) {
@@ -1205,7 +1218,7 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
               },
             ),
             const SizedBox(height: 16),
-            const Text('送信先'),
+            Text(strings.text('送信先')),
             const SizedBox(height: 8),
             DropdownButtonFormField<_EstimateDestination>(
               key: const Key('estimateDestinationSelector'),
@@ -1214,7 +1227,7 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
                 for (final destination in _EstimateDestination.values)
                   DropdownMenuItem(
                     value: destination,
-                    child: Text(destination.label),
+                    child: Text(strings.text(destination.label)),
                   ),
               ],
               onChanged: (value) {
@@ -1222,7 +1235,10 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
               },
             ),
             const SizedBox(height: 16),
-            Text('送信内容の確認', style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              strings.text('送信内容の確認'),
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 6),
             DecoratedBox(
               decoration: BoxDecoration(
@@ -1243,7 +1259,7 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('キャンセル'),
+                    child: Text(strings.text('キャンセル')),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1258,7 +1274,7 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
                         ),
                       );
                     },
-                    child: const Text('次へ'),
+                    child: Text(strings.text('次へ')),
                   ),
                 ),
               ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../application/estimate_controller.dart';
 import '../domain/unit_price_master.dart';
 import 'unit_price_master_editor_screen.dart';
@@ -28,19 +29,20 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('単価マスタ')),
+      appBar: AppBar(title: Text(l10n.unitPriceMaster)),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,
           builder: (context, _) {
             final allPrices = controller.unitPriceMasters;
             if (allPrices.isEmpty) {
-              return const Center(
+              return Center(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
+                  padding: const EdgeInsets.all(32),
                   child: Text(
-                    '登録された単価はありません\n右下の「単価を登録」から追加できます',
+                    l10n.text('登録された単価はありません\n右下の「単価を登録」から追加できます'),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -60,12 +62,12 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
                     controller: _search,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
-                      hintText: '工種・名称・仕様・単位・摘要を検索',
+                      hintText: l10n.text('工種・名称・仕様・単位・摘要を検索'),
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _search.text.isEmpty
                           ? null
                           : IconButton(
-                              tooltip: '検索をクリア',
+                              tooltip: l10n.text('検索をクリア'),
                               onPressed: () {
                                 _search.clear();
                                 setState(() {});
@@ -83,12 +85,14 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
                   ),
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: Text('${prices.length} / ${allPrices.length}件'),
+                    child: Text(
+                      l10n.itemCountWithLimit(prices.length, allPrices.length),
+                    ),
                   ),
                 ),
                 Expanded(
                   child: prices.isEmpty
-                      ? const Center(child: Text('一致する単価がありません'))
+                      ? Center(child: Text(l10n.text('一致する単価がありません')))
                       : ListView.separated(
                           key: const Key('unitPriceMasterList'),
                           padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
@@ -106,7 +110,7 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
                                   children: [
                                     Text(
                                       price.unitPrice == null
-                                          ? '未入力'
+                                          ? l10n.text('未入力')
                                           : '¥ ${_displayPrice(price.unitPrice!)}',
                                       style: Theme.of(
                                         context,
@@ -115,14 +119,14 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
                                     PopupMenuButton<_UnitPriceAction>(
                                       onSelected: (action) =>
                                           _handleAction(context, price, action),
-                                      itemBuilder: (_) => const [
+                                      itemBuilder: (_) => [
                                         PopupMenuItem(
                                           value: _UnitPriceAction.edit,
-                                          child: Text('編集'),
+                                          child: Text(l10n.text('編集')),
                                         ),
                                         PopupMenuItem(
                                           value: _UnitPriceAction.delete,
-                                          child: Text('削除'),
+                                          child: Text(l10n.delete),
                                         ),
                                       ],
                                     ),
@@ -143,7 +147,7 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
         key: const Key('addUnitPriceMaster'),
         onPressed: () => _add(context),
         icon: const Icon(Icons.add),
-        label: const Text('単価を登録'),
+        label: Text(AppLocalizations.of(context).text('単価を登録')),
       ),
     );
   }
@@ -156,15 +160,19 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
     try {
       await controller.addUnitPriceMaster(draft);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('単価を登録しました')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).text('単価を登録しました')),
+          ),
+        );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('単価を登録できませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).text('単価を登録できませんでした')),
+          ),
+        );
       }
     }
   }
@@ -182,15 +190,19 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
     try {
       await controller.updateUnitPriceMaster(price.id, draft);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('単価を更新しました')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).text('単価を更新しました')),
+          ),
+        );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('単価を更新できませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).text('単価を更新できませんでした')),
+          ),
+        );
       }
     }
   }
@@ -207,16 +219,20 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('単価を削除'),
-            content: Text('「${price.name}」を単価マスタから削除しますか？'),
+            title: Text(AppLocalizations.of(context).text('単価を削除')),
+            content: Text(
+              AppLocalizations.of(context).isEnglish
+                  ? 'Delete "${price.name}" from the unit price master?'
+                  : '「${price.name}」を単価マスタから削除しますか？',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('キャンセル'),
+                child: Text(AppLocalizations.of(context).cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('削除'),
+                child: Text(AppLocalizations.of(context).delete),
               ),
             ],
           ),
@@ -225,15 +241,21 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
         try {
           await controller.deleteUnitPriceMaster(price.id);
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('単価を削除しました')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context).text('単価を削除しました')),
+              ),
+            );
           }
         } catch (_) {
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('単価を削除できませんでした')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context).text('単価を削除できませんでした'),
+                ),
+              ),
+            );
           }
         }
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../domain/unit_price_master.dart';
 
 class UnitPriceMasterEditorScreen extends StatefulWidget {
@@ -61,26 +62,29 @@ class _UnitPriceMasterEditorScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.isEditing ? '単価を編集' : '単価を登録')),
+      appBar: AppBar(
+        title: Text(l10n.text(widget.isEditing ? '単価を編集' : '単価を登録')),
+      ),
       body: SafeArea(
         child: Form(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
-              _field(_trade, '工種', const Key('unitPriceTradeField')),
+              _field(_trade, l10n.text('工種'), const Key('unitPriceTradeField')),
               _field(
                 _name,
-                '名称（必須）',
+                l10n.text('名称（必須）'),
                 const Key('unitPriceNameField'),
                 validator: (value) => value == null || value.trim().isEmpty
-                    ? '名称を入力してください'
+                    ? l10n.text('名称を入力してください')
                     : null,
               ),
               _field(
                 _specification,
-                '仕様',
+                l10n.text('仕様'),
                 const Key('unitPriceSpecificationField'),
                 maxLines: 2,
               ),
@@ -88,14 +92,18 @@ class _UnitPriceMasterEditorScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: _field(_unit, '単位', const Key('unitPriceUnitField')),
+                    child: _field(
+                      _unit,
+                      l10n.text('単位'),
+                      const Key('unitPriceUnitField'),
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     flex: 2,
                     child: _field(
                       _unitPrice,
-                      '単価',
+                      l10n.text('単価'),
                       const Key('unitPriceValueField'),
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -108,7 +116,7 @@ class _UnitPriceMasterEditorScreenState
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) return null;
                         return _parseNumber(value) == null
-                            ? '数値を入力してください'
+                            ? l10n.text('数値を入力してください')
                             : null;
                       },
                     ),
@@ -117,7 +125,7 @@ class _UnitPriceMasterEditorScreenState
               ),
               _field(
                 _description,
-                '摘要',
+                l10n.text('摘要'),
                 const Key('unitPriceDescriptionField'),
                 maxLines: 3,
               ),
@@ -125,7 +133,7 @@ class _UnitPriceMasterEditorScreenState
               FilledButton(
                 key: const Key('saveUnitPriceMaster'),
                 onPressed: _save,
-                child: Text(widget.isEditing ? '変更を保存' : '単価マスタへ登録'),
+                child: Text(l10n.text(widget.isEditing ? '変更を保存' : '単価マスタへ登録')),
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../application/estimate_controller.dart';
 import '../application/estimate_excel_export.dart';
 import '../application/estimate_pdf_export.dart';
@@ -26,6 +27,7 @@ class EstimateItemsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: ListenableBuilder(
@@ -35,25 +37,27 @@ class EstimateItemsScreen extends StatelessWidget {
         actions: [
           IconButton(
             key: const Key('printEstimatePdf'),
-            tooltip: 'A4横で印刷',
+            tooltip: l10n.isEnglish ? 'Print in A4 landscape' : 'A4横で印刷',
             onPressed: () => _printEstimate(context),
             icon: const Icon(Icons.print_outlined),
           ),
           IconButton(
             key: const Key('exportEstimateExcel'),
-            tooltip: 'A4横のExcelを出力',
+            tooltip: l10n.isEnglish
+                ? 'Export A4 landscape Excel'
+                : 'A4横のExcelを出力',
             onPressed: () => _exportExcel(context),
             icon: const Icon(Icons.file_download_outlined),
           ),
           IconButton(
             key: const Key('copyEstimateTable'),
-            tooltip: 'Excel用に表をコピー',
+            tooltip: l10n.isEnglish ? 'Copy table for Excel' : 'Excel用に表をコピー',
             onPressed: () => _copyTable(context),
             icon: const Icon(Icons.table_view_outlined),
           ),
           IconButton(
             key: const Key('editEstimateInfo'),
-            tooltip: '見積基本情報',
+            tooltip: l10n.text('見積基本情報'),
             onPressed: () => _editInfo(context),
             icon: const Icon(Icons.edit_note_outlined),
           ),
@@ -63,7 +67,7 @@ class EstimateItemsScreen extends StatelessWidget {
         key: const Key('addEstimateItemDirect'),
         onPressed: () => _addItem(context),
         icon: const Icon(Icons.add),
-        label: const Text('明細を追加'),
+        label: Text(l10n.text('明細を追加')),
       ),
       body: SafeArea(
         child: ListenableBuilder(
@@ -88,9 +92,9 @@ class EstimateItemsScreen extends StatelessWidget {
                 const Divider(height: 1),
                 Expanded(
                   child: controller.items.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
-                            '見積明細はまだありません',
+                            l10n.text('見積明細はまだありません'),
                             key: Key('emptyEstimateItems'),
                           ),
                         )
@@ -123,9 +127,11 @@ class EstimateItemsScreen extends StatelessWidget {
 
   Future<void> _printEstimate(BuildContext context) async {
     if (controller.items.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('印刷する明細がありません')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).text('印刷する明細がありません')),
+        ),
+      );
       return;
     }
     try {
@@ -138,18 +144,24 @@ class EstimateItemsScreen extends StatelessWidget {
       );
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('印刷用PDFを作成できませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).text('印刷用PDFを作成できませんでした'),
+            ),
+          ),
+        );
       }
     }
   }
 
   Future<void> _exportExcel(BuildContext context) async {
     if (controller.items.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('出力する明細がありません')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).text('出力する明細がありません')),
+        ),
+      );
       return;
     }
     try {
@@ -176,18 +188,24 @@ class EstimateItemsScreen extends StatelessWidget {
       );
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Excelファイルを作成できませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).text('Excelファイルを作成できませんでした'),
+            ),
+          ),
+        );
       }
     }
   }
 
   Future<void> _copyTable(BuildContext context) async {
     if (controller.items.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('コピーする明細がありません')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).text('コピーする明細がありません')),
+        ),
+      );
       return;
     }
     try {
@@ -196,14 +214,24 @@ class EstimateItemsScreen extends StatelessWidget {
       );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('見積明細をコピーしました（${controller.items.length}件）')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).isEnglish
+                  ? 'Copied ${controller.items.length} estimate details'
+                  : '見積明細をコピーしました（${controller.items.length}件）',
+            ),
+          ),
         );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('見積明細をコピーできませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).text('見積明細をコピーできませんでした'),
+            ),
+          ),
+        );
       }
     }
   }
@@ -306,9 +334,11 @@ class EstimateItemsScreen extends StatelessWidget {
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('見積明細を保存できませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).text('見積明細を保存できませんでした')),
+          ),
+        );
       }
     }
   }
@@ -323,15 +353,21 @@ class EstimateItemsScreen extends StatelessWidget {
     try {
       await controller.updateInfo(info);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('見積基本情報を保存しました')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).text('見積基本情報を保存しました')),
+          ),
+        );
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('見積基本情報を保存できませんでした')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).text('見積基本情報を保存できませんでした'),
+            ),
+          ),
+        );
       }
     }
   }
@@ -374,9 +410,13 @@ class EstimateItemsScreen extends StatelessWidget {
           }
         } catch (_) {
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積明細を複製できませんでした')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context).text('見積明細を複製できませんでした'),
+                ),
+              ),
+            );
           }
         }
       case _EstimateItemAction.edit:
@@ -412,27 +452,33 @@ class EstimateItemsScreen extends StatelessWidget {
           }
         } catch (_) {
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積明細を更新できませんでした')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context).text('見積明細を更新できませんでした'),
+                ),
+              ),
+            );
           }
         }
       case _EstimateItemAction.delete:
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('見積明細を削除'),
+            title: Text(AppLocalizations.of(context).text('見積明細を削除')),
             content: Text(
-              '「${item.name.isEmpty ? '名称未入力' : item.name}」を削除しますか？',
+              AppLocalizations.of(context).isEnglish
+                  ? 'Delete "${item.name.isEmpty ? AppLocalizations.of(context).text('名称未入力') : item.name}"?'
+                  : '「${item.name.isEmpty ? '名称未入力' : item.name}」を削除しますか？',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('キャンセル'),
+                child: Text(AppLocalizations.of(context).cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('削除'),
+                child: Text(AppLocalizations.of(context).delete),
               ),
             ],
           ),
@@ -441,15 +487,21 @@ class EstimateItemsScreen extends StatelessWidget {
         try {
           await controller.delete(item.id);
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積明細を削除しました')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context).text('見積明細を削除しました')),
+              ),
+            );
           }
         } catch (_) {
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('見積明細を削除できませんでした')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context).text('見積明細を削除できませんでした'),
+                ),
+              ),
+            );
           }
         }
     }
@@ -469,28 +521,41 @@ class EstimateItemsScreen extends StatelessWidget {
     required String message,
     required String itemId,
   }) {
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 5),
-          content: Text('$message（${controller.items.length}件）'),
+          content: Text(
+            l10n.isEnglish
+                ? '${l10n.text(message)} (${controller.items.length} details)'
+                : '$message（${controller.items.length}件）',
+          ),
           action: SnackBarAction(
             key: const Key('undoEstimateItemAdd'),
-            label: '元に戻す',
+            label: AppLocalizations.of(context).text('元に戻す'),
             onPressed: () async {
               try {
                 await controller.delete(itemId);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('直前の追加を取り消しました')),
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.of(context).text('直前の追加を取り消しました'),
+                      ),
+                    ),
                   );
                 }
               } catch (_) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('追加を取り消せませんでした')),
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.of(context).text('追加を取り消せませんでした'),
+                      ),
+                    ),
                   );
                 }
               }
@@ -523,13 +588,14 @@ class _EstimateTotalsSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final textTheme = Theme.of(context).textTheme;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 2),
-          child: Text('$itemCount件'),
+          child: Text(l10n.itemCount(itemCount)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -540,7 +606,7 @@ class _EstimateTotalsSummary extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
                 child: Text(
-                  '税抜合計  ¥ ${_money(subtotal.toDouble())}',
+                  '${l10n.text('税抜合計')}  ¥ ${_money(subtotal.toDouble())}',
                   key: const Key('estimateSubtotalAmount'),
                   style: textTheme.bodyMedium,
                 ),
@@ -550,7 +616,7 @@ class _EstimateTotalsSummary extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
                 child: Text(
-                  '消費税（10%）  ¥ ${_money(tax.toDouble())}',
+                  '${l10n.text('消費税（10%）')}  ¥ ${_money(tax.toDouble())}',
                   key: const Key('estimateTaxAmount'),
                   style: textTheme.bodyMedium,
                 ),
@@ -560,7 +626,7 @@ class _EstimateTotalsSummary extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerRight,
                 child: Text(
-                  '税込総額  ¥ ${_money(grandTotal.toDouble())}',
+                  '${l10n.text('税込総額')}  ¥ ${_money(grandTotal.toDouble())}',
                   key: const Key('estimateGrandTotalAmount'),
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -582,11 +648,12 @@ class _EstimateInfoSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final details = <String>[
-      if (info.siteName.isNotEmpty) '現場：${info.siteName}',
-      if (info.clientName.isNotEmpty) '宛名：${info.clientName}',
+      if (info.siteName.isNotEmpty) '${l10n.text('現場')}：${info.siteName}',
+      if (info.clientName.isNotEmpty) '${l10n.text('宛名')}：${info.clientName}',
       if (info.estimateNumber.isNotEmpty) 'No. ${info.estimateNumber}',
-      '作成日：${_date(info.createdDate)}',
+      '${l10n.text('作成日')}：${_date(info.createdDate)}',
     ];
     return Card(
       key: const Key('estimateInfoSummary'),
@@ -599,7 +666,7 @@ class _EstimateInfoSummary extends StatelessWidget {
             Text(details.join('　')),
             if (info.notes.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text('備考：${info.notes}'),
+              Text('${l10n.text('備考')}：${info.notes}'),
             ],
           ],
         ),
@@ -630,7 +697,8 @@ class _EstimateItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = item.name.isEmpty ? '名称未入力' : item.name;
+    final l10n = AppLocalizations.of(context);
+    final title = item.name.isEmpty ? l10n.text('名称未入力') : item.name;
     return Card(
       key: Key('estimateItem$index'),
       elevation: 0,
@@ -652,26 +720,26 @@ class _EstimateItemCard extends StatelessWidget {
                 PopupMenuButton<_EstimateItemAction>(
                   key: Key('estimateItemMenu$index'),
                   onSelected: onAction,
-                  itemBuilder: (_) => const [
+                  itemBuilder: (_) => [
                     PopupMenuItem(
                       value: _EstimateItemAction.duplicate,
                       child: ListTile(
                         leading: Icon(Icons.copy_outlined),
-                        title: Text('複製'),
+                        title: Text(l10n.text('複製')),
                       ),
                     ),
                     PopupMenuItem(
                       value: _EstimateItemAction.edit,
                       child: ListTile(
                         leading: Icon(Icons.edit_outlined),
-                        title: Text('編集'),
+                        title: Text(l10n.text('編集')),
                       ),
                     ),
                     PopupMenuItem(
                       value: _EstimateItemAction.delete,
                       child: ListTile(
                         leading: Icon(Icons.delete_outline),
-                        title: Text('削除'),
+                        title: Text(l10n.delete),
                       ),
                     ),
                   ],
@@ -689,14 +757,16 @@ class _EstimateItemCard extends StatelessWidget {
                   child: Text('${_number(item.quantity)} ${item.unit}'.trim()),
                 ),
                 Text(
-                  item.amount == null ? '金額未設定' : '¥ ${_money(item.amount!)}',
+                  item.amount == null
+                      ? l10n.text('金額未設定')
+                      : '¥ ${_money(item.amount!)}',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
             if (item.description.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text('摘要：${item.description}'),
+              Text('${l10n.text('摘要')}：${item.description}'),
             ],
           ],
         ),
@@ -720,6 +790,7 @@ class _EstimateGroupSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
       key: Key('estimateGroup$groupIndex'),
@@ -744,7 +815,7 @@ class _EstimateGroupSection extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text('${group.items.length}件'),
+                  Text(l10n.itemCount(group.items.length)),
                 ],
               ),
             ),
@@ -762,10 +833,10 @@ class _EstimateGroupSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    '工種小計',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    l10n.text('工種小計'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
                 Text(
@@ -783,7 +854,7 @@ class _EstimateGroupSection extends StatelessWidget {
 }
 
 String _number(double? value) {
-  if (value == null) return '数量未設定';
+  if (value == null) return '—';
   if (value == value.truncateToDouble()) return value.toInt().toString();
   return value.toString();
 }

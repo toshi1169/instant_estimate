@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/transport_vehicle.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/earthwork_calculator.dart';
@@ -147,6 +148,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
   Widget build(BuildContext context) {
     final result = _result;
     final geometry = result?.geometry;
+    final l10n = AppLocalizations.of(context);
     return Form(
       key: _formKey,
       child: ListView(
@@ -156,18 +158,18 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
             children: [
               Expanded(
                 child: Text(
-                  '完成形状から必要な搬入土量を算出します。',
+                  l10n.text('完成形状から必要な搬入土量を算出します。'),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
-              TextButton(onPressed: _clear, child: const Text('入力を消去')),
+              TextButton(onPressed: _clear, child: Text(l10n.text('入力を消去'))),
             ],
           ),
           const SizedBox(height: 12),
           EarthworkNumberField(
             keyName: 'embankmentLength',
             controller: _lengthController,
-            label: '天端の長さ',
+            label: l10n.text('天端の長さ'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -175,7 +177,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
           EarthworkNumberField(
             keyName: 'embankmentWidth',
             controller: _widthController,
-            label: '天端の幅',
+            label: l10n.text('天端の幅'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -183,7 +185,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
           EarthworkNumberField(
             keyName: 'embankmentHeight',
             controller: _heightController,
-            label: '盛土高さ',
+            label: l10n.text('盛土高さ'),
             suffix: 'm',
             validator: validatePositiveEarthworkNumber,
           ),
@@ -191,8 +193,8 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
           SwitchListTile(
             key: const Key('embankmentHasSlope'),
             contentPadding: EdgeInsets.zero,
-            title: const Text('法面あり'),
-            subtitle: const Text('OFFの場合は直方体として計算'),
+            title: Text(l10n.text('法面あり')),
+            subtitle: Text(l10n.text('OFFの場合は直方体として計算')),
             value: _hasSlope,
             onChanged: (value) => setState(() {
               _hasSlope = value;
@@ -204,12 +206,15 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
             DropdownButtonFormField<String>(
               key: const Key('embankmentSlopePreset'),
               initialValue: _slopePreset,
-              decoration: const InputDecoration(labelText: '法勾配（垂直1：水平）'),
-              items: const [
-                DropdownMenuItem(value: '1.5', child: Text('1 : 1.5')),
-                DropdownMenuItem(value: '1.8', child: Text('1 : 1.8')),
-                DropdownMenuItem(value: '2.0', child: Text('1 : 2.0')),
-                DropdownMenuItem(value: 'custom', child: Text('任意入力')),
+              decoration: InputDecoration(labelText: l10n.text('法勾配（垂直1：水平）')),
+              items: [
+                const DropdownMenuItem(value: '1.5', child: Text('1 : 1.5')),
+                const DropdownMenuItem(value: '1.8', child: Text('1 : 1.8')),
+                const DropdownMenuItem(value: '2.0', child: Text('1 : 2.0')),
+                DropdownMenuItem(
+                  value: 'custom',
+                  child: Text(l10n.text('任意入力')),
+                ),
               ],
               onChanged: (value) => setState(() {
                 _slopePreset = value ?? '1.5';
@@ -221,14 +226,14 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
               EarthworkNumberField(
                 keyName: 'embankmentCustomSlope',
                 controller: _customSlopeController,
-                label: '任意の水平比',
-                helperText: '例：1 : 1.7 の場合は 1.7',
+                label: l10n.text('任意の水平比'),
+                helperText: l10n.text('例：1 : 1.7 の場合は 1.7'),
                 validator: validatePositiveEarthworkNumber,
               ),
             ],
             const SizedBox(height: 6),
             Text(
-              '※候補は参考値です。設計図書や現場条件に合わせて確認・変更してください。',
+              l10n.text('※候補は参考値です。設計図書や現場条件に合わせて確認・変更してください。'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -236,16 +241,16 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
           EarthworkNumberField(
             keyName: 'embankmentCompactionFactor',
             controller: _compactionController,
-            label: '締固め係数',
-            helperText: '初期参考値 0.90',
+            label: l10n.text('締固め係数'),
+            helperText: l10n.text('初期参考値 0.90'),
             validator: validatePositiveEarthworkNumber,
           ),
           const SizedBox(height: 12),
           EarthworkNumberField(
             keyName: 'embankmentLooseFactor',
             controller: _looseFactorController,
-            label: '搬入時のほぐし係数',
-            helperText: '初期参考値 1.25',
+            label: l10n.text('搬入時のほぐし係数'),
+            helperText: l10n.text('初期参考値 1.25'),
             validator: validatePositiveEarthworkNumber,
           ),
           const SizedBox(height: 16),
@@ -263,7 +268,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
             key: const Key('calculateEmbankment'),
             onPressed: _calculate,
             icon: const Icon(Icons.calculate_outlined),
-            label: const Text('計算する'),
+            label: Text(l10n.text('計算する')),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
@@ -297,7 +302,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
           if (result != null && geometry != null) ...[
             const SizedBox(height: 20),
             EarthworkResultCard(
-              label: '完成盛土量',
+              label: l10n.text('完成盛土量'),
               value: '${formatEarthworkNumber(result.completedVolume)} m³',
               onSend: () => _send(
                 name: '盛土',
@@ -308,7 +313,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
               ),
             ),
             EarthworkResultCard(
-              label: '締固めを考慮した必要土量',
+              label: l10n.text('締固めを考慮した必要土量'),
               value: '${formatEarthworkNumber(result.requiredBankVolume)} m³',
               note:
                   '完成盛土量 ÷ 締固め係数 ${formatEarthworkNumber(result.compactionFactor)}',
@@ -324,7 +329,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
               ),
             ),
             EarthworkResultCard(
-              label: '必要搬入土量',
+              label: l10n.text('必要搬入土量'),
               value:
                   '${formatEarthworkNumber(result.requiredIncomingLooseVolume)} m³',
               note: '必要土量 × ほぐし係数 ${formatEarthworkNumber(result.looseFactor)}',
@@ -340,9 +345,9 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
               ),
             ),
             EarthworkResultCard(
-              label: '必要運搬回数',
+              label: l10n.text('必要運搬回数'),
               value: '${result.transportTrips} 回',
-              note: '端数切り上げ',
+              note: l10n.text('端数切り上げ'),
               onSend: () => _send(
                 name: '土砂運搬',
                 quantity: result.transportTrips.toDouble(),

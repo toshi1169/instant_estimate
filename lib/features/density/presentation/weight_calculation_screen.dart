@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/localization/app_localizations.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -199,18 +200,21 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('比重・重量計算'),
-        actions: [TextButton(onPressed: _clear, child: const Text('クリア'))],
+        title: Text(strings.text('比重・重量計算')),
+        actions: [
+          TextButton(onPressed: _clear, child: Text(strings.text('クリア'))),
+        ],
       ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
           children: [
             Text(
-              '材料と体積から重量を計算します。初期の比重は目安のため、現場条件に合わせて変更できます。',
+              strings.text('材料と体積から重量を計算します。初期の比重は目安のため、現場条件に合わせて変更できます。'),
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 18),
@@ -221,29 +225,33 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                   DropdownButtonFormField<String>(
                     key: const Key('densityMaterial'),
                     initialValue: _selectedMaterial,
-                    decoration: const InputDecoration(labelText: '材料'),
+                    decoration: InputDecoration(labelText: strings.text('材料')),
                     items: [
                       for (final material in densityMaterialPresets)
                         DropdownMenuItem(
                           value: material.name,
-                          child: Text(material.name),
+                          child: Text(strings.text(material.name)),
                         ),
                       for (final material in _registeredMaterials)
                         DropdownMenuItem(
                           value: material.name,
-                          child: Text('${material.name}（登録）'),
+                          child: Text(
+                            strings.isEnglish
+                                ? '${material.name} (Saved)'
+                                : '${material.name}（登録）',
+                          ),
                         ),
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: _customMaterial,
-                        child: Text(_customMaterial),
+                        child: Text(strings.text(_customMaterial)),
                       ),
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: _addMaterial,
                         child: Row(
                           children: [
-                            Icon(Icons.add),
-                            SizedBox(width: 8),
-                            Text('材料を追加'),
+                            const Icon(Icons.add),
+                            const SizedBox(width: 8),
+                            Text(strings.text('材料を追加')),
                           ],
                         ),
                       ),
@@ -259,7 +267,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                         key: const Key('deleteDensityMaterial'),
                         onPressed: _deleteSelectedMaterial,
                         icon: const Icon(Icons.delete_outline),
-                        label: const Text('登録材料を削除'),
+                        label: Text(strings.text('登録材料を削除')),
                       ),
                     ),
                   ],
@@ -268,7 +276,9 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                     TextFormField(
                       key: const Key('customDensityMaterialName'),
                       controller: _customMaterialController,
-                      decoration: const InputDecoration(labelText: '材料名'),
+                      decoration: InputDecoration(
+                        labelText: strings.text('材料名'),
+                      ),
                       validator: _validateMaterialName,
                     ),
                   ],
@@ -282,8 +292,8 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
-                    decoration: const InputDecoration(
-                      labelText: '体積',
+                    decoration: InputDecoration(
+                      labelText: strings.text('体積'),
                       suffixText: 'm³',
                     ),
                     validator: _validatePositiveNumber,
@@ -298,8 +308,8 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
-                    decoration: const InputDecoration(
-                      labelText: '比重',
+                    decoration: InputDecoration(
+                      labelText: strings.text('比重'),
                       suffixText: 't/m³',
                     ),
                     validator: _validatePositiveNumber,
@@ -312,7 +322,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
               key: const Key('calculateWeight'),
               onPressed: _calculate,
               icon: const Icon(Icons.scale_outlined),
-              label: const Text('重量を計算'),
+              label: Text(strings.text('重量を計算')),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 16),
@@ -342,7 +352,10 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('計算結果', style: theme.textTheme.titleMedium),
+                    Text(
+                      strings.text('計算結果'),
+                      style: theme.textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 10),
                     Text(
                       '${_formatResultNumber(result.weightTonnes)} t',
@@ -372,7 +385,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                 key: const Key('sendWeightToEstimate'),
                 onPressed: _sendToEstimate,
                 icon: const Icon(Icons.request_quote_outlined),
-                label: const Text('見積明細へ追加'),
+                label: Text(strings.text('見積明細へ追加')),
               ),
             ],
           ],
@@ -439,8 +452,9 @@ class _AddDensityMaterialDialogState extends State<_AddDensityMaterialDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('材料を追加'),
+      title: Text(strings.text('材料を追加')),
       content: Form(
         key: _formKey,
         child: Column(
@@ -450,7 +464,7 @@ class _AddDensityMaterialDialogState extends State<_AddDensityMaterialDialog> {
               key: const Key('newDensityMaterialName'),
               controller: _nameController,
               autofocus: true,
-              decoration: const InputDecoration(labelText: '材料名'),
+              decoration: InputDecoration(labelText: strings.text('材料名')),
               validator: _validateName,
             ),
             const SizedBox(height: 12),
@@ -463,8 +477,8 @@ class _AddDensityMaterialDialogState extends State<_AddDensityMaterialDialog> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
-              decoration: const InputDecoration(
-                labelText: '比重',
+              decoration: InputDecoration(
+                labelText: strings.text('比重'),
                 suffixText: 't/m³',
               ),
               validator: _validateDensity,
@@ -475,12 +489,12 @@ class _AddDensityMaterialDialogState extends State<_AddDensityMaterialDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
+          child: Text(strings.text('キャンセル')),
         ),
         FilledButton(
           key: const Key('saveDensityMaterial'),
           onPressed: _save,
-          child: const Text('追加'),
+          child: Text(strings.text('追加')),
         ),
       ],
     );

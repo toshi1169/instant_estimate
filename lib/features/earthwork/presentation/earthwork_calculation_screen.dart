@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/transport_vehicle.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../settings/domain/app_settings.dart';
 import 'backfill_tab.dart';
@@ -52,17 +53,18 @@ class _EarthworkCalculationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('土量計算'),
-          bottom: const TabBar(
+          title: Text(strings.text('土量計算')),
+          bottom: TabBar(
             isScrollable: true,
             tabs: [
-              Tab(text: '掘削・搬出'),
-              Tab(text: '埋戻し'),
-              Tab(text: '盛土'),
+              Tab(text: strings.text('掘削・搬出')),
+              Tab(text: strings.text('埋戻し')),
+              Tab(text: strings.text('盛土')),
             ],
           ),
         ),
