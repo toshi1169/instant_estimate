@@ -183,13 +183,15 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
   String? _validatePositiveNumber(String? value) {
     final number = double.tryParse((value ?? '').trim().replaceAll(',', '.'));
     if (number == null || !number.isFinite || number <= 0) {
-      return '0より大きい数値を入力';
+      return AppLocalizations.of(context).text('0より大きい数値を入力');
     }
     return null;
   }
 
   String? _validateMaterialName(String? value) {
-    if ((value ?? '').trim().isEmpty) return '材料名を入力';
+    if ((value ?? '').trim().isEmpty) {
+      return AppLocalizations.of(context).text('材料名を入力');
+    }
     return null;
   }
 
@@ -333,7 +335,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  _errorMessage!,
+                  strings.text(_errorMessage!),
                   key: const Key('weightCalculationError'),
                   style: TextStyle(color: theme.colorScheme.onErrorContainer),
                 ),
@@ -423,9 +425,10 @@ class _AddDensityMaterialDialogState extends State<_AddDensityMaterialDialog> {
 
   String? _validateName(String? value) {
     final name = (value ?? '').trim();
-    if (name.isEmpty) return '材料名を入力';
+    final strings = AppLocalizations.of(context);
+    if (name.isEmpty) return strings.text('材料名を入力');
     if (widget.reservedNames.contains(name)) {
-      return '同じ材料名が登録されています';
+      return strings.text('同じ材料名が登録されています');
     }
     return null;
   }
@@ -433,7 +436,7 @@ class _AddDensityMaterialDialogState extends State<_AddDensityMaterialDialog> {
   String? _validateDensity(String? value) {
     final number = double.tryParse((value ?? '').trim().replaceAll(',', '.'));
     if (number == null || !number.isFinite || number <= 0) {
-      return '0より大きい数値を入力';
+      return AppLocalizations.of(context).text('0より大きい数値を入力');
     }
     return null;
   }

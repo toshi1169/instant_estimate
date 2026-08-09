@@ -4,6 +4,7 @@ import 'package:instant_estimate/features/density/domain/weight_calculator.dart'
 import 'package:instant_estimate/features/density/presentation/weight_calculation_screen.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
+import 'package:instant_estimate/core/localization/app_localizations.dart';
 
 void main() {
   test('体積と比重からtとkgの重量を計算する', () {
@@ -131,5 +132,22 @@ void main() {
     expect(sentDraft?.quantity, 1.23);
     expect(sentDraft?.originalQuantity, 1.239);
     expect(sentDraft?.calculationBasis, '1 × 1.239 ＝ 1.239t');
+  });
+
+  testWidgets('英語設定で入力エラーを英語表示する', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: WeightCalculationScreen(onSendToEstimate: (_) async {}),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('calculateWeight')));
+    await tester.pump();
+
+    expect(find.text('Enter a number greater than 0'), findsOneWidget);
+    expect(find.text('0より大きい数値を入力'), findsNothing);
   });
 }
