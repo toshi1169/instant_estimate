@@ -41,6 +41,7 @@ class CalculatorScreen extends StatefulWidget {
     this.estimateController,
     this.productivityRecordStore,
     this.productivityController,
+    this.accessPlan = AppAccessPlan.free,
     super.key,
   });
 
@@ -52,6 +53,7 @@ class CalculatorScreen extends StatefulWidget {
   final EstimateController? estimateController;
   final ProductivityRecordStore? productivityRecordStore;
   final ProductivityController? productivityController;
+  final AppAccessPlan accessPlan;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -92,11 +94,17 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   late final bool _ownsController = widget.controller == null;
   late final EstimateController _estimateController =
       widget.estimateController ??
-      EstimateController(store: widget.estimateItemStore);
+      EstimateController(
+        store: widget.estimateItemStore,
+        accessPlan: widget.accessPlan,
+      );
   late final bool _ownsEstimateController = widget.estimateController == null;
   late final ProductivityController _productivityController =
       widget.productivityController ??
-      ProductivityController(store: widget.productivityRecordStore);
+      ProductivityController(
+        store: widget.productivityRecordStore,
+        accessPlan: widget.accessPlan,
+      );
   late final bool _ownsProductivityController =
       widget.productivityController == null;
 
@@ -667,7 +675,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       animation: _controller,
       builder: (context, _) => Scaffold(
         key: _scaffoldKey,
-        drawer: CalculatorSideMenu(onSelected: _selectSideMenu),
+        drawer: CalculatorSideMenu(
+          showAds: widget.accessPlan.showsAds,
+          onSelected: _selectSideMenu,
+        ),
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -679,8 +690,20 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _AdBanner(height: compact ? 50 : 58),
-                    SizedBox(height: gap),
+                    if (widget.accessPlan.showsAds) ...[
+                      _AdBanner(
+                        key: const Key('calculatorAdBanner'),
+                        height: compact ? 50 : 58,
+                        onUpgrade: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const AccessPlanScreen(
+                              plan: AppAccessPlan.adFree,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: gap),
+                    ],
                     Expanded(
                       flex: 18,
                       child: _HistoryPanel(
@@ -729,9 +752,10 @@ String _displayEstimateQuantity(double? value) {
 }
 
 class _AdBanner extends StatelessWidget {
-  const _AdBanner({required this.height});
+  const _AdBanner({required this.height, required this.onUpgrade, super.key});
 
   final double height;
+  final VoidCallback onUpgrade;
 
   @override
   Widget build(BuildContext context) {
@@ -767,7 +791,7 @@ class _AdBanner extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
-                  'プライムで広告を非表示に！',
+                  '広告なし版で非表示に！',
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -778,7 +802,7 @@ class _AdBanner extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(5),
               child: FilledButton(
-                onPressed: () {},
+                onPressed: onUpgrade,
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(74, 44),
                   padding: const EdgeInsets.symmetric(horizontal: 7),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/domain/app_access_plan.dart';
 import '../core/theme/app_theme.dart';
 import '../features/calculator/presentation/calculator_screen.dart';
 import '../features/calculator/data/calculation_history_store.dart';
@@ -19,6 +20,7 @@ class InstantEstimateApp extends StatefulWidget {
     this.appSettingsStore,
     this.estimateItemStore,
     this.productivityRecordStore,
+    this.accessPlan = AppAccessPlan.free,
     super.key,
   });
 
@@ -27,6 +29,7 @@ class InstantEstimateApp extends StatefulWidget {
   final AppSettingsStore? appSettingsStore;
   final EstimateItemStore? estimateItemStore;
   final ProductivityRecordStore? productivityRecordStore;
+  final AppAccessPlan accessPlan;
 
   @override
   State<InstantEstimateApp> createState() => _InstantEstimateAppState();
@@ -84,6 +87,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
         calculationHistoryStore: widget.calculationHistoryStore,
         estimateItemStore: widget.estimateItemStore,
         productivityRecordStore: widget.productivityRecordStore,
+        accessPlan: widget.accessPlan,
         settings: _settings,
         onSettingsChanged: _changeSettings,
       ),
@@ -97,6 +101,7 @@ class _StartupGate extends StatefulWidget {
     required this.calculationHistoryStore,
     required this.estimateItemStore,
     required this.productivityRecordStore,
+    required this.accessPlan,
     required this.settings,
     required this.onSettingsChanged,
   });
@@ -105,6 +110,7 @@ class _StartupGate extends StatefulWidget {
   final CalculationHistoryStore? calculationHistoryStore;
   final EstimateItemStore? estimateItemStore;
   final ProductivityRecordStore? productivityRecordStore;
+  final AppAccessPlan accessPlan;
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
 
@@ -130,6 +136,7 @@ class _StartupGateState extends State<_StartupGate> {
             historyStore: widget.calculationHistoryStore,
             estimateItemStore: widget.estimateItemStore,
             productivityRecordStore: widget.productivityRecordStore,
+            accessPlan: widget.accessPlan,
             settings: widget.settings,
             onSettingsChanged: widget.onSettingsChanged,
           );
@@ -145,6 +152,7 @@ class _StartupGateState extends State<_StartupGate> {
                   historyStore: widget.calculationHistoryStore,
                   estimateItemStore: widget.estimateItemStore,
                   productivityRecordStore: widget.productivityRecordStore,
+                  accessPlan: widget.accessPlan,
                   settings: widget.settings,
                   onSettingsChanged: widget.onSettingsChanged,
                 ),

@@ -13,9 +13,14 @@ enum CalculatorSideMenuDestination {
 }
 
 class CalculatorSideMenu extends StatelessWidget {
-  const CalculatorSideMenu({required this.onSelected, super.key});
+  const CalculatorSideMenu({
+    required this.onSelected,
+    required this.showAds,
+    super.key,
+  });
 
   final ValueChanged<CalculatorSideMenuDestination> onSelected;
+  final bool showAds;
 
   @override
   Widget build(BuildContext context) {
@@ -91,25 +96,26 @@ class CalculatorSideMenu extends StatelessWidget {
                   onSelected(CalculatorSideMenuDestination.productivityMaster),
             ),
             const Divider(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                key: const Key('sideMenuAdArea'),
-                constraints: const BoxConstraints(minHeight: 82),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLow,
-                  border: Border.all(color: theme.colorScheme.outlineVariant),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '広告エリア',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+            if (showAds)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  key: const Key('sideMenuAdArea'),
+                  constraints: const BoxConstraints(minHeight: 82),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerLow,
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '広告エリア',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),
-            ),
             const SizedBox(height: 18),
             Text(
               'Version 1.0.0',

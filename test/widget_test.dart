@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
+import 'package:instant_estimate/core/domain/app_access_plan.dart';
 import 'package:instant_estimate/core/domain/angle_unit.dart';
 import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
@@ -460,6 +461,51 @@ void main() {
     expect(find.text('¥500／月'), findsOneWidget);
     expect(find.text('初回のみ7日間無料体験'), findsOneWidget);
     expect(find.text('見積の保存件数を無制限に拡張'), findsOneWidget);
+  });
+
+  testWidgets('広告なし版では電卓上部と左メニューの広告枠を表示しない', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessPlan: AppAccessPlan.adFree,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calculatorAdBanner')), findsNothing);
+
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sideMenuAdArea')), findsNothing);
+    expect(find.text('広告なし版（買い切り）'), findsOneWidget);
+  });
+
+  testWidgets('無料版の上部広告から広告なし版の案内を開ける', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calculatorAdBanner')), findsOneWidget);
+    await tester.tap(find.text('今すぐ\nアップグレード'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('広告なし版'), findsWidgets);
+    expect(find.text('¥300（買い切り）'), findsOneWidget);
   });
 
   testWidgets('左メニューから単位変換を開き換算できる', (tester) async {
