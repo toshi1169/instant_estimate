@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/core/domain/app_access_plan.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_document.dart';
@@ -266,6 +267,45 @@ void main() {
       controller.duplicateEstimate(controller.info.id),
       throwsStateError,
     );
+  });
+
+  test('完全版では見積件数を制限しない', () async {
+    final controller = EstimateController(accessPlan: AppAccessPlan.full);
+    await controller.load();
+    for (var day = 2; day <= 7; day++) {
+      await controller.createEstimate(
+        EstimateInfo.initial(DateTime(2026, 8, day)),
+      );
+    }
+    expect(controller.estimates, hasLength(7));
+    expect(controller.estimateLimit, isNull);
+  });
+
+  test('無料版の単価マスタは10件まで、完全版は無制限に追加できる', () async {
+    final free = EstimateController();
+    await free.load();
+    for (var index = 0; index < 10; index++) {
+      await free.addUnitPriceMaster(
+        UnitPriceMasterDraft(name: '項目$index', unitPrice: index + 1),
+      );
+    }
+    expect(free.canAddUnitPriceMaster, isFalse);
+    await expectLater(
+      free.addUnitPriceMaster(
+        const UnitPriceMasterDraft(name: '上限超過', unitPrice: 100),
+      ),
+      throwsStateError,
+    );
+
+    final full = EstimateController(accessPlan: AppAccessPlan.full);
+    await full.load();
+    for (var index = 0; index < 11; index++) {
+      await full.addUnitPriceMaster(
+        UnitPriceMasterDraft(name: '項目$index', unitPrice: index + 1),
+      );
+    }
+    expect(full.unitPriceMasters, hasLength(11));
+    expect(full.unitPriceMasterLimit, isNull);
   });
 
   test('見積全体を別IDで複製してコピーを追加先にできる', () async {

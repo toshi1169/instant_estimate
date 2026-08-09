@@ -45,9 +45,17 @@ class EstimateDocumentsScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
                   child: Row(
                     children: [
-                      Text('${controller.estimates.length} / 5件'),
+                      Text(
+                        controller.estimateLimit == null
+                            ? '${controller.estimates.length}件'
+                            : '${controller.estimates.length} / ${controller.estimateLimit}件',
+                      ),
                       const Spacer(),
-                      const Text('無料版の保存上限：5件'),
+                      Text(
+                        controller.estimateLimit == null
+                            ? '完全版：件数制限なし'
+                            : '現在の保存上限：${controller.estimateLimit}件',
+                      ),
                     ],
                   ),
                 ),
@@ -92,7 +100,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
   ) async {
     switch (action) {
       case _EstimateDocumentAction.duplicate:
-        if (controller.estimates.length >= 5) {
+        if (!controller.canCreateEstimate) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('無料版では見積を5件まで保存できます')));
@@ -162,7 +170,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
   }
 
   Future<void> _createEstimate(BuildContext context) async {
-    if (controller.estimates.length >= 5) {
+    if (!controller.canCreateEstimate) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('無料版では見積を5件まで保存できます')));

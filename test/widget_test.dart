@@ -410,8 +410,8 @@ void main() {
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
     expect(find.byIcon(Icons.calculate_outlined), findsNothing);
     expect(find.text('ヘルプ'), findsOneWidget);
-    expect(find.text('プライム（広告非表示）'), findsOneWidget);
-    expect(find.text('アルティメット'), findsOneWidget);
+    expect(find.text('広告なし版（買い切り）'), findsOneWidget);
+    expect(find.text('完全版（月額）'), findsOneWidget);
     expect(find.text('便利計算一覧'), findsOneWidget);
     expect(find.text('単位変換'), findsOneWidget);
     expect(find.text('インスタント見積'), findsWidgets);
@@ -430,6 +430,36 @@ void main() {
 
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
     expect(find.text('便利計算一覧'), findsOneWidget);
+  });
+
+  testWidgets('左メニューから広告なし版と完全版の内容を確認できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sideMenuAdFree')));
+    await tester.pumpAndSettle();
+    expect(find.text('¥300（買い切り）'), findsOneWidget);
+    expect(find.text('見積は5件まで保存'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sideMenuFull')));
+    await tester.pumpAndSettle();
+    expect(find.text('¥500／月'), findsOneWidget);
+    expect(find.text('初回のみ7日間無料体験'), findsOneWidget);
+    expect(find.text('見積の保存件数を無制限に拡張'), findsOneWidget);
   });
 
   testWidgets('左メニューから単位変換を開き換算できる', (tester) async {

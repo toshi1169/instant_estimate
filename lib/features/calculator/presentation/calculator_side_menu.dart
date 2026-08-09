@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 enum CalculatorSideMenuDestination {
   settings,
   help,
-  prime,
-  ultimate,
+  adFree,
+  full,
   constructionCalculations,
   unitConversion,
   instantEstimate,
@@ -41,16 +41,16 @@ class CalculatorSideMenu extends StatelessWidget {
               onTap: () => onSelected(CalculatorSideMenuDestination.help),
             ),
             _MenuTile(
-              key: const Key('sideMenuPrime'),
+              key: const Key('sideMenuAdFree'),
               icon: Icons.block_outlined,
-              label: 'プライム（広告非表示）',
-              onTap: () => onSelected(CalculatorSideMenuDestination.prime),
+              label: '広告なし版（買い切り）',
+              onTap: () => onSelected(CalculatorSideMenuDestination.adFree),
             ),
             _MenuTile(
-              key: const Key('sideMenuUltimate'),
+              key: const Key('sideMenuFull'),
               icon: Icons.workspace_premium_outlined,
-              label: 'アルティメット',
-              onTap: () => onSelected(CalculatorSideMenuDestination.ultimate),
+              label: '完全版（月額）',
+              onTap: () => onSelected(CalculatorSideMenuDestination.full),
             ),
             const Divider(height: 24),
             _MenuTile(

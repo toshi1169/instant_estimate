@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/domain/app_access_plan.dart';
 import '../data/estimate_item_store.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
@@ -11,10 +12,14 @@ import '../domain/estimate_totals.dart';
 import '../domain/unit_price_master.dart';
 
 class EstimateController extends ChangeNotifier {
-  EstimateController({this.store, DateTime? now})
-    : _info = EstimateInfo.initial(now ?? DateTime.now());
+  EstimateController({
+    this.store,
+    this.accessPlan = AppAccessPlan.free,
+    DateTime? now,
+  }) : _info = EstimateInfo.initial(now ?? DateTime.now());
 
   final EstimateItemStore? store;
+  final AppAccessPlan accessPlan;
   final List<EstimateItem> _items = [];
   final List<EstimateDocument> _estimates = [];
   final List<UnitPriceMaster> _unitPriceMasters = [];
@@ -28,6 +33,13 @@ class EstimateController extends ChangeNotifier {
   List<UnitPriceMaster> get unitPriceMasters =>
       List.unmodifiable(_unitPriceMasters);
   bool get isLoaded => _loaded;
+  int? get estimateLimit => accessPlan.estimateLimit;
+  int? get unitPriceMasterLimit => accessPlan.unitPriceMasterLimit;
+  bool get canCreateEstimate =>
+      estimateLimit == null || _estimates.length < estimateLimit!;
+  bool get canAddUnitPriceMaster =>
+      unitPriceMasterLimit == null ||
+      _unitPriceMasters.length < unitPriceMasterLimit!;
   double get totalAmount =>
       _items.fold(0, (total, item) => total + (item.amount ?? 0));
   int get subtotalAmount => estimateSubtotal(_items);
@@ -216,7 +228,7 @@ class EstimateController extends ChangeNotifier {
   }
 
   Future<void> createEstimate(EstimateInfo info) async {
-    if (_estimates.length >= 5) {
+    if (!canCreateEstimate) {
       throw StateError('Free estimate limit reached.');
     }
     final current = _currentDocument();
@@ -240,7 +252,7 @@ class EstimateController extends ChangeNotifier {
   }
 
   Future<EstimateDocument> duplicateEstimate(String id) async {
-    if (_estimates.length >= 5) {
+    if (!canCreateEstimate) {
       throw StateError('Free estimate limit reached.');
     }
     final currentWorkspace = _workspaceWithActive();
@@ -341,6 +353,9 @@ class EstimateController extends ChangeNotifier {
   }
 
   Future<UnitPriceMaster> addUnitPriceMaster(UnitPriceMasterDraft draft) async {
+    if (!canAddUnitPriceMaster) {
+      throw StateError('Free unit price master limit reached.');
+    }
     final now = DateTime.now();
     final price = UnitPriceMaster.fromDraft(
       draft,

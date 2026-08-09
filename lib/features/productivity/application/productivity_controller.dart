@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
+import '../../../core/domain/app_access_plan.dart';
 import '../data/productivity_record_store.dart';
 import '../domain/productivity_record.dart';
-
-enum ProductivityAccessTier { free, ultimate }
 
 class ProductivityLimitException implements Exception {
   const ProductivityLimitException(this.limit);
@@ -12,14 +11,13 @@ class ProductivityLimitException implements Exception {
 class ProductivityController extends ChangeNotifier {
   ProductivityController({
     ProductivityRecordStore? store,
-    this.accessTier = ProductivityAccessTier.free,
+    this.accessPlan = AppAccessPlan.free,
   }) : store = store ?? MemoryProductivityRecordStore();
   final ProductivityRecordStore store;
-  final ProductivityAccessTier accessTier;
+  final AppAccessPlan accessPlan;
   final List<ProductivityRecord> _records = [];
   bool _loaded = false;
-  int get recordLimit =>
-      accessTier == ProductivityAccessTier.ultimate ? 100 : 5;
+  int get recordLimit => accessPlan.productivityRecordLimit;
   bool get canAdd => _records.length < recordLimit;
   bool get isLoaded => _loaded;
   List<ProductivityRecord> get records => List.unmodifiable(_records);

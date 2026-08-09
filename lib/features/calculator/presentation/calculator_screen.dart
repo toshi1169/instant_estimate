@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/domain/app_access_plan.dart';
 import '../../../core/domain/angle_unit.dart';
 import '../../../core/theme/app_colors.dart';
 import '../application/calculator_controller.dart';
@@ -27,6 +28,7 @@ import 'calculator_side_menu.dart';
 import '../../construction_calculations/presentation/construction_calculations_screen.dart';
 import '../../help/presentation/help_screen.dart';
 import '../../unit_conversion/presentation/unit_conversion_screen.dart';
+import '../../subscription/presentation/access_plan_screen.dart';
 import 'function_list_dialog.dart';
 
 class CalculatorScreen extends StatefulWidget {
@@ -262,12 +264,28 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       );
       return;
     }
+    if (destination == CalculatorSideMenuDestination.adFree ||
+        destination == CalculatorSideMenuDestination.full) {
+      final plan = destination == CalculatorSideMenuDestination.adFree
+          ? AppAccessPlan.adFree
+          : AppAccessPlan.full;
+      unawaited(
+        _openFromSideMenu(
+          () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => AccessPlanScreen(plan: plan),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
 
     final label = switch (destination) {
       CalculatorSideMenuDestination.settings => '設定',
       CalculatorSideMenuDestination.help => 'ヘルプ',
-      CalculatorSideMenuDestination.prime => 'プライム',
-      CalculatorSideMenuDestination.ultimate => 'アルティメット',
+      CalculatorSideMenuDestination.adFree => '広告なし版',
+      CalculatorSideMenuDestination.full => '完全版',
       CalculatorSideMenuDestination.constructionCalculations => '便利計算一覧',
       CalculatorSideMenuDestination.unitConversion => '単位変換',
       CalculatorSideMenuDestination.instantEstimate => 'インスタント見積',

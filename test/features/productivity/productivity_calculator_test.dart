@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/core/domain/app_access_plan.dart';
 import 'package:instant_estimate/features/productivity/application/productivity_controller.dart';
 import 'package:instant_estimate/features/productivity/data/productivity_record_store.dart';
 import 'package:instant_estimate/features/productivity/domain/productivity_calculator.dart';
@@ -51,7 +52,7 @@ void main() {
     expect(summary.maximumLaborRate, 0.057);
   });
 
-  test('無料版は5件、アルティメット版は100件を上限とする', () async {
+  test('無料版は5件、完全版は100件を上限とする', () async {
     final free = ProductivityController(store: MemoryProductivityRecordStore());
     await free.load();
     for (var index = 0; index < 5; index++) {
@@ -63,11 +64,11 @@ void main() {
       throwsA(isA<ProductivityLimitException>()),
     );
 
-    final ultimate = ProductivityController(
+    final full = ProductivityController(
       store: MemoryProductivityRecordStore(),
-      accessTier: ProductivityAccessTier.ultimate,
+      accessPlan: AppAccessPlan.full,
     );
-    expect(ultimate.recordLimit, 100);
+    expect(full.recordLimit, 100);
   });
 }
 
