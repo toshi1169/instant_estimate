@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/area/domain/quadrilateral_area_calculator.dart';
 import 'package:instant_estimate/features/area/presentation/quadrilateral_area_screen.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
@@ -118,5 +119,31 @@ void main() {
 
     expect(sentDraft?.quantity, 0.86);
     expect(sentDraft?.originalQuantity, closeTo(0.8660254038, 0.000000001));
+  });
+
+  testWidgets('英語設定で三角形を作れないエラーを英語表示する', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: QuadrilateralAreaScreen(onSendToEstimate: (_) async {}),
+      ),
+    );
+
+    for (final (index, value) in ['1', '2', '3', '4', '5'].indexed) {
+      await tester.enterText(
+        find.byKey(Key('quadrilateralLength$index')),
+        value,
+      );
+    }
+    await tester.tap(find.byKey(const Key('calculateQuadrilateralArea')));
+    await tester.pump();
+
+    expect(
+      find.text('The entered lengths cannot form a triangle'),
+      findsOneWidget,
+    );
+    expect(find.text('入力した長さでは三角形を作れません'), findsNothing);
   });
 }

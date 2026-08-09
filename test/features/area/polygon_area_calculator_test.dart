@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/area/domain/polygon_area_calculator.dart';
 import 'package:instant_estimate/features/area/presentation/polygon_area_screen.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
@@ -136,5 +137,28 @@ void main() {
 
     expect(sentDraft?.quantity, 1.29);
     expect(sentDraft?.originalQuantity, closeTo(1.2990381057, 0.000000001));
+  });
+
+  testWidgets('英語設定で未入力エラーを英語表示する', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: PolygonAreaScreen(onSendToEstimate: (_) async {}),
+      ),
+    );
+
+    final calculateButton = find.byKey(const Key('calculatePolygonArea'));
+    await tester.scrollUntilVisible(
+      calculateButton,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(calculateButton);
+    await tester.pump();
+
+    expect(find.text('Enter a number greater than 0'), findsWidgets);
+    expect(find.text('0より大きい数値を入力'), findsNothing);
   });
 }

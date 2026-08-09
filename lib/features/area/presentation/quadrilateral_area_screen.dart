@@ -101,7 +101,7 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
   String? _validateLength(String? value) {
     final number = double.tryParse((value ?? '').replaceAll(',', '.'));
     if (number == null || !number.isFinite || number <= 0) {
-      return '0より大きい数値を入力';
+      return AppLocalizations.of(context).text('0より大きい数値を入力');
     }
     return null;
   }
@@ -173,7 +173,7 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  _errorMessage!,
+                  strings.text(_errorMessage!),
                   key: const Key('quadrilateralAreaError'),
                   style: TextStyle(color: theme.colorScheme.onErrorContainer),
                 ),

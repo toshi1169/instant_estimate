@@ -187,6 +187,12 @@ class AppLocalizations {
           '同じ材料名が登録されています': 'A material with this name is already saved',
           '体積に0より大きい数値を入力してください': 'Enter a volume greater than 0',
           '比重に0より大きい数値を入力してください': 'Enter a density greater than 0',
+          'すべての長さに0より大きい数値を入力してください':
+              'Enter a number greater than 0 for every length',
+          '入力した長さでは三角形を作れません': 'The entered lengths cannot form a triangle',
+          '外周は5辺以上入力してください': 'Enter at least five outer sides',
+          '辺数に対応する対角線を入力してください':
+              'Enter the diagonals required for the number of sides',
           '広告スペース': 'Ad space',
           '広告なし版で非表示に！': 'Remove ads with Ad-free!',
           '今すぐ\nアップグレード': 'Upgrade\nnow',
