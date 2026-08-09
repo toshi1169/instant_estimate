@@ -917,6 +917,7 @@ class _HistoryMenuSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     const items = <(_HistoryMenuAction, IconData, String)>[
       (_HistoryMenuAction.copy, Icons.copy_outlined, 'コピー'),
       (_HistoryMenuAction.share, Icons.share_outlined, '共有'),
@@ -932,7 +933,7 @@ class _HistoryMenuSheet extends StatelessWidget {
           for (final item in items)
             ListTile(
               leading: Icon(item.$2),
-              title: Text(item.$3),
+              title: Text(strings.text(item.$3)),
               onTap: () => Navigator.of(context).pop(item.$1),
             ),
         ],

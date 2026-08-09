@@ -1236,6 +1236,38 @@ void main() {
     expect(find.text('見積へ送る'), findsOneWidget);
   });
 
+  testWidgets('英語設定で履歴メニューを英語表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final settingsStore = FakeAppSettingsStore(
+      settings: const AppSettings(language: AppLanguage.english),
+    );
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (final key in ['1', '+', '2', '=']) {
+      await tester.tap(find.text(key));
+      await tester.pump();
+    }
+    await tester.tap(find.byKey(const Key('historyMenuButton0')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Copy'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
+    expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+    expect(find.text('Star'), findsOneWidget);
+    expect(find.text('Send to estimate'), findsOneWidget);
+  });
+
   testWidgets('無料版の履歴スターでは利用制限を案内する', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
