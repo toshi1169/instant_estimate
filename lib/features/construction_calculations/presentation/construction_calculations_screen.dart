@@ -84,6 +84,7 @@ class ConstructionCalculationsScreen extends StatelessWidget {
                 MaterialPageRoute<void>(
                   builder: (_) => QuadrilateralAreaScreen(
                     onSendToEstimate: onSendToEstimate,
+                    settings: settings,
                   ),
                 ),
               ),
@@ -95,8 +96,10 @@ class ConstructionCalculationsScreen extends StatelessWidget {
               subtitle: '外周と対角線から三角形へ分割して自動合算',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) =>
-                      PolygonAreaScreen(onSendToEstimate: onSendToEstimate),
+                  builder: (_) => PolygonAreaScreen(
+                    onSendToEstimate: onSendToEstimate,
+                    settings: settings,
+                  ),
                 ),
               ),
             ),

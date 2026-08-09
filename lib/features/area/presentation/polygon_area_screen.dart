@@ -3,12 +3,18 @@ import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/polygon_area_calculator.dart';
 
 class PolygonAreaScreen extends StatefulWidget {
-  const PolygonAreaScreen({required this.onSendToEstimate, super.key});
+  const PolygonAreaScreen({
+    required this.onSendToEstimate,
+    this.settings = const AppSettings(),
+    super.key,
+  });
 
   final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
+  final AppSettings settings;
 
   @override
   State<PolygonAreaScreen> createState() => _PolygonAreaScreenState();
@@ -99,7 +105,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
       EstimateItemDraft(
         name: '面積',
         specification: specification,
-        quantity: result.totalArea,
+        quantity: widget.settings.roundEstimateQuantity(result.totalArea),
         unit: 'm²',
         calculationBasis:
             '$specification\n$triangleText ＝ ${_format(result.totalArea)}m²',

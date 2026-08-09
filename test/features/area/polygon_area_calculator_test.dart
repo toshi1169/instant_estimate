@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/area/domain/polygon_area_calculator.dart';
 import 'package:instant_estimate/features/area/presentation/polygon_area_screen.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 void main() {
   test('5辺形を3つの三角形へ分割して面積を合計する', () {
@@ -91,5 +92,49 @@ void main() {
     expect(find.text('6辺'), findsOneWidget);
     expect(find.byKey(const Key('polygonOuterSide5')), findsOneWidget);
     expect(find.byKey(const Key('polygonDiagonal2')), findsOneWidget);
+  });
+
+  testWidgets('見積数量には設定の丸めを適用し元の面積を保持する', (tester) async {
+    EstimateItemDraft? sentDraft;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PolygonAreaScreen(
+          settings: const AppSettings(
+            decimalPlaces: 2,
+            roundingMode: CalculatorRoundingMode.floor,
+          ),
+          onSendToEstimate: (draft) async => sentDraft = draft,
+        ),
+      ),
+    );
+
+    for (final (index, value) in ['1', '1', '1', '1', '1'].indexed) {
+      await tester.enterText(find.byKey(Key('polygonOuterSide$index')), value);
+    }
+    for (final (index, value) in ['1', '1'].indexed) {
+      await tester.enterText(find.byKey(Key('polygonDiagonal$index')), value);
+    }
+    final calculateButton = find.byKey(const Key('calculatePolygonArea'));
+    await tester.scrollUntilVisible(
+      calculateButton,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(calculateButton);
+    await tester.pump();
+
+    final sendButton = find.byKey(const Key('sendPolygonAreaToEstimate'));
+    await tester.scrollUntilVisible(
+      sendButton,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(ListView), const Offset(0, -100));
+    await tester.pump();
+    await tester.tap(sendButton);
+    await tester.pump();
+
+    expect(sentDraft?.quantity, 1.29);
+    expect(sentDraft?.originalQuantity, closeTo(1.2990381057, 0.000000001));
   });
 }

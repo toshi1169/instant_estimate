@@ -3,12 +3,18 @@ import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/quadrilateral_area_calculator.dart';
 
 class QuadrilateralAreaScreen extends StatefulWidget {
-  const QuadrilateralAreaScreen({required this.onSendToEstimate, super.key});
+  const QuadrilateralAreaScreen({
+    required this.onSendToEstimate,
+    this.settings = const AppSettings(),
+    super.key,
+  });
 
   final Future<void> Function(EstimateItemDraft draft) onSendToEstimate;
+  final AppSettings settings;
 
   @override
   State<QuadrilateralAreaScreen> createState() =>
@@ -83,7 +89,7 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
       EstimateItemDraft(
         name: '面積',
         specification: specification,
-        quantity: result.totalArea,
+        quantity: widget.settings.roundEstimateQuantity(result.totalArea),
         unit: 'm²',
         calculationBasis: calculationBasis,
         originalQuantity: result.totalArea,
