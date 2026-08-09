@@ -5,6 +5,7 @@ import 'package:instant_estimate/app/app.dart';
 import 'package:instant_estimate/core/domain/app_access_plan.dart';
 import 'package:instant_estimate/core/domain/angle_unit.dart';
 import 'package:instant_estimate/core/localization/app_language.dart';
+import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
@@ -676,6 +677,62 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
+  });
+
+  testWidgets('英語の単位変換で日本固有単位の説明を開ける', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final settingsStore = FakeAppSettingsStore(
+      settings: const AppSettings(language: AppLanguage.english),
+    );
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sideMenuUnitConversion')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unit conversion'), findsOneWidget);
+    expect(find.textContaining('SHAKU, SUN and KEN'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('unitConversionFrom')));
+    await tester.pumpAndSettle();
+    expect(find.text('尺：SHAKU'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('unitInfo-shaku')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('尺：SHAKU'), findsWidgets);
+    expect(
+      find.textContaining('traditional Japanese unit of length'),
+      findsOneWidget,
+    );
+  });
+
+  test('日本固有単位の英語説明をすべて用意する', () {
+    const strings = AppLocalizations(AppLanguage.english);
+    for (final id in const [
+      'shaku',
+      'sun',
+      'ken',
+      'tsubo',
+      'hyo',
+      'natural',
+      'loose',
+      'compacted',
+    ]) {
+      expect(strings.isSpecializedUnit(id), isTrue);
+      expect(strings.specializedUnitExplanation(id), isNotEmpty);
+    }
   });
 
   testWidgets('ヘルプを開き戻るとサイドメニューへ戻る', (tester) async {

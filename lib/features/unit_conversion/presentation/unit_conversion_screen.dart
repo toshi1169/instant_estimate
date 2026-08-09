@@ -159,6 +159,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                 child: DropdownButtonFormField<UnitConversionCategory>(
                   key: const Key('unitConversionCategory'),
                   initialValue: _category,
+                  isExpanded: true,
                   decoration: InputDecoration(
                     labelText: strings.text('変換する種類'),
                     prefixIcon: const Icon(Icons.swap_horiz),
@@ -167,7 +168,10 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                     for (final category in UnitConversionCategory.values)
                       DropdownMenuItem(
                         value: category,
-                        child: Text(strings.text(category.label)),
+                        child: Text(
+                          strings.text(category.label),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                   ],
                   onChanged: _changeCategory,
@@ -279,6 +283,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
     required List<UnitConversionUnit> units,
     required ValueChanged<String?> onChanged,
   }) {
+    final strings = AppLocalizations.of(context);
     return DropdownButtonFormField<String>(
       key: key,
       initialValue: value,
@@ -288,13 +293,51 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
         for (final unit in units)
           DropdownMenuItem(
             value: unit.id,
-            child: Text(
-              AppLocalizations.of(context).specializedUnit(unit.id, unit.label),
-              overflow: TextOverflow.ellipsis,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    strings.specializedUnit(unit.id, unit.label),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (strings.isSpecializedUnit(unit.id)) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    key: Key('unitInfo-${unit.id}'),
+                    tooltip: strings.showUnitInformation,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 30,
+                      height: 30,
+                    ),
+                    icon: const Icon(Icons.info_outline, size: 18),
+                    onPressed: () => _showUnitInformation(unit),
+                  ),
+                ],
+              ],
             ),
           ),
       ],
       onChanged: onChanged,
+    );
+  }
+
+  Future<void> _showUnitInformation(UnitConversionUnit unit) async {
+    final strings = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.specializedUnit(unit.id, unit.label)),
+        content: Text(strings.specializedUnitExplanation(unit.id)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(strings.text('閉じる')),
+          ),
+        ],
+      ),
     );
   }
 
@@ -355,8 +398,10 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
   }
 
   Widget _noteCard() {
-    final text = switch (_category) {
+    final strings = AppLocalizations.of(context);
+    final japaneseText = switch (_category) {
       UnitConversionCategory.length => '尺・寸・間は、1尺＝10/33mを基準に変換します。',
+      UnitConversionCategory.area => '坪は、1坪＝400/121㎡（約3.30579㎡）を基準に変換します。',
       UnitConversionCategory.weight =>
         '俵は品目によって重量が異なります。この画面では参考値として米1俵＝60kgで変換します。',
       UnitConversionCategory.gradient => '1:nは、垂直1に対する水平距離nとして変換します。',
@@ -364,6 +409,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
         '地山を基準に、ほぐし土量＝地山土量×ほぐし係数、締固め土量＝地山土量×締固め係数で変換します。係数は土質・施工条件に合わせて変更してください。',
       _ => '変換結果は設定画面の小数点以下桁数と丸め方法を反映します。',
     };
+    final text = strings.text(japaneseText);
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(

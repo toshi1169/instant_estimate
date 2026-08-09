@@ -92,6 +92,18 @@ class AppLocalizations {
           '変換前': 'From',
           '変換後': 'To',
           '単位を入れ替える': 'Swap units',
+          '尺・寸・間は、1尺＝10/33mを基準に変換します。':
+              'SHAKU, SUN and KEN are traditional Japanese length units. This app converts them using 1 shaku = 10/33 m. Tap the information icon next to a unit for details.',
+          '坪は、1坪＝400/121㎡（約3.30579㎡）を基準に変換します。':
+              'TSUBO is a traditional Japanese area unit. This app uses 1 tsubo = 400/121 m² (about 3.30579 m²). Tap the information icon for details.',
+          '俵は品目によって重量が異なります。この画面では参考値として米1俵＝60kgで変換します。':
+              'The weight of HYO varies by commodity. This app uses 1 hyo of rice = 60 kg as a reference value. Tap the information icon for details.',
+          '1:nは、垂直1に対する水平距離nとして変換します。':
+              '1:n represents a horizontal distance of n for a vertical rise of 1.',
+          '地山を基準に、ほぐし土量＝地山土量×ほぐし係数、締固め土量＝地山土量×締固め係数で変換します。係数は土質・施工条件に合わせて変更してください。':
+              'Using JIYAMA as the reference, loose volume = natural volume × loosening factor, and compacted volume = natural volume × compaction factor. Adjust the factors for the soil and work conditions. Tap the information icon for details.',
+          '変換結果は設定画面の小数点以下桁数と丸め方法を反映します。':
+              'Conversion results use the decimal places and rounding method selected in Settings.',
           'ほぐし係数': 'Loosening factor',
           '締固め係数': 'Compaction factor',
           '見積へ': 'To estimate',
@@ -440,15 +452,66 @@ class AppLocalizations {
   String specializedUnit(String id, String japanese) {
     if (!isEnglish) return japanese;
     return switch (id) {
-      'shaku' => '尺：SHAKU ℹ️',
-      'sun' => '寸：SUN ℹ️',
-      'ken' => '間：KEN ℹ️',
-      'tsubo' => '坪：TSUBO ℹ️',
-      'hyo' => '俵：HYO ℹ️',
-      'natural' => '地山：JIYAMA ℹ️',
-      'loose' => 'ほぐし：HOGUSHI ℹ️',
-      'compacted' => '締固め：SHIMEKATAME ℹ️',
+      'shaku' => '尺：SHAKU',
+      'sun' => '寸：SUN',
+      'ken' => '間：KEN',
+      'tsubo' => '坪：TSUBO',
+      'hyo' => '俵：HYO',
+      'natural' => '地山：JIYAMA',
+      'loose' => 'ほぐし：HOGUSHI',
+      'compacted' => '締固め：SHIMEKATAME',
       _ => japanese,
+    };
+  }
+
+  bool isSpecializedUnit(String id) => const {
+    'shaku',
+    'sun',
+    'ken',
+    'tsubo',
+    'hyo',
+    'natural',
+    'loose',
+    'compacted',
+  }.contains(id);
+
+  String get unitInformation => isEnglish ? 'Unit information' : '単位の説明';
+
+  String get showUnitInformation =>
+      isEnglish ? 'Show unit information' : '単位の説明を表示';
+
+  String specializedUnitExplanation(String id) {
+    if (isEnglish) {
+      return switch (id) {
+        'shaku' =>
+          '尺 (SHAKU) is a traditional Japanese unit of length. This app uses 1 shaku = 10/33 m (about 0.30303 m).',
+        'sun' =>
+          '寸 (SUN) is a traditional Japanese unit of length. This app uses 1 sun = 1/10 shaku = 1/33 m (about 0.030303 m).',
+        'ken' =>
+          '間 (KEN) is a traditional Japanese unit of length. This app uses 1 ken = 6 shaku = 20/11 m (about 1.81818 m).',
+        'tsubo' =>
+          '坪 (TSUBO) is a traditional Japanese unit of area. This app uses 1 tsubo = 400/121 m² (about 3.30579 m²).',
+        'hyo' =>
+          '俵 (HYO) is a traditional Japanese unit whose weight varies by commodity. This app uses 1 hyo of rice = 60 kg as a reference value.',
+        'natural' =>
+          '地山 (JIYAMA) means soil in its natural condition before excavation. It is the reference volume for earthwork conversion.',
+        'loose' =>
+          'ほぐし (HOGUSHI) means the expanded, loose volume after excavation. Loose volume = natural volume × loosening factor.',
+        'compacted' =>
+          '締固め (SHIMEKATAME) means the volume after compaction. Compacted volume = natural volume × compaction factor.',
+        _ => '',
+      };
+    }
+    return switch (id) {
+      'shaku' => '尺は日本の伝統的な長さの単位です。このアプリでは1尺＝10/33m（約0.30303m）で換算します。',
+      'sun' => '寸は日本の伝統的な長さの単位です。1寸＝1/10尺＝1/33m（約0.030303m）で換算します。',
+      'ken' => '間は日本の伝統的な長さの単位です。1間＝6尺＝20/11m（約1.81818m）で換算します。',
+      'tsubo' => '坪は日本の伝統的な面積の単位です。1坪＝400/121㎡（約3.30579㎡）で換算します。',
+      'hyo' => '俵は品目によって重量が異なる日本の伝統的な単位です。このアプリでは参考値として米1俵＝60kgで換算します。',
+      'natural' => '地山は、掘削前の自然な状態の土量です。土量変換の基準として使用します。',
+      'loose' => 'ほぐしは、掘削後に膨らんだ土量です。ほぐし土量＝地山土量×ほぐし係数で求めます。',
+      'compacted' => '締固めは、締め固め後の土量です。締固め土量＝地山土量×締固め係数で求めます。',
+      _ => '',
     };
   }
 
