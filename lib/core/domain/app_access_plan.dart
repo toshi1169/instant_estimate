@@ -1,5 +1,12 @@
 enum AppAccessPlan { free, adFree, full }
 
+AppAccessPlan appAccessPlanFromStorageName(String? value) {
+  return AppAccessPlan.values.firstWhere(
+    (plan) => plan.name == value,
+    orElse: () => AppAccessPlan.free,
+  );
+}
+
 extension AppAccessPlanDetails on AppAccessPlan {
   String get displayName => switch (this) {
     AppAccessPlan.free => '無料版',

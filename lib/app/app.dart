@@ -12,6 +12,7 @@ import '../features/settings/data/app_settings_store.dart';
 import '../features/settings/domain/app_settings.dart';
 import '../features/estimate/data/estimate_item_store.dart';
 import '../features/productivity/data/productivity_record_store.dart';
+import '../features/subscription/data/app_access_state_store.dart';
 
 class InstantEstimateApp extends StatefulWidget {
   const InstantEstimateApp({
@@ -20,6 +21,7 @@ class InstantEstimateApp extends StatefulWidget {
     this.appSettingsStore,
     this.estimateItemStore,
     this.productivityRecordStore,
+    this.accessStateStore,
     this.accessPlan = AppAccessPlan.free,
     super.key,
   });
@@ -29,6 +31,7 @@ class InstantEstimateApp extends StatefulWidget {
   final AppSettingsStore? appSettingsStore;
   final EstimateItemStore? estimateItemStore;
   final ProductivityRecordStore? productivityRecordStore;
+  final AppAccessStateStore? accessStateStore;
   final AppAccessPlan accessPlan;
 
   @override
@@ -37,11 +40,31 @@ class InstantEstimateApp extends StatefulWidget {
 
 class _InstantEstimateAppState extends State<InstantEstimateApp> {
   AppSettings _settings = const AppSettings();
+  late AppAccessPlan _accessPlan = widget.accessPlan;
+  late bool _isAccessStateReady = widget.accessStateStore == null;
 
   @override
   void initState() {
     super.initState();
     unawaited(_loadSettings());
+    unawaited(_loadAccessState());
+  }
+
+  Future<void> _loadAccessState() async {
+    final store = widget.accessStateStore;
+    if (store == null) return;
+    var loadedPlan = AppAccessPlan.free;
+    try {
+      final state = await store.load();
+      loadedPlan = state.effectivePlan();
+    } catch (_) {
+      // 契約情報を読めない場合は、安全な無料版のまま起動する。
+    }
+    if (!mounted) return;
+    setState(() {
+      _accessPlan = loadedPlan;
+      _isAccessStateReady = true;
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -82,15 +105,17 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
           : AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: _settings.themeMode,
-      home: _StartupGate(
-        onboardingPreferences: widget.onboardingPreferences,
-        calculationHistoryStore: widget.calculationHistoryStore,
-        estimateItemStore: widget.estimateItemStore,
-        productivityRecordStore: widget.productivityRecordStore,
-        accessPlan: widget.accessPlan,
-        settings: _settings,
-        onSettingsChanged: _changeSettings,
-      ),
+      home: _isAccessStateReady
+          ? _StartupGate(
+              onboardingPreferences: widget.onboardingPreferences,
+              calculationHistoryStore: widget.calculationHistoryStore,
+              estimateItemStore: widget.estimateItemStore,
+              productivityRecordStore: widget.productivityRecordStore,
+              accessPlan: _accessPlan,
+              settings: _settings,
+              onSettingsChanged: _changeSettings,
+            )
+          : const ColoredBox(color: Colors.transparent),
     );
   }
 }

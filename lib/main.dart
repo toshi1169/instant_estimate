@@ -6,6 +6,7 @@ import 'features/onboarding/data/onboarding_preferences.dart';
 import 'features/settings/data/app_settings_store.dart';
 import 'features/estimate/data/estimate_item_store.dart';
 import 'features/productivity/data/productivity_record_store.dart';
+import 'features/subscription/data/app_access_state_store.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,7 @@ void main() {
       appSettingsStore: PlatformAppSettingsStore(),
       estimateItemStore: PlatformEstimateItemStore(),
       productivityRecordStore: PlatformProductivityRecordStore(),
+      accessStateStore: PlatformAppAccessStateStore(),
     ),
   );
 }

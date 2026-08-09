@@ -169,5 +169,28 @@ import UIKit
         result(FlutterMethodNotImplemented)
       }
     }
+
+    let accessChannel = FlutterMethodChannel(
+      name: "jp.instant_estimate/app_access",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    accessChannel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "loadAccessState":
+        result(UserDefaults.standard.string(forKey: "appAccessState"))
+      case "saveAccessState":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let accessState = arguments["accessState"] as? String
+        else {
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Access state is required.", details: nil))
+          return
+        }
+        UserDefaults.standard.set(accessState, forKey: "appAccessState")
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }

@@ -10,6 +10,8 @@ import 'package:instant_estimate/features/calculator/presentation/calculator_scr
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
+import 'package:instant_estimate/features/subscription/data/app_access_state_store.dart';
+import 'package:instant_estimate/features/subscription/domain/app_access_state.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_document.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
@@ -50,6 +52,20 @@ class FakeAppSettingsStore implements AppSettingsStore {
   @override
   Future<void> save(AppSettings settings) async {
     this.settings = settings;
+  }
+}
+
+class FakeAppAccessStateStore implements AppAccessStateStore {
+  FakeAppAccessStateStore(this.state);
+
+  AppAccessState state;
+
+  @override
+  Future<AppAccessState> load() async => state;
+
+  @override
+  Future<void> save(AppAccessState state) async {
+    this.state = state;
   }
 }
 
@@ -485,6 +501,28 @@ void main() {
 
     expect(find.byKey(const Key('sideMenuAdArea')), findsNothing);
     expect(find.text('広告なし版（買い切り）'), findsOneWidget);
+  });
+
+  testWidgets('端末に保存した広告なし版を起動時に復元する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessStateStore: FakeAppAccessStateStore(
+          const AppAccessState(plan: AppAccessPlan.adFree),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calculatorAdBanner')), findsNothing);
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('sideMenuAdArea')), findsNothing);
   });
 
   testWidgets('無料版の上部広告から広告なし版の案内を開ける', (tester) async {
