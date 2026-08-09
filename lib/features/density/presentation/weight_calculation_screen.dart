@@ -168,7 +168,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
       EstimateItemDraft(
         name: _materialName,
         specification: specification,
-        quantity: result.weightTonnes,
+        quantity: widget.settings.roundEstimateQuantity(result.weightTonnes),
         unit: 't',
         calculationBasis: '$volume × $density ＝ ${weight}t',
         originalQuantity: result.weightTonnes,
@@ -345,7 +345,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                     Text('計算結果', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 10),
                     Text(
-                      '${_formatNumber(result.weightTonnes)} t',
+                      '${_formatResultNumber(result.weightTonnes)} t',
                       textAlign: TextAlign.right,
                       style: theme.textTheme.headlineLarge?.copyWith(
                         color: AppColors.accent,
@@ -354,7 +354,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${_formatNumber(result.weightKilograms)} kg',
+                      '${_formatResultNumber(result.weightKilograms)} kg',
                       textAlign: TextAlign.right,
                       style: theme.textTheme.titleMedium,
                     ),
@@ -379,6 +379,10 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
         ),
       ),
     );
+  }
+
+  String _formatResultNumber(double value) {
+    return _formatNumber(widget.settings.roundEstimateQuantity(value));
   }
 }
 

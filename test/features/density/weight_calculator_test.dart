@@ -99,4 +99,37 @@ void main() {
     expect(savedSettings?.customDensityMaterials.single.name, '再生砕石');
     expect(savedSettings?.customDensityMaterials.single.density, 1.65);
   });
+
+  testWidgets('設定の小数桁と丸め方法を表示と見積数量へ反映する', (tester) async {
+    EstimateItemDraft? sentDraft;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WeightCalculationScreen(
+          settings: const AppSettings(
+            decimalPlaces: 2,
+            roundingMode: CalculatorRoundingMode.floor,
+          ),
+          onSendToEstimate: (draft) async => sentDraft = draft,
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byKey(const Key('densityVolume')), '1');
+    await tester.enterText(find.byKey(const Key('densityValue')), '1.239');
+    await tester.tap(find.byKey(const Key('calculateWeight')));
+    await tester.pump();
+
+    expect(find.text('1.23 t'), findsOneWidget);
+    expect(find.text('1239 kg'), findsOneWidget);
+
+    final sendButton = find.byKey(const Key('sendWeightToEstimate'));
+    await tester.ensureVisible(sendButton);
+    await tester.pumpAndSettle();
+    await tester.tap(sendButton);
+    await tester.pump();
+
+    expect(sentDraft?.quantity, 1.23);
+    expect(sentDraft?.originalQuantity, 1.239);
+    expect(sentDraft?.calculationBasis, '1 × 1.239 ＝ 1.239t');
+  });
 }
