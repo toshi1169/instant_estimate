@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/app_access_plan.dart';
 import '../../../core/domain/angle_unit.dart';
 import '../../../core/localization/app_language.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -10,6 +11,7 @@ class SettingsScreen extends StatefulWidget {
     required this.settings,
     required this.onSettingsChanged,
     required this.onClearHistory,
+    this.accessPlan = AppAccessPlan.free,
     this.onShowAdvertisingPrivacyOptions,
     super.key,
   });
@@ -17,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
   final Future<void> Function() onClearHistory;
+  final AppAccessPlan accessPlan;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
 
   @override
@@ -265,6 +268,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 24),
           Text(
+            strings.text('購入状況'),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                _PurchaseStatusTile(
+                  key: const Key('purchaseStatusAdFree'),
+                  icon: Icons.block_outlined,
+                  title: strings.adFreePlan,
+                  status: _adFreeStatus(widget.accessPlan, strings),
+                  active: widget.accessPlan != AppAccessPlan.free,
+                ),
+                const Divider(height: 1),
+                _PurchaseStatusTile(
+                  key: const Key('purchaseStatusFull'),
+                  icon: Icons.workspace_premium_outlined,
+                  title: strings.fullPlan,
+                  status: _fullPlanStatus(widget.accessPlan, strings),
+                  active: widget.accessPlan == AppAccessPlan.full,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
             strings.calculationHistory,
             style: Theme.of(context).textTheme.titleMedium,
           ),
@@ -359,3 +390,48 @@ String _roundingLabel(CalculatorRoundingMode value, AppLocalizations strings) =>
       CalculatorRoundingMode.ceiling => strings.roundUp,
       CalculatorRoundingMode.floor => strings.roundDown,
     };
+
+class _PurchaseStatusTile extends StatelessWidget {
+  const _PurchaseStatusTile({
+    required this.icon,
+    required this.title,
+    required this.status,
+    required this.active,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String status;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(
+        status,
+        style: TextStyle(
+          color: active ? colors.primary : colors.onSurfaceVariant,
+          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+      trailing: Icon(
+        active ? Icons.check_circle : Icons.remove_circle_outline,
+        color: active ? colors.primary : colors.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
+String _adFreeStatus(AppAccessPlan plan, AppLocalizations strings) =>
+    switch (plan) {
+      AppAccessPlan.free => strings.text('未購入'),
+      AppAccessPlan.adFree => strings.text('購入済み'),
+      AppAccessPlan.full => strings.text('完全版特典で有効'),
+    };
+
+String _fullPlanStatus(AppAccessPlan plan, AppLocalizations strings) =>
+    plan == AppAccessPlan.full ? strings.text('契約中') : strings.text('未契約');

@@ -639,6 +639,10 @@ void main() {
     expect(find.text('ヘルプ'), findsOneWidget);
     expect(find.text('広告なし版（買い切り）'), findsOneWidget);
     expect(find.text('完全版（月額）'), findsOneWidget);
+    expect(find.byKey(const Key('sideMenuAdFreeStatus')), findsOneWidget);
+    expect(find.byKey(const Key('sideMenuFullStatus')), findsOneWidget);
+    expect(find.text('未購入'), findsOneWidget);
+    expect(find.text('未契約'), findsOneWidget);
     expect(find.text('便利計算一覧'), findsOneWidget);
     expect(find.text('単位変換'), findsOneWidget);
     expect(find.text('インスタント見積'), findsWidgets);
@@ -711,6 +715,43 @@ void main() {
 
     expect(find.byKey(const Key('sideMenuAdArea')), findsNothing);
     expect(find.text('広告なし版（買い切り）'), findsOneWidget);
+    expect(find.text('購入済み'), findsOneWidget);
+    expect(find.text('未契約'), findsOneWidget);
+  });
+
+  testWidgets('完全版では左メニューと設定に契約状況を区別して表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessPlan: AppAccessPlan.full,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('完全版特典で有効'), findsOneWidget);
+    expect(find.text('契約中'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sideMenuSettings')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('purchaseStatusAdFree')),
+      250,
+    );
+
+    expect(find.text('購入状況'), findsOneWidget);
+    expect(find.byKey(const Key('purchaseStatusAdFree')), findsOneWidget);
+    expect(find.byKey(const Key('purchaseStatusFull')), findsOneWidget);
+    expect(find.text('完全版特典で有効'), findsOneWidget);
+    expect(find.text('契約中'), findsOneWidget);
   });
 
   testWidgets('端末に保存した広告なし版を起動時に復元する', (tester) async {

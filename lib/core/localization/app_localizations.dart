@@ -68,6 +68,12 @@ class AppLocalizations {
           '広告に関する同意内容を確認・変更します':
               'Review or change your advertising consent choices.',
           '広告のプライバシー設定を開けませんでした': 'Could not open ad privacy choices.',
+          '購入状況': 'Purchase status',
+          '未購入': 'Not purchased',
+          '購入済み': 'Purchased',
+          '完全版特典で有効': 'Included with Full plan',
+          '未契約': 'Not subscribed',
+          '契約中': 'Active subscription',
           '便利計算一覧': 'Convenient calculations',
           '土量計算': 'Earthwork calculation',
           '掘削・搬出': 'Excavation & haul',

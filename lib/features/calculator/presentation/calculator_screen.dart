@@ -185,6 +185,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       MaterialPageRoute<void>(
         builder: (_) => SettingsScreen(
           settings: widget.settings,
+          accessPlan: widget.accessPlan,
           onSettingsChanged: widget.onSettingsChanged ?? (_) {},
           onClearHistory: _controller.clearHistory,
           onShowAdvertisingPrivacyOptions:
@@ -732,6 +733,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         key: _scaffoldKey,
         drawer: CalculatorSideMenu(
           showAds: widget.accessPlan.showsAds,
+          accessPlan: widget.accessPlan,
           enableGoogleMobileAds: widget.enableGoogleMobileAds,
           onSelected: _selectSideMenu,
         ),

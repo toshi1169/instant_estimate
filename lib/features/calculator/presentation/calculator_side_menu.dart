@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/app_access_plan.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/widgets/technical_term_info.dart';
 import '../../advertising/presentation/google_mobile_ads_banner.dart';
@@ -20,12 +21,14 @@ class CalculatorSideMenu extends StatelessWidget {
   const CalculatorSideMenu({
     required this.onSelected,
     required this.showAds,
+    required this.accessPlan,
     this.enableGoogleMobileAds = false,
     super.key,
   });
 
   final ValueChanged<CalculatorSideMenuDestination> onSelected;
   final bool showAds;
+  final AppAccessPlan accessPlan;
   final bool enableGoogleMobileAds;
 
   @override
@@ -56,12 +59,18 @@ class CalculatorSideMenu extends StatelessWidget {
               key: const Key('sideMenuAdFree'),
               icon: Icons.block_outlined,
               label: strings.adFreePlan,
+              subtitle: _adFreeStatus(accessPlan, strings),
+              subtitleKey: const Key('sideMenuAdFreeStatus'),
+              statusActive: accessPlan != AppAccessPlan.free,
               onTap: () => onSelected(CalculatorSideMenuDestination.adFree),
             ),
             _MenuTile(
               key: const Key('sideMenuFull'),
               icon: Icons.workspace_premium_outlined,
               label: strings.fullPlan,
+              subtitle: _fullPlanStatus(accessPlan, strings),
+              subtitleKey: const Key('sideMenuFullStatus'),
+              statusActive: accessPlan == AppAccessPlan.full,
               onTap: () => onSelected(CalculatorSideMenuDestination.full),
             ),
             const Divider(height: 24),
@@ -184,6 +193,9 @@ class _MenuTile extends StatelessWidget {
     required this.onTap,
     this.infoTitle,
     this.infoExplanation,
+    this.subtitle,
+    this.subtitleKey,
+    this.statusActive = false,
     super.key,
   });
 
@@ -192,6 +204,9 @@ class _MenuTile extends StatelessWidget {
   final VoidCallback onTap;
   final String? infoTitle;
   final String? infoExplanation;
+  final String? subtitle;
+  final Key? subtitleKey;
+  final bool statusActive;
 
   @override
   Widget build(BuildContext context) {
@@ -205,8 +220,30 @@ class _MenuTile extends StatelessWidget {
             TechnicalTermInfo(title: infoTitle!, explanation: infoExplanation!),
         ],
       ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle!,
+              key: subtitleKey,
+              style: TextStyle(
+                color: statusActive
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: statusActive ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );
   }
 }
+
+String _adFreeStatus(AppAccessPlan plan, AppLocalizations strings) =>
+    switch (plan) {
+      AppAccessPlan.free => strings.text('未購入'),
+      AppAccessPlan.adFree => strings.text('購入済み'),
+      AppAccessPlan.full => strings.text('完全版特典で有効'),
+    };
+
+String _fullPlanStatus(AppAccessPlan plan, AppLocalizations strings) =>
+    plan == AppAccessPlan.full ? strings.text('契約中') : strings.text('未契約');
