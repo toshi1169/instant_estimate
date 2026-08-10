@@ -20,6 +20,7 @@ import '../features/settings/data/app_settings_store.dart';
 import '../features/settings/domain/app_settings.dart';
 import '../features/subscription/data/app_access_state_store.dart';
 import '../features/subscription/domain/app_access_state.dart';
+import '../features/subscription/domain/purchase_store.dart';
 
 class InstantEstimateApp extends StatefulWidget {
   const InstantEstimateApp({
@@ -32,6 +33,7 @@ class InstantEstimateApp extends StatefulWidget {
     this.rewardedAdPresenter,
     this.advertisingConsentManager,
     this.enableGoogleMobileAds = false,
+    this.purchaseStore,
     this.accessPlan = AppAccessPlan.free,
     super.key,
   });
@@ -45,6 +47,7 @@ class InstantEstimateApp extends StatefulWidget {
   final RewardedAdPresenter? rewardedAdPresenter;
   final AdvertisingConsentManager? advertisingConsentManager;
   final bool enableGoogleMobileAds;
+  final PurchaseStore? purchaseStore;
   final AppAccessPlan accessPlan;
 
   @override
@@ -68,6 +71,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   late AdvertisingConsentState _advertisingConsentState =
       widget.advertisingConsentManager?.state.value ??
       const AdvertisingConsentState(canRequestAds: true);
+  StreamSubscription<AppAccessPlan>? _purchaseEntitlementSubscription;
 
   @override
   void initState() {
@@ -76,7 +80,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       _handleAdvertisingConsentChanged,
     );
     unawaited(_loadSettings());
-    unawaited(_loadAccessState());
+    unawaited(_initializeAccessAndPurchases());
     if (widget.enableGoogleMobileAds) {
       unawaited(widget.advertisingConsentManager?.gatherConsent());
     }
@@ -87,8 +91,52 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
     widget.advertisingConsentManager?.state.removeListener(
       _handleAdvertisingConsentChanged,
     );
+    unawaited(_purchaseEntitlementSubscription?.cancel());
+    widget.purchaseStore?.dispose();
     super.dispose();
   }
+
+  Future<void> _initializeAccessAndPurchases() async {
+    await _loadAccessState();
+    final purchaseStore = widget.purchaseStore;
+    if (purchaseStore == null) return;
+    _purchaseEntitlementSubscription = purchaseStore.entitlementChanges.listen(
+      (plan) => unawaited(_applyPurchasedPlan(plan)),
+    );
+    await purchaseStore.initialize();
+  }
+
+  Future<void> _applyPurchasedPlan(AppAccessPlan purchasedPlan) async {
+    final currentPlan = _accessState.effectivePlan();
+    final effectivePlan =
+        _planPriority(purchasedPlan) >= _planPriority(currentPlan)
+        ? purchasedPlan
+        : currentPlan;
+    final updatedState = _accessState.copyWith(
+      plan: effectivePlan,
+      lastVerifiedAt: DateTime.now(),
+    );
+    final store = widget.accessStateStore;
+    if (store != null) {
+      try {
+        await store.save(updatedState);
+      } catch (_) {
+        // ストアの購入結果は画面へ反映し、保存は次回の復元で再取得できる。
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _accessState = updatedState;
+      _accessPlan = updatedState.effectivePlan();
+      _rewardedAdAccessController.updateState(updatedState);
+    });
+  }
+
+  int _planPriority(AppAccessPlan plan) => switch (plan) {
+    AppAccessPlan.free => 0,
+    AppAccessPlan.adFree => 1,
+    AppAccessPlan.full => 2,
+  };
 
   void _handleAdvertisingConsentChanged() {
     if (!mounted) return;
@@ -199,6 +247,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
               enableGoogleMobileAds:
                   widget.enableGoogleMobileAds &&
                   _advertisingConsentState.canRequestAds,
+              purchaseStore: widget.purchaseStore,
             )
           : const ColoredBox(color: Colors.transparent),
     );
@@ -217,6 +266,7 @@ class _StartupGate extends StatefulWidget {
     required this.onRequestRewardedAdAccess,
     required this.onShowAdvertisingPrivacyOptions,
     required this.enableGoogleMobileAds,
+    required this.purchaseStore,
   });
 
   final OnboardingPreferences onboardingPreferences;
@@ -229,6 +279,7 @@ class _StartupGate extends StatefulWidget {
   final Future<bool> Function(RewardedAdEntryPoint) onRequestRewardedAdAccess;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
+  final PurchaseStore? purchaseStore;
 
   @override
   State<_StartupGate> createState() => _StartupGateState();
@@ -296,6 +347,7 @@ class _StartupGateState extends State<_StartupGate> {
             onShowAdvertisingPrivacyOptions:
                 widget.onShowAdvertisingPrivacyOptions,
             enableGoogleMobileAds: widget.enableGoogleMobileAds,
+            purchaseStore: widget.purchaseStore,
           );
         }
 

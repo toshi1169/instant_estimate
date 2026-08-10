@@ -9,6 +9,7 @@ import 'features/settings/data/app_settings_store.dart';
 import 'features/estimate/data/estimate_item_store.dart';
 import 'features/productivity/data/productivity_record_store.dart';
 import 'features/subscription/data/app_access_state_store.dart';
+import 'features/subscription/data/in_app_purchase_store.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ void main() {
       rewardedAdPresenter: const GoogleMobileAdsRewardedAdPresenter(),
       advertisingConsentManager: GoogleMobileAdsConsentManager(),
       enableGoogleMobileAds: true,
+      purchaseStore: InAppPurchaseStore(),
     ),
   );
 }

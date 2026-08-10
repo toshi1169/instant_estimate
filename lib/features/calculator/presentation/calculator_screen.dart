@@ -32,6 +32,7 @@ import '../../construction_calculations/presentation/construction_calculations_s
 import '../../help/presentation/help_screen.dart';
 import '../../unit_conversion/presentation/unit_conversion_screen.dart';
 import '../../subscription/presentation/access_plan_screen.dart';
+import '../../subscription/domain/purchase_store.dart';
 import 'function_list_dialog.dart';
 
 class CalculatorScreen extends StatefulWidget {
@@ -48,6 +49,7 @@ class CalculatorScreen extends StatefulWidget {
     this.onRequestRewardedAdAccess,
     this.onShowAdvertisingPrivacyOptions,
     this.enableGoogleMobileAds = false,
+    this.purchaseStore,
     super.key,
   });
 
@@ -63,6 +65,7 @@ class CalculatorScreen extends StatefulWidget {
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
+  final PurchaseStore? purchaseStore;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -309,7 +312,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         _openFromSideMenu(
           () => Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => AccessPlanScreen(plan: plan),
+              builder: (_) => AccessPlanScreen(
+                plan: plan,
+                currentPlan: widget.accessPlan,
+                purchaseStore: widget.purchaseStore,
+              ),
             ),
           ),
         ),
@@ -746,8 +753,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         enableGoogleMobileAds: widget.enableGoogleMobileAds,
                         onUpgrade: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder: (_) => const AccessPlanScreen(
+                            builder: (_) => AccessPlanScreen(
                               plan: AppAccessPlan.adFree,
+                              currentPlan: widget.accessPlan,
+                              purchaseStore: widget.purchaseStore,
                             ),
                           ),
                         ),
