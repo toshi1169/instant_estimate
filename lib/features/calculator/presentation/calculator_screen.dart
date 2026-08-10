@@ -721,6 +721,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         key: _scaffoldKey,
         drawer: CalculatorSideMenu(
           showAds: widget.accessPlan.showsAds,
+          enableGoogleMobileAds: widget.enableGoogleMobileAds,
           onSelected: _selectSideMenu,
         ),
         body: SafeArea(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/widgets/technical_term_info.dart';
+import '../../advertising/presentation/google_mobile_ads_banner.dart';
 
 enum CalculatorSideMenuDestination {
   settings,
@@ -19,11 +20,13 @@ class CalculatorSideMenu extends StatelessWidget {
   const CalculatorSideMenu({
     required this.onSelected,
     required this.showAds,
+    this.enableGoogleMobileAds = false,
     super.key,
   });
 
   final ValueChanged<CalculatorSideMenuDestination> onSelected;
   final bool showAds;
+  final bool enableGoogleMobileAds;
 
   @override
   Widget build(BuildContext context) {
@@ -108,22 +111,12 @@ class CalculatorSideMenu extends StatelessWidget {
             const Divider(height: 24),
             if (showAds)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  key: const Key('sideMenuAdArea'),
-                  constraints: const BoxConstraints(minHeight: 82),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerLow,
-                    border: Border.all(color: theme.colorScheme.outlineVariant),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    strings.adArea,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                padding: EdgeInsets.symmetric(
+                  horizontal: enableGoogleMobileAds ? 8 : 16,
+                ),
+                child: _SideMenuAdArea(
+                  enableGoogleMobileAds: enableGoogleMobileAds,
+                  label: strings.adArea,
                 ),
               ),
             const SizedBox(height: 18),
@@ -138,6 +131,48 @@ class CalculatorSideMenu extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SideMenuAdArea extends StatelessWidget {
+  const _SideMenuAdArea({
+    required this.enableGoogleMobileAds,
+    required this.label,
+  });
+
+  final bool enableGoogleMobileAds;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final height = enableGoogleMobileAds ? 250.0 : 82.0;
+    final fallback = Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+
+    if (!enableGoogleMobileAds) {
+      return KeyedSubtree(key: const Key('sideMenuAdArea'), child: fallback);
+    }
+
+    return GoogleMobileAdsBanner(
+      key: const Key('sideMenuAdArea'),
+      height: height,
+      format: GoogleMobileAdsBannerFormat.mediumRectangle,
+      fallback: fallback,
     );
   }
 }

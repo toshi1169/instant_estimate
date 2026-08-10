@@ -15,6 +15,8 @@ abstract final class GoogleMobileAdsBannerTestIds {
   }
 }
 
+enum GoogleMobileAdsBannerFormat { standard, mediumRectangle }
+
 /// Google公式のテスト広告を表示するバナー。
 ///
 /// 広告の読み込み中・取得失敗時は [fallback] を維持し、無料版の画面に
@@ -23,11 +25,13 @@ class GoogleMobileAdsBanner extends StatefulWidget {
   const GoogleMobileAdsBanner({
     required this.height,
     required this.fallback,
+    this.format = GoogleMobileAdsBannerFormat.standard,
     super.key,
   });
 
   final double height;
   final Widget fallback;
+  final GoogleMobileAdsBannerFormat format;
 
   @override
   State<GoogleMobileAdsBanner> createState() => _GoogleMobileAdsBannerState();
@@ -50,9 +54,14 @@ class _GoogleMobileAdsBannerState extends State<GoogleMobileAdsBanner> {
     );
     if (adUnitId == null) return;
 
+    final adSize = switch (widget.format) {
+      GoogleMobileAdsBannerFormat.standard => AdSize.banner,
+      GoogleMobileAdsBannerFormat.mediumRectangle => AdSize.mediumRectangle,
+    };
+
     final banner = BannerAd(
       adUnitId: adUnitId,
-      size: AdSize.banner,
+      size: adSize,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
