@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 import 'package:instant_estimate/features/slope/domain/slope_calculator.dart';
 import 'package:instant_estimate/features/slope/presentation/slope_calculation_screen.dart';
@@ -173,5 +174,48 @@ void main() {
       matching: find.byType(TextField),
     );
     expect(tester.widget<TextField>(heightField).controller!.text, '1.00');
+  });
+
+  testWidgets('English settings show slope errors and help in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: const SlopeCalculationScreen(),
+      ),
+    );
+
+    final heightField = find.descendant(
+      of: find.byKey(const Key('slopeHeight')),
+      matching: find.byType(TextField),
+    );
+    final lengthField = find.descendant(
+      of: find.byKey(const Key('slopeLength')),
+      matching: find.byType(TextField),
+    );
+    await tester.tap(heightField);
+    await tester.enterText(heightField, '5');
+    await tester.ensureVisible(lengthField);
+    await tester.tap(lengthField);
+    await tester.enterText(lengthField, '4');
+    await tester.pump();
+
+    expect(
+      find.text('Enter a slope length greater than the height'),
+      findsOneWidget,
+    );
+    expect(find.text('法長は高さより大きい数値を入力してください'), findsNothing);
+
+    await tester.tap(find.byTooltip('Input guide'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Tap two input fields in order'),
+      findsOneWidget,
+    );
   });
 }

@@ -266,15 +266,18 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
   }
 
   void _showHelp() {
+    final strings = AppLocalizations.of(context);
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (context) => const SafeArea(
+      builder: (context) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.fromLTRB(24, 8, 24, 28),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
           child: Text(
-            '計算に使う2つの入力欄を順にタップし、数値を入力してください。'
-            '残りの値は自動計算されます。法勾配 1:n は、縦1に対する水平距離nを表します。',
+            strings.text(
+              '計算に使う2つの入力欄を順にタップし、数値を入力してください。'
+              '残りの値は自動計算されます。法勾配 1:n は、縦1に対する水平距離nを表します。',
+            ),
           ),
         ),
       ),
@@ -342,6 +345,10 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
                   fillColor: AppColors.accent.withValues(alpha: 0.82),
                   unit: _lengthUnit,
                   format: _format,
+                  slopeLengthLabel: strings.text('法長'),
+                  heightLabel: strings.text('高さ'),
+                  horizontalDistanceLabel: strings.text('水平距離'),
+                  slopeRatioLabel: strings.text('法勾配'),
                 ),
               ),
             ),
@@ -634,6 +641,10 @@ class _SlopeDiagramPainter extends CustomPainter {
     required this.fillColor,
     required this.unit,
     required this.format,
+    required this.slopeLengthLabel,
+    required this.heightLabel,
+    required this.horizontalDistanceLabel,
+    required this.slopeRatioLabel,
   });
 
   final SlopeCalculationResult? result;
@@ -641,6 +652,10 @@ class _SlopeDiagramPainter extends CustomPainter {
   final Color fillColor;
   final String unit;
   final String Function(double) format;
+  final String slopeLengthLabel;
+  final String heightLabel;
+  final String horizontalDistanceLabel;
+  final String slopeRatioLabel;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -675,21 +690,21 @@ class _SlopeDiagramPainter extends CustomPainter {
     _text(canvas, 'C', Offset(top.dx + 4, top.dy - 18), color, 13);
     _text(
       canvas,
-      '法長 (L)\n${result == null ? '—' : format(result.slopeLengthMeters * (unit == 'mm' ? 1000 : 1))} $unit',
+      '$slopeLengthLabel (L)\n${result == null ? '—' : format(result.slopeLengthMeters * (unit == 'mm' ? 1000 : 1))} $unit',
       Offset(size.width * 0.21, size.height * 0.29),
       color,
       13,
     );
     _text(
       canvas,
-      '高さ (V)\n${result == null ? '—' : format(result.heightDifferenceMeters * (unit == 'mm' ? 1000 : 1))} $unit',
+      '$heightLabel (V)\n${result == null ? '—' : format(result.heightDifferenceMeters * (unit == 'mm' ? 1000 : 1))} $unit',
       Offset(size.width - 66, size.height * 0.42),
       color,
       12,
     );
     _text(
       canvas,
-      '水平距離 (H)  ${result == null ? '—' : format(result.horizontalDistanceMeters * (unit == 'mm' ? 1000 : 1))} $unit',
+      '$horizontalDistanceLabel (H)  ${result == null ? '—' : format(result.horizontalDistanceMeters * (unit == 'mm' ? 1000 : 1))} $unit',
       Offset(size.width * 0.18, size.height - 31),
       color,
       12,
@@ -704,8 +719,8 @@ class _SlopeDiagramPainter extends CustomPainter {
     _text(
       canvas,
       result == null
-          ? '法勾配  —'
-          : '法勾配\n1 : ${format(result.gradientRatioDenominator ?? 0)}',
+          ? '$slopeRatioLabel  —'
+          : '$slopeRatioLabel\n1 : ${format(result.gradientRatioDenominator ?? 0)}',
       Offset(size.width * 0.57, size.height * 0.56),
       Colors.white,
       13,
@@ -737,6 +752,10 @@ class _SlopeDiagramPainter extends CustomPainter {
   bool shouldRepaint(covariant _SlopeDiagramPainter oldDelegate) {
     return oldDelegate.result != result ||
         oldDelegate.color != color ||
-        oldDelegate.unit != unit;
+        oldDelegate.unit != unit ||
+        oldDelegate.slopeLengthLabel != slopeLengthLabel ||
+        oldDelegate.heightLabel != heightLabel ||
+        oldDelegate.horizontalDistanceLabel != horizontalDistanceLabel ||
+        oldDelegate.slopeRatioLabel != slopeRatioLabel;
   }
 }

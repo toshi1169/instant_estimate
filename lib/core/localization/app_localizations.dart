@@ -313,7 +313,9 @@ class AppLocalizations {
           'その他': 'Other',
           '入力方法': 'Input guide',
           '高さ（V）': 'Height (V)',
+          '高さ': 'Height',
           '法長（L）': 'Slope length (L)',
+          '法長': 'Slope length',
           '法勾配': 'Slope ratio',
           '角度（θ）': 'Angle (θ)',
           '勾配（%）': 'Slope (%)',
@@ -418,9 +420,30 @@ class AppLocalizations {
           '入力': 'Enter',
           '自動計算': 'Calculated automatically',
           '計算する1項目を空欄にしてください': 'Leave one value blank to calculate it',
+          '4項目のうち3項目を入力してください': 'Enter three of the four values',
+          '0より大きい数値を入力してください': 'Enter a number greater than 0',
+          'この値では計算できません': 'These values cannot be calculated',
+          '距離の項目と1つ以上組み合わせて入力してください': 'Select a distance and one other value',
+          '勾配の入力項目を選択してください': 'Select a slope input',
+          '高さは0より大きい数値を入力してください': 'Enter a height greater than 0',
+          '法長は0より大きい数値を入力してください': 'Enter a slope length greater than 0',
+          '水平距離は0より大きい数値を入力してください':
+              'Enter a horizontal distance greater than 0',
+          '法長は高さより大きい数値を入力してください':
+              'Enter a slope length greater than the height',
+          '法長は水平距離より大きい数値を入力してください':
+              'Enter a slope length greater than the horizontal distance',
+          '法勾配は0より大きい数値を入力してください': 'Enter a slope ratio greater than 0',
+          '入力値は0以上の数値を入力してください': 'Enter a value of 0 or greater',
+          '勾配比は0より大きい数値を入力してください': 'Enter a gradient ratio greater than 0',
+          '角度は0度以上90度未満で入力してください':
+              'Enter an angle from 0 degrees up to but not including 90 degrees',
+          '計算に使う2つの入力欄を順にタップし、数値を入力してください。残りの値は自動計算されます。法勾配 1:n は、縦1に対する水平距離nを表します。':
+              'Tap two input fields in order and enter their values. The remaining values are calculated automatically. A slope ratio of 1:n means a horizontal distance of n for a vertical rise of 1.',
           '入力項目（選択した2つから自動計算）':
               'Inputs (calculated automatically from two selected values)',
           '水平距離（H）': 'Horizontal distance (H)',
+          '水平距離': 'Horizontal distance',
           '法面積（延長分）': 'Slope area (total length)',
           '見積名': 'Estimate name',
           '見積番号': 'Estimate number',

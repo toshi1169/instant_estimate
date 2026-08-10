@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/ratio/domain/ratio_calculator.dart';
 import 'package:instant_estimate/features/ratio/presentation/ratio_calculation_screen.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
@@ -60,5 +61,26 @@ void main() {
     await tester.pump();
 
     expect(find.text('D ＝ 6.67'), findsOneWidget);
+  });
+
+  testWidgets('English settings show ratio input errors in English', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: const RatioCalculationScreen(),
+      ),
+    );
+
+    for (final key in const ['ratioA', 'ratioB', 'ratioC', 'ratioD']) {
+      await tester.enterText(find.byKey(Key(key)), '1');
+    }
+    await tester.pump();
+
+    expect(find.text('Leave one value blank to calculate it'), findsOneWidget);
+    expect(find.text('計算する1項目を空欄にしてください'), findsNothing);
   });
 }
