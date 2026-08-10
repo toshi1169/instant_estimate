@@ -39,39 +39,7 @@ class InAppPurchaseStore implements PurchaseStore {
     _setState(PurchaseOperation.loading);
 
     try {
-      if (!await _inAppPurchase.isAvailable()) {
-        _setState(PurchaseOperation.unavailable);
-        return;
-      }
-      final response = await _inAppPurchase.queryProductDetails(
-        PurchaseProductIds.all,
-      );
-      if (response.error != null) {
-        _setState(PurchaseOperation.error, message: response.error!.message);
-        return;
-      }
-      _productDetails = {
-        for (final product in response.productDetails) product.id: product,
-      };
-      final products = response.productDetails
-          .map((product) {
-            final plan = PurchaseProductIds.planFor(product.id);
-            return plan == null
-                ? null
-                : PurchaseProduct(
-                    id: product.id,
-                    plan: plan,
-                    displayPrice: product.price,
-                  );
-          })
-          .whereType<PurchaseProduct>()
-          .toList(growable: false);
-      _state.value = PurchaseStoreState(
-        operation: products.isEmpty
-            ? PurchaseOperation.unavailable
-            : PurchaseOperation.ready,
-        products: products,
-      );
+      await _loadProducts();
     } catch (error) {
       _setState(PurchaseOperation.error, message: error.toString());
     }
@@ -79,14 +47,22 @@ class InAppPurchaseStore implements PurchaseStore {
 
   @override
   Future<void> purchase(AppAccessPlan plan) async {
-    final productId = PurchaseProductIds.forPlan(plan);
-    final product = productId == null ? null : _productDetails[productId];
-    if (product == null) {
-      _setState(PurchaseOperation.unavailable);
-      return;
-    }
-    _setState(PurchaseOperation.purchasing);
     try {
+      final productId = PurchaseProductIds.forPlan(plan);
+      var product = productId == null ? null : _productDetails[productId];
+      if (product == null && productId != null) {
+        _setState(PurchaseOperation.loading);
+        await _loadProducts();
+        product = _productDetails[productId];
+      }
+      if (product == null) {
+        _setState(
+          PurchaseOperation.unavailable,
+          message: 'Store product could not be loaded.',
+        );
+        return;
+      }
+      _setState(PurchaseOperation.purchasing);
       final started = await _inAppPurchase.buyNonConsumable(
         purchaseParam: PurchaseParam(productDetails: product),
       );
@@ -96,6 +72,42 @@ class InAppPurchaseStore implements PurchaseStore {
     } catch (error) {
       _setState(PurchaseOperation.error, message: error.toString());
     }
+  }
+
+  Future<void> _loadProducts() async {
+    if (!await _inAppPurchase.isAvailable()) {
+      _setState(PurchaseOperation.unavailable);
+      return;
+    }
+    final response = await _inAppPurchase.queryProductDetails(
+      PurchaseProductIds.all,
+    );
+    if (response.error != null) {
+      _setState(PurchaseOperation.error, message: response.error!.message);
+      return;
+    }
+    _productDetails = {
+      for (final product in response.productDetails) product.id: product,
+    };
+    final products = response.productDetails
+        .map((product) {
+          final plan = PurchaseProductIds.planFor(product.id);
+          return plan == null
+              ? null
+              : PurchaseProduct(
+                  id: product.id,
+                  plan: plan,
+                  displayPrice: product.price,
+                );
+        })
+        .whereType<PurchaseProduct>()
+        .toList(growable: false);
+    _state.value = PurchaseStoreState(
+      operation: products.isEmpty
+          ? PurchaseOperation.unavailable
+          : PurchaseOperation.ready,
+      products: products,
+    );
   }
 
   @override

@@ -97,10 +97,7 @@ class AccessPlanScreen extends StatelessWidget {
     final priceLabel = product?.displayPrice ?? fallbackPriceLabel;
     final isCurrentPlan = currentPlan == plan;
     final canPurchase =
-        store != null &&
-        product != null &&
-        !isCurrentPlan &&
-        !(purchaseState?.isBusy ?? false);
+        store != null && !isCurrentPlan && !(purchaseState?.isBusy ?? false);
 
     return Scaffold(
       appBar: AppBar(title: Text(planName)),
@@ -170,6 +167,8 @@ class AccessPlanScreen extends StatelessWidget {
                 label: Text(
                   isCurrentPlan
                       ? (l10n.isEnglish ? 'Current plan' : '現在のプラン')
+                      : product == null
+                      ? (l10n.isEnglish ? 'Connect to store' : 'ストアへ接続')
                       : (l10n.isEnglish ? 'Purchase' : '購入する'),
                 ),
               ),

@@ -112,6 +112,40 @@ void main() {
     expect(find.text('現在のプラン'), findsOneWidget);
     expect(button.onPressed, isNull);
   });
+
+  testWidgets('商品情報が未取得でもストアへの再接続を試せる', (tester) async {
+    final store = _FakePurchaseStore(
+      const PurchaseStoreState(operation: PurchaseOperation.unavailable),
+    );
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        locale: const Locale('ja'),
+        home: AccessPlanScreen(
+          plan: AppAccessPlan.adFree,
+          purchaseStore: store,
+        ),
+      ),
+    );
+
+    expect(find.text('ストアへ接続'), findsOneWidget);
+    final button = tester.widget<FilledButton>(
+      find.byKey(const Key('purchasePlanButton')),
+    );
+    expect(button.onPressed, isNotNull);
+
+    await tester.tap(find.byKey(const Key('purchasePlanButton')));
+    await tester.pump();
+    expect(store.purchasedPlan, AppAccessPlan.adFree);
+  });
 }
 
 class _FakePurchaseStore implements PurchaseStore {
