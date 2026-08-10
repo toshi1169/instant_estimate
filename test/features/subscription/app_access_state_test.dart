@@ -10,6 +10,8 @@ void main() {
       plan: AppAccessPlan.full,
       trialEndsAt: trialEndsAt,
       lastVerifiedAt: verifiedAt,
+      rewardedAccessDay: '2026-08-09',
+      rewardedAccessGroups: const ['convenientCalculations', 'output'],
     );
 
     final restored = AppAccessState.fromJson(original.toJson());
@@ -17,6 +19,11 @@ void main() {
     expect(restored.plan, AppAccessPlan.full);
     expect(restored.trialEndsAt, trialEndsAt);
     expect(restored.lastVerifiedAt, verifiedAt);
+    expect(restored.rewardedAccessDay, '2026-08-09');
+    expect(restored.rewardedAccessGroups, const [
+      'convenientCalculations',
+      'output',
+    ]);
   });
 
   test('7日間体験の期間中だけ完全版を有効にする', () {
@@ -42,5 +49,16 @@ void main() {
 
     expect(state.plan, AppAccessPlan.free);
     expect(state.effectivePlan(), AppAccessPlan.free);
+  });
+
+  test('壊れた広告保存値は空の状態へ安全に戻す', () {
+    final state = AppAccessState.fromJson(const {
+      'plan': 'free',
+      'rewardedAccessDay': 20260809,
+      'rewardedAccessGroups': 'output',
+    });
+
+    expect(state.rewardedAccessDay, isNull);
+    expect(state.rewardedAccessGroups, isEmpty);
   });
 }

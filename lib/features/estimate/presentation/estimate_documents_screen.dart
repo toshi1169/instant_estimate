@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../application/estimate_controller.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
@@ -11,9 +12,14 @@ import 'unit_price_master_screen.dart';
 enum _EstimateDocumentAction { duplicate, delete }
 
 class EstimateDocumentsScreen extends StatelessWidget {
-  const EstimateDocumentsScreen({required this.controller, super.key});
+  const EstimateDocumentsScreen({
+    required this.controller,
+    this.onRequestRewardedAdAccess,
+    super.key,
+  });
 
   final EstimateController controller;
+  final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +32,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
             key: const Key('openUnitPriceMaster'),
             tooltip: strings.unitPriceMaster,
             icon: const Icon(Icons.price_change_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => UnitPriceMasterScreen(controller: controller),
-              ),
-            ),
+            onPressed: () => _openUnitPriceMaster(context),
           ),
         ],
       ),
@@ -137,7 +139,10 @@ class EstimateDocumentsScreen extends StatelessWidget {
         );
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => EstimateItemsScreen(controller: controller),
+            builder: (_) => EstimateItemsScreen(
+              controller: controller,
+              onRequestRewardedAdAccess: onRequestRewardedAdAccess,
+            ),
           ),
         );
       case _EstimateDocumentAction.delete:
@@ -226,7 +231,10 @@ class EstimateDocumentsScreen extends StatelessWidget {
     if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => EstimateItemsScreen(controller: controller),
+        builder: (_) => EstimateItemsScreen(
+          controller: controller,
+          onRequestRewardedAdAccess: onRequestRewardedAdAccess,
+        ),
       ),
     );
   }
@@ -250,7 +258,24 @@ class EstimateDocumentsScreen extends StatelessWidget {
     if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => EstimateItemsScreen(controller: controller),
+        builder: (_) => EstimateItemsScreen(
+          controller: controller,
+          onRequestRewardedAdAccess: onRequestRewardedAdAccess,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openUnitPriceMaster(BuildContext context) async {
+    final requestAccess = onRequestRewardedAdAccess;
+    if (requestAccess != null &&
+        !await requestAccess(RewardedAdEntryPoint.unitPriceMaster)) {
+      return;
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => UnitPriceMasterScreen(controller: controller),
       ),
     );
   }

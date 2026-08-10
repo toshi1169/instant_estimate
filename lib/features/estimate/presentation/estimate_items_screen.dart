@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../application/estimate_controller.dart';
 import '../application/estimate_excel_export.dart';
 import '../application/estimate_pdf_export.dart';
@@ -21,9 +22,14 @@ import 'merge_estimate_quantity_dialog.dart';
 enum _EstimateItemAction { duplicate, edit, delete }
 
 class EstimateItemsScreen extends StatelessWidget {
-  const EstimateItemsScreen({required this.controller, super.key});
+  const EstimateItemsScreen({
+    required this.controller,
+    this.onRequestRewardedAdAccess,
+    super.key,
+  });
 
   final EstimateController controller;
+  final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +140,8 @@ class EstimateItemsScreen extends StatelessWidget {
       );
       return;
     }
+    if (!await _requestOutputAccess(RewardedAdEntryPoint.printOutput)) return;
+    if (!context.mounted) return;
     try {
       await Printing.layoutPdf(
         name: '${controller.info.displayName}.pdf',
@@ -164,6 +172,8 @@ class EstimateItemsScreen extends StatelessWidget {
       );
       return;
     }
+    if (!await _requestOutputAccess(RewardedAdEntryPoint.excelExport)) return;
+    if (!context.mounted) return;
     try {
       final file = await createEstimateWorkbookFile(
         info: controller.info,
@@ -208,6 +218,8 @@ class EstimateItemsScreen extends StatelessWidget {
       );
       return;
     }
+    if (!await _requestOutputAccess(RewardedAdEntryPoint.excelExport)) return;
+    if (!context.mounted) return;
     try {
       await Clipboard.setData(
         ClipboardData(text: buildEstimateTableText(controller.items)),
@@ -234,6 +246,10 @@ class EstimateItemsScreen extends StatelessWidget {
         );
       }
     }
+  }
+
+  Future<bool> _requestOutputAccess(RewardedAdEntryPoint entryPoint) async {
+    return await onRequestRewardedAdAccess?.call(entryPoint) ?? true;
   }
 
   Future<void> _addItem(BuildContext context) async {

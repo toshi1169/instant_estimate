@@ -8,6 +8,7 @@ import '../../../core/domain/app_access_plan.dart';
 import '../../../core/domain/angle_unit.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -43,6 +44,7 @@ class CalculatorScreen extends StatefulWidget {
     this.productivityRecordStore,
     this.productivityController,
     this.accessPlan = AppAccessPlan.free,
+    this.onRequestRewardedAdAccess,
     super.key,
   });
 
@@ -55,6 +57,7 @@ class CalculatorScreen extends StatefulWidget {
   final ProductivityRecordStore? productivityRecordStore;
   final ProductivityController? productivityController;
   final AppAccessPlan accessPlan;
+  final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -224,11 +227,25 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       return;
     }
     if (destination == CalculatorSideMenuDestination.instantEstimate) {
-      unawaited(_openFromSideMenu(_openEstimateDocuments));
+      unawaited(
+        _openFromSideMenu(
+          () => _openWithRewardedAccess(
+            RewardedAdEntryPoint.instantEstimate,
+            _openEstimateDocuments,
+          ),
+        ),
+      );
       return;
     }
     if (destination == CalculatorSideMenuDestination.unitPriceMaster) {
-      unawaited(_openFromSideMenu(_openUnitPriceMaster));
+      unawaited(
+        _openFromSideMenu(
+          () => _openWithRewardedAccess(
+            RewardedAdEntryPoint.unitPriceMaster,
+            _openUnitPriceMaster,
+          ),
+        ),
+      );
       return;
     }
     if (destination == CalculatorSideMenuDestination.productivityMaster) {
@@ -247,13 +264,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     if (destination == CalculatorSideMenuDestination.constructionCalculations) {
       unawaited(
         _openFromSideMenu(
-          () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => ConstructionCalculationsScreen(
-                onSendToEstimate: _sendDraftToEstimate,
-                productivityController: _productivityController,
-                settings: widget.settings,
-                onSettingsChanged: widget.onSettingsChanged,
+          () => _openWithRewardedAccess(
+            RewardedAdEntryPoint.convenientCalculation,
+            () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ConstructionCalculationsScreen(
+                  onSendToEstimate: _sendDraftToEstimate,
+                  productivityController: _productivityController,
+                  settings: widget.settings,
+                  onSettingsChanged: widget.onSettingsChanged,
+                ),
               ),
             ),
           ),
@@ -312,6 +332,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     });
   }
 
+  Future<void> _openWithRewardedAccess(
+    RewardedAdEntryPoint entryPoint,
+    Future<void> Function() openScreen,
+  ) async {
+    final requestAccess = widget.onRequestRewardedAdAccess;
+    if (requestAccess != null && !await requestAccess(entryPoint)) return;
+    if (!mounted) return;
+    await openScreen();
+  }
+
   Future<void> _openUnitPriceMaster() async {
     try {
       await _estimateController.load();
@@ -337,8 +367,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            EstimateDocumentsScreen(controller: _estimateController),
+        builder: (_) => EstimateDocumentsScreen(
+          controller: _estimateController,
+          onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
+        ),
       ),
     );
   }
@@ -347,7 +379,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => EstimateItemsScreen(controller: _estimateController),
+        builder: (_) => EstimateItemsScreen(
+          controller: _estimateController,
+          onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
+        ),
       ),
     );
   }

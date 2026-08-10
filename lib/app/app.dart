@@ -6,6 +6,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/domain/app_access_plan.dart';
 import '../core/localization/app_localizations.dart';
 import '../core/theme/app_theme.dart';
+import '../features/advertising/application/rewarded_ad_access_controller.dart';
+import '../features/advertising/domain/rewarded_ad_policy.dart';
 import '../features/calculator/data/calculation_history_store.dart';
 import '../features/calculator/presentation/calculator_screen.dart';
 import '../features/estimate/data/estimate_item_store.dart';
@@ -16,6 +18,7 @@ import '../features/productivity/data/productivity_record_store.dart';
 import '../features/settings/data/app_settings_store.dart';
 import '../features/settings/domain/app_settings.dart';
 import '../features/subscription/data/app_access_state_store.dart';
+import '../features/subscription/domain/app_access_state.dart';
 
 class InstantEstimateApp extends StatefulWidget {
   const InstantEstimateApp({
@@ -25,6 +28,7 @@ class InstantEstimateApp extends StatefulWidget {
     this.estimateItemStore,
     this.productivityRecordStore,
     this.accessStateStore,
+    this.rewardedAdPresenter,
     this.accessPlan = AppAccessPlan.free,
     super.key,
   });
@@ -35,6 +39,7 @@ class InstantEstimateApp extends StatefulWidget {
   final EstimateItemStore? estimateItemStore;
   final ProductivityRecordStore? productivityRecordStore;
   final AppAccessStateStore? accessStateStore;
+  final RewardedAdPresenter? rewardedAdPresenter;
   final AppAccessPlan accessPlan;
 
   @override
@@ -44,6 +49,15 @@ class InstantEstimateApp extends StatefulWidget {
 class _InstantEstimateAppState extends State<InstantEstimateApp> {
   AppSettings _settings = const AppSettings();
   late AppAccessPlan _accessPlan = widget.accessPlan;
+  late AppAccessState _accessState = AppAccessState(plan: widget.accessPlan);
+  late final RewardedAdAccessController _rewardedAdAccessController =
+      RewardedAdAccessController(
+        initialState: _accessState,
+        store: widget.accessStateStore,
+        presenter:
+            widget.rewardedAdPresenter ??
+            const UnavailableRewardedAdPresenter(),
+      );
   late bool _isAccessStateReady = widget.accessStateStore == null;
   late bool _isSettingsReady = widget.appSettingsStore == null;
 
@@ -57,16 +71,17 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   Future<void> _loadAccessState() async {
     final store = widget.accessStateStore;
     if (store == null) return;
-    var loadedPlan = AppAccessPlan.free;
+    var loadedState = const AppAccessState();
     try {
-      final state = await store.load();
-      loadedPlan = state.effectivePlan();
+      loadedState = await store.load();
     } catch (_) {
       // 契約情報を読めない場合は、安全な無料版のまま起動する。
     }
     if (!mounted) return;
     setState(() {
-      _accessPlan = loadedPlan;
+      _accessState = loadedState;
+      _rewardedAdAccessController.updateState(loadedState);
+      _accessPlan = loadedState.effectivePlan();
       _isAccessStateReady = true;
     });
   }
@@ -131,6 +146,8 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
               accessPlan: _accessPlan,
               settings: _settings,
               onSettingsChanged: _changeSettings,
+              onRequestRewardedAdAccess:
+                  _rewardedAdAccessController.requestAccess,
             )
           : const ColoredBox(color: Colors.transparent),
     );
@@ -146,6 +163,7 @@ class _StartupGate extends StatefulWidget {
     required this.accessPlan,
     required this.settings,
     required this.onSettingsChanged,
+    required this.onRequestRewardedAdAccess,
   });
 
   final OnboardingPreferences onboardingPreferences;
@@ -155,6 +173,7 @@ class _StartupGate extends StatefulWidget {
   final AppAccessPlan accessPlan;
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
+  final Future<bool> Function(RewardedAdEntryPoint) onRequestRewardedAdAccess;
 
   @override
   State<_StartupGate> createState() => _StartupGateState();
@@ -218,6 +237,7 @@ class _StartupGateState extends State<_StartupGate> {
             accessPlan: widget.accessPlan,
             settings: widget.settings,
             onSettingsChanged: widget.onSettingsChanged,
+            onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
           );
         }
 
