@@ -1,0 +1,85 @@
+{
+  "identifier" : "1E570001",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "300",
+      "familyShareable" : false,
+      "internalID" : "ADFE0001",
+      "localizations" : [
+        {
+          "description" : "アプリ内の広告を非表示にします。見積件数などの上限は無料版と同じです。",
+          "displayName" : "広告なし版",
+          "locale" : "ja_JP"
+        },
+        {
+          "description" : "Removes all ads. Free-plan data limits remain unchanged.",
+          "displayName" : "Ad-Free",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "instant_estimate_ad_free",
+      "referenceName" : "Ad-Free",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "F011A001",
+      "localizations" : [
+
+      ],
+      "name" : "Instant Estimate Full Plan",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "500",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "F011A002",
+          "introductoryOffer" : {
+            "displayPrice" : "0",
+            "internalID" : "F011A003",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
+          "localizations" : [
+            {
+              "description" : "広告を非表示にし、見積件数などの完全版機能を利用できます。",
+              "displayName" : "完全版（月額）",
+              "locale" : "ja_JP"
+            },
+            {
+              "description" : "Removes ads and unlocks full-plan features.",
+              "displayName" : "Full Plan Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "instant_estimate_full_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Full Plan Monthly",
+          "subscriptionGroupID" : "F011A001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
