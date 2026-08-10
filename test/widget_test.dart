@@ -139,6 +139,83 @@ class FakeEstimateItemStore implements EstimateItemStore {
 }
 
 void main() {
+  testWidgets('英語設定では単価マスタの組み込み項目と空詳細を英語で表示する', (tester) async {
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await controller.addUnitPriceMaster(
+      const UnitPriceMasterDraft(
+        trade: '土工事',
+        name: 'Custom excavation',
+        unit: '本',
+        unitPrice: 4500,
+      ),
+    );
+    await controller.addUnitPriceMaster(
+      const UnitPriceMasterDraft(name: 'Blank details'),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: UnitPriceMasterScreen(controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Earthwork / Unit: pcs'), findsOneWidget);
+    expect(find.text('No details'), findsOneWidget);
+    expect(find.text('Custom excavation'), findsOneWidget);
+  });
+
+  testWidgets('英語設定では見積の初期名称と未分類工種を英語で表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    await controller.add(
+      const EstimateItemDraft(name: 'Custom item', quantity: 1),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: EstimateItemsScreen(controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Untitled estimate'), findsOneWidget);
+    expect(find.text('Uncategorized'), findsOneWidget);
+    expect(find.text('Custom item'), findsOneWidget);
+  });
+
+  testWidgets('英語設定の見積一覧では初期名称を英語で表示する', (tester) async {
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: EstimateDocumentsScreen(controller: controller),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Untitled estimate'), findsOneWidget);
+  });
+
   testWidgets('単価マスタを工種・名称・仕様・単位・摘要から検索できる', (tester) async {
     final controller = EstimateController();
     await controller.load();

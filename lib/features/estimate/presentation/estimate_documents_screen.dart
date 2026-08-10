@@ -154,9 +154,9 @@ class EstimateDocumentsScreen extends StatelessWidget {
           builder: (context) => AlertDialog(
             title: Text(AppLocalizations.of(context).text('見積を削除')),
             content: Text(
-              AppLocalizations.of(
-                context,
-              ).deleteEstimateQuestion(estimate.info.displayName),
+              AppLocalizations.of(context).deleteEstimateQuestion(
+                AppLocalizations.of(context).text(estimate.info.displayName),
+              ),
             ),
             actions: [
               TextButton(
@@ -281,7 +281,7 @@ class _EstimateDocumentCard extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         title: Row(
           children: [
-            Expanded(child: Text(estimate.info.displayName)),
+            Expanded(child: Text(strings.text(estimate.info.displayName))),
             if (isActive)
               Chip(
                 key: Key('activeEstimateDocument'),

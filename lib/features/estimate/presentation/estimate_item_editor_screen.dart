@@ -111,9 +111,9 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     return quantity * unitPrice;
   }
 
-  String? _validateNumber(String? value) {
+  String? _validateNumber(String? value, AppLocalizations l10n) {
     if (value == null || value.trim().isEmpty) return null;
-    return _parseNumber(value) == null ? '数値を入力してください' : null;
+    return _parseNumber(value) == null ? l10n.text('数値を入力してください') : null;
   }
 
   void _complete(EstimateItemEditorAction action) {
@@ -179,7 +179,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                           ? Icons.check_circle
                           : Icons.description_outlined,
                     ),
-                    title: Text(estimate.info.displayName),
+                    title: Text(l10n.text(estimate.info.displayName)),
                     subtitle: Text(
                       estimate.info.siteName.isEmpty
                           ? l10n.estimateDetails(estimate.items.length)
@@ -267,11 +267,13 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                               title: Text(price.name),
                               subtitle: Text(
                                 [
-                                  if (price.trade.isNotEmpty) price.trade,
+                                  if (price.trade.isNotEmpty)
+                                    l10n.text(price.trade),
                                   if (price.specification.isNotEmpty)
                                     price.specification,
-                                  if (price.unit.isNotEmpty) price.unit,
-                                ].join(' ／ '),
+                                  if (price.unit.isNotEmpty)
+                                    l10n.productivityUnit(price.unit),
+                                ].join(l10n.isEnglish ? ' / ' : ' ／ '),
                               ),
                               trailing: Text(
                                 price.unitPrice == null
@@ -365,7 +367,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                                 'selectPastUnitPrice-${candidate.estimate.info.id}-${item.id}',
                               ),
                               title: Text(item.name),
-                              subtitle: Text(candidate.subtitle),
+                              subtitle: Text(candidate.subtitle(l10n)),
                               trailing: Text(
                                 '¥ ${_displayAmount(item.unitPrice!)}',
                               ),
@@ -411,7 +413,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                   leading: const Icon(Icons.description_outlined),
                   title: Text(l10n.text('追加先')),
                   subtitle: Text(
-                    _selectedEstimateTitle,
+                    l10n.text(_selectedEstimateTitle),
                     key: const Key('selectedEstimateDestination'),
                   ),
                   trailing: TextButton(
@@ -627,7 +629,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
         inputFormatters: [
           FilteringTextInputFormatter.allow(RegExp(r'[0-9.,+\-eE]')),
         ],
-        validator: _validateNumber,
+        validator: (value) =>
+            _validateNumber(value, AppLocalizations.of(context)),
         decoration: InputDecoration(
           labelText: label,
           prefixText: prefixText,
@@ -644,16 +647,16 @@ class _PastUnitPriceCandidate {
   final EstimateDocument estimate;
   final EstimateItem item;
 
-  String get subtitle {
+  String subtitle(AppLocalizations l10n) {
     final date = item.createdAt;
     final parts = [
-      estimate.info.displayName,
+      l10n.text(estimate.info.displayName),
       '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}',
-      if (item.trade.isNotEmpty) item.trade,
+      if (item.trade.isNotEmpty) l10n.text(item.trade),
       if (item.specification.isNotEmpty) item.specification,
-      if (item.unit.isNotEmpty) item.unit,
+      if (item.unit.isNotEmpty) l10n.productivityUnit(item.unit),
     ];
-    return parts.join(' ／ ');
+    return parts.join(l10n.isEnglish ? ' / ' : ' ／ ');
   }
 
   bool matches(String query) {

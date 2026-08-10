@@ -32,7 +32,7 @@ class EstimateItemsScreen extends StatelessWidget {
       appBar: AppBar(
         title: ListenableBuilder(
           listenable: controller,
-          builder: (_, _) => Text(controller.info.displayName),
+          builder: (_, _) => Text(l10n.text(controller.info.displayName)),
         ),
         actions: [
           IconButton(
@@ -273,7 +273,9 @@ class EstimateItemsScreen extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  addedToMaster ? '既存明細を更新し単価マスタへ追加しました' : '既存の見積明細を更新しました',
+                  AppLocalizations.of(context).text(
+                    addedToMaster ? '既存明細を更新し単価マスタへ追加しました' : '既存の見積明細を更新しました',
+                  ),
                 ),
               ),
             );
@@ -309,7 +311,11 @@ class EstimateItemsScreen extends StatelessWidget {
                 SnackBar(
                   content: Text(
                     addedToMaster
-                        ? '数量を加算し単価マスタへ追加しました'
+                        ? AppLocalizations.of(
+                            context,
+                          ).text('数量を加算し単価マスタへ追加しました')
+                        : AppLocalizations.of(context).isEnglish
+                        ? 'Added the quantity to the existing detail. New quantity: ${_displayQuantity(merged.quantity)}'
                         : '既存明細の数量を${_displayQuantity(merged.quantity)}へ加算しました',
                   ),
                 ),
@@ -807,7 +813,7 @@ class _EstimateGroupSection extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      group.displayName,
+                      l10n.text(group.displayName),
                       key: Key('estimateGroupName$groupIndex'),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: colorScheme.onPrimaryContainer,

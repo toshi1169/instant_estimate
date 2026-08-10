@@ -157,6 +157,8 @@ class AppLocalizations {
           '変換結果': 'Result',
           '有効な数値を入力してください': 'Enter a valid number',
           '新しい見積': 'New estimate',
+          '名称未設定の見積': 'Untitled estimate',
+          '工種未設定': 'Uncategorized',
           '見積を削除': 'Delete estimate',
           '見積を複製しました': 'Estimate duplicated',
           '見積を複製できませんでした': 'Could not duplicate estimate',

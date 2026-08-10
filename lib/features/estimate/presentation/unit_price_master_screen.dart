@@ -104,7 +104,7 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
                               child: ListTile(
                                 key: Key('unitPriceMaster-${price.id}'),
                                 title: Text(price.name),
-                                subtitle: Text(_subtitle(price)),
+                                subtitle: Text(_subtitle(price, l10n)),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -262,14 +262,17 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
   }
 }
 
-String _subtitle(UnitPriceMaster price) {
+String _subtitle(UnitPriceMaster price, AppLocalizations l10n) {
   final parts = <String>[
-    if (price.trade.isNotEmpty) price.trade,
+    if (price.trade.isNotEmpty) l10n.text(price.trade),
     if (price.specification.isNotEmpty) price.specification,
-    if (price.unit.isNotEmpty) '単位：${price.unit}',
+    if (price.unit.isNotEmpty)
+      '${l10n.text('単位')}: ${l10n.productivityUnit(price.unit)}',
     if (price.description.isNotEmpty) price.description,
   ];
-  return parts.isEmpty ? '詳細未入力' : parts.join(' ／ ');
+  return parts.isEmpty
+      ? l10n.text('詳細未入力')
+      : parts.join(l10n.isEnglish ? ' / ' : ' ／ ');
 }
 
 String _displayPrice(double value) {
