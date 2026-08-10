@@ -63,6 +63,11 @@ class AppLocalizations {
   String text(String japanese) {
     if (!isEnglish) return japanese;
     return const <String, String>{
+          'プライバシー': 'Privacy',
+          '広告のプライバシー設定': 'Ad privacy choices',
+          '広告に関する同意内容を確認・変更します':
+              'Review or change your advertising consent choices.',
+          '広告のプライバシー設定を開けませんでした': 'Could not open ad privacy choices.',
           '便利計算一覧': 'Convenient calculations',
           '土量計算': 'Earthwork calculation',
           '掘削・搬出': 'Excavation & haul',

@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/domain/app_access_plan.dart';
 import '../core/localization/app_localizations.dart';
 import '../core/theme/app_theme.dart';
+import '../features/advertising/application/advertising_consent_manager.dart';
 import '../features/advertising/application/rewarded_ad_access_controller.dart';
 import '../features/advertising/domain/rewarded_ad_policy.dart';
 import '../features/calculator/data/calculation_history_store.dart';
@@ -29,6 +30,7 @@ class InstantEstimateApp extends StatefulWidget {
     this.productivityRecordStore,
     this.accessStateStore,
     this.rewardedAdPresenter,
+    this.advertisingConsentManager,
     this.enableGoogleMobileAds = false,
     this.accessPlan = AppAccessPlan.free,
     super.key,
@@ -41,6 +43,7 @@ class InstantEstimateApp extends StatefulWidget {
   final ProductivityRecordStore? productivityRecordStore;
   final AppAccessStateStore? accessStateStore;
   final RewardedAdPresenter? rewardedAdPresenter;
+  final AdvertisingConsentManager? advertisingConsentManager;
   final bool enableGoogleMobileAds;
   final AppAccessPlan accessPlan;
 
@@ -62,12 +65,52 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       );
   late bool _isAccessStateReady = widget.accessStateStore == null;
   late bool _isSettingsReady = widget.appSettingsStore == null;
+  late AdvertisingConsentState _advertisingConsentState =
+      widget.advertisingConsentManager?.state.value ??
+      const AdvertisingConsentState(canRequestAds: true);
 
   @override
   void initState() {
     super.initState();
+    widget.advertisingConsentManager?.state.addListener(
+      _handleAdvertisingConsentChanged,
+    );
     unawaited(_loadSettings());
     unawaited(_loadAccessState());
+    if (widget.enableGoogleMobileAds) {
+      unawaited(widget.advertisingConsentManager?.gatherConsent());
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.advertisingConsentManager?.state.removeListener(
+      _handleAdvertisingConsentChanged,
+    );
+    super.dispose();
+  }
+
+  void _handleAdvertisingConsentChanged() {
+    if (!mounted) return;
+    setState(() {
+      _advertisingConsentState =
+          widget.advertisingConsentManager?.state.value ??
+          const AdvertisingConsentState(canRequestAds: true);
+    });
+  }
+
+  Future<bool> _requestRewardedAdAccess(RewardedAdEntryPoint entryPoint) async {
+    final consentManager = widget.advertisingConsentManager;
+    if (widget.enableGoogleMobileAds &&
+        consentManager != null &&
+        !consentManager.state.value.canRequestAds) {
+      await consentManager.gatherConsent();
+      if (!consentManager.state.value.canRequestAds) {
+        // 同意情報や広告を取得できない場合も、機能は利用可能にする。
+        return true;
+      }
+    }
+    return _rewardedAdAccessController.requestAccess(entryPoint);
   }
 
   Future<void> _loadAccessState() async {
@@ -148,9 +191,14 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
               accessPlan: _accessPlan,
               settings: _settings,
               onSettingsChanged: _changeSettings,
-              onRequestRewardedAdAccess:
-                  _rewardedAdAccessController.requestAccess,
-              enableGoogleMobileAds: widget.enableGoogleMobileAds,
+              onRequestRewardedAdAccess: _requestRewardedAdAccess,
+              onShowAdvertisingPrivacyOptions:
+                  _advertisingConsentState.privacyOptionsRequired
+                  ? widget.advertisingConsentManager?.showPrivacyOptions
+                  : null,
+              enableGoogleMobileAds:
+                  widget.enableGoogleMobileAds &&
+                  _advertisingConsentState.canRequestAds,
             )
           : const ColoredBox(color: Colors.transparent),
     );
@@ -167,6 +215,7 @@ class _StartupGate extends StatefulWidget {
     required this.settings,
     required this.onSettingsChanged,
     required this.onRequestRewardedAdAccess,
+    required this.onShowAdvertisingPrivacyOptions,
     required this.enableGoogleMobileAds,
   });
 
@@ -178,6 +227,7 @@ class _StartupGate extends StatefulWidget {
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
   final Future<bool> Function(RewardedAdEntryPoint) onRequestRewardedAdAccess;
+  final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
 
   @override
@@ -243,6 +293,8 @@ class _StartupGateState extends State<_StartupGate> {
             settings: widget.settings,
             onSettingsChanged: widget.onSettingsChanged,
             onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
+            onShowAdvertisingPrivacyOptions:
+                widget.onShowAdvertisingPrivacyOptions,
             enableGoogleMobileAds: widget.enableGoogleMobileAds,
           );
         }

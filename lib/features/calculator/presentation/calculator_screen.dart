@@ -46,6 +46,7 @@ class CalculatorScreen extends StatefulWidget {
     this.productivityController,
     this.accessPlan = AppAccessPlan.free,
     this.onRequestRewardedAdAccess,
+    this.onShowAdvertisingPrivacyOptions,
     this.enableGoogleMobileAds = false,
     super.key,
   });
@@ -60,6 +61,7 @@ class CalculatorScreen extends StatefulWidget {
   final ProductivityController? productivityController;
   final AppAccessPlan accessPlan;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
+  final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
 
   static const _keys = <_CalculatorKey>[
@@ -182,6 +184,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           settings: widget.settings,
           onSettingsChanged: widget.onSettingsChanged ?? (_) {},
           onClearHistory: _controller.clearHistory,
+          onShowAdvertisingPrivacyOptions:
+              widget.onShowAdvertisingPrivacyOptions,
         ),
       ),
     );

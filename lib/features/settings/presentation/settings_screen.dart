@@ -10,12 +10,14 @@ class SettingsScreen extends StatefulWidget {
     required this.settings,
     required this.onSettingsChanged,
     required this.onClearHistory,
+    this.onShowAdvertisingPrivacyOptions,
     super.key,
   });
 
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
   final Future<void> Function() onClearHistory;
+  final Future<void> Function()? onShowAdvertisingPrivacyOptions;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -173,6 +175,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ).showSnackBar(SnackBar(content: Text(strings.historyCleared)));
   }
 
+  Future<void> _showAdvertisingPrivacyOptions(BuildContext context) async {
+    final showOptions = widget.onShowAdvertisingPrivacyOptions;
+    if (showOptions == null) return;
+    try {
+      await showOptions();
+    } catch (_) {
+      if (!context.mounted) return;
+      final strings = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.text('広告のプライバシー設定を開けませんでした'))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
@@ -304,6 +320,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
+          if (widget.onShowAdvertisingPrivacyOptions != null) ...[
+            const SizedBox(height: 24),
+            Text(
+              strings.text('プライバシー'),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Card(
+              margin: EdgeInsets.zero,
+              child: ListTile(
+                key: const Key('advertisingPrivacyOptionsSetting'),
+                leading: const Icon(Icons.privacy_tip_outlined),
+                title: Text(strings.text('広告のプライバシー設定')),
+                subtitle: Text(strings.text('広告に関する同意内容を確認・変更します')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showAdvertisingPrivacyOptions(context),
+              ),
+            ),
+          ],
         ],
       ),
     );

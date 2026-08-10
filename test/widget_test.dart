@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
 import 'package:instant_estimate/core/domain/app_access_plan.dart';
@@ -12,6 +13,7 @@ import 'package:instant_estimate/features/calculator/presentation/calculator_scr
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
+import 'package:instant_estimate/features/settings/presentation/settings_screen.dart';
 import 'package:instant_estimate/features/subscription/data/app_access_state_store.dart';
 import 'package:instant_estimate/features/subscription/domain/app_access_state.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
@@ -493,6 +495,39 @@ void main() {
     await tester.tap(find.text('ラジアン（RAD）'));
     await tester.pumpAndSettle();
     expect(settingsStore.settings.angleUnit, AngleUnit.radians);
+  });
+
+  testWidgets('必要な場合は設定画面から広告プライバシー設定を開ける', (tester) async {
+    var opened = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ja'),
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        home: SettingsScreen(
+          settings: const AppSettings(),
+          onSettingsChanged: (_) {},
+          onClearHistory: () async {},
+          onShowAdvertisingPrivacyOptions: () async => opened = true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final privacySetting = find.byKey(
+      const Key('advertisingPrivacyOptionsSetting'),
+    );
+    await tester.scrollUntilVisible(privacySetting, 250);
+    expect(find.text('広告のプライバシー設定'), findsOneWidget);
+
+    await tester.tap(privacySetting);
+    await tester.pumpAndSettle();
+    expect(opened, isTrue);
   });
 
   testWidgets('初回起動では業種選択を表示する', (tester) async {
