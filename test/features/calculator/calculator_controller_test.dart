@@ -432,6 +432,41 @@ void main() {
       expect(controller.result, '2.5625');
     });
 
+    test('分子と分母の中で四則演算を計算できる', () {
+      final controller = CalculatorController();
+      for (final key in [
+        'a/b',
+        '1',
+        '+',
+        '2',
+        'a/b',
+        '3',
+        '×',
+        '2',
+        'a/b',
+        '=',
+      ]) {
+        controller.press(key);
+      }
+
+      expect(controller.displayExpression, '(1+2)/(3×2)');
+      expect(controller.result, '0.5');
+    });
+
+    test('分子と分母の中で括弧と平方根を計算できる', () {
+      final controller = CalculatorController();
+      for (final key in ['a/b', '()', '1', '+', '2', '()', 'a/b']) {
+        controller.press(key);
+      }
+      expect(controller.insertFunction('√'), isNull);
+      for (final key in ['3', '6', 'a/b', '=']) {
+        controller.press(key);
+      }
+
+      expect(controller.displayExpression, '((1+2))/(√(36)');
+      expect(controller.result, '0.5');
+    });
+
     test('空の分数枠はバックボタンで枠ごと削除する', () {
       final controller = CalculatorController();
       controller.press('a/b');
@@ -487,6 +522,32 @@ void main() {
 
       expect(fraction.numerator, '1111111111');
       expect(notice, 'これ以上入力できません');
+    });
+
+    test('分数内の演算子は10桁の入力上限に数えない', () {
+      final controller = CalculatorController();
+      controller.press('a/b');
+      for (final key in [
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '+',
+        '6',
+        '7',
+        '8',
+        '9',
+        '0',
+      ]) {
+        expect(controller.press(key), isNull);
+      }
+
+      expect(controller.press('1'), 'これ以上入力できません');
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.numerator, '12345+67890');
     });
 
     test('1京を超える解は10のべき乗で表示する', () {
