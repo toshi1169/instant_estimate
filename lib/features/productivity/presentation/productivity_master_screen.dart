@@ -117,7 +117,7 @@ class _SummaryCard extends StatelessWidget {
         ),
         subtitle: Text(
           l10n.isEnglish
-              ? '${summary.trade} · ${summary.unit} · ${summary.recordCount} records'
+              ? '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} records'
               : '${summary.trade}・${summary.unit}・実績${summary.recordCount}件',
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -126,15 +126,15 @@ class _SummaryCard extends StatelessWidget {
             l10n.text('基準歩掛'),
             summary.standardLaborRate == null
                 ? '—'
-                : '${summary.standardLaborRate!.toStringAsFixed(3)} 人工/${summary.unit}',
+                : _laborRate(l10n, summary.standardLaborRate!, summary.unit),
           ),
           _row(
             l10n.text('平均実績歩掛'),
-            '${summary.averageActualLaborRate.toStringAsFixed(3)} 人工/${summary.unit}',
+            _laborRate(l10n, summary.averageActualLaborRate, summary.unit),
           ),
           _row(
             l10n.text('平均生産性'),
-            '${summary.averageProductivity.toStringAsFixed(2)} ${summary.unit}/人工',
+            _productivity(l10n, summary.averageProductivity, summary.unit),
           ),
           _row(l10n.text('最小歩掛'), summary.minimumLaborRate.toStringAsFixed(3)),
           _row(l10n.text('最大歩掛'), summary.maximumLaborRate.toStringAsFixed(3)),
@@ -143,9 +143,7 @@ class _SummaryCard extends StatelessWidget {
             (record) => ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(record.siteName),
-              subtitle: Text(
-                '${_date(record.workDate)}　${record.quantity} ${record.unit}\n${record.workers}人 × ${record.workDays}日 = ${record.actualLabor.toStringAsFixed(2)}人工${record.conditions.isEmpty ? '' : '\n${record.conditions}'}',
-              ),
+              subtitle: Text(_recordDetails(l10n, record)),
               trailing: IconButton(
                 tooltip: l10n.delete,
                 icon: const Icon(Icons.delete_outline),
@@ -163,10 +161,41 @@ class _SummaryCard extends StatelessWidget {
     child: Row(
       children: [
         Expanded(child: Text(label)),
-        Text(value),
+        Flexible(child: Text(value, textAlign: TextAlign.end)),
       ],
     ),
   );
   static String _date(DateTime value) =>
       '${value.year}/${value.month.toString().padLeft(2, '0')}/${value.day.toString().padLeft(2, '0')}';
+
+  static String _laborRate(
+    AppLocalizations l10n,
+    double value,
+    String storedUnit,
+  ) {
+    final unit = l10n.productivityUnit(storedUnit);
+    final suffix = l10n.isEnglish ? 'labor-days/$unit' : '人工/$unit';
+    return '${value.toStringAsFixed(3)} $suffix';
+  }
+
+  static String _productivity(
+    AppLocalizations l10n,
+    double value,
+    String storedUnit,
+  ) {
+    final unit = l10n.productivityUnit(storedUnit);
+    final suffix = l10n.isEnglish ? '$unit/labor-day' : '$unit/人工';
+    return '${value.toStringAsFixed(2)} $suffix';
+  }
+
+  static String _recordDetails(
+    AppLocalizations l10n,
+    ProductivityRecord record,
+  ) {
+    final unit = l10n.productivityUnit(record.unit);
+    final work = l10n.isEnglish
+        ? '${record.workers} workers × ${record.workDays} days = ${record.actualLabor.toStringAsFixed(2)} labor-days'
+        : '${record.workers}人 × ${record.workDays}日 = ${record.actualLabor.toStringAsFixed(2)}人工';
+    return '${_date(record.workDate)}　${record.quantity} $unit\n$work${record.conditions.isEmpty ? '' : '\n${record.conditions}'}';
+  }
 }

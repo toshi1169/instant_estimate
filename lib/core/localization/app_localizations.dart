@@ -430,6 +430,14 @@ class AppLocalizations {
           '作業名称': 'Work name',
           '現場名': 'Site name',
           '施工数量': 'Work quantity',
+          '土工事': 'Earthwork',
+          '地業工事': 'Groundwork',
+          '鉄筋工事': 'Reinforcement work',
+          'コンクリート工事': 'Concrete work',
+          '型枠工事': 'Formwork',
+          '舗装工事': 'Pavement work',
+          '外構工事': 'Exterior work',
+          '内装工事': 'Interior work',
           '基準歩掛（任意・人工/単位）': 'Standard BUGAKARI (optional, labor/unit)',
           '基準歩掛（人工/単位）': 'Standard BUGAKARI (labor/unit)',
           '作業人数（任意）': 'Workers (optional)',
@@ -448,6 +456,8 @@ class AppLocalizations {
           '効率差': 'Efficiency difference',
           '歩掛・生産性マスタへ保存しました': 'Saved to the BUGAKARI & productivity master',
           '実績を保存できませんでした': 'Could not save the actual record',
+          '工種・作業名称・現場名・数量・単位・人数・日数を入力してください':
+              'Enter category, work name, site, quantity, unit, workers and days',
           '保存済み実績': 'Saved actual records',
           '保存上限に達しています。既存データは引き続き閲覧できます。':
               'The storage limit has been reached. Existing data remains available.',
@@ -535,10 +545,26 @@ class AppLocalizations {
   }
 
   String itemCount(int count) => isEnglish ? '$count items' : '$count件';
+  String productivityUnit(String value) {
+    if (!isEnglish) return value;
+    return switch (value) {
+      '本' => 'pcs',
+      '枚' => 'sheets',
+      '個' => 'items',
+      '箇所' => 'locations',
+      '組' => 'sets',
+      '式' => 'lump sum',
+      _ => text(value),
+    };
+  }
+
   String itemCountWithLimit(int count, int limit) =>
       isEnglish ? '$count / $limit items' : '$count / $limit件';
   String currentSaveLimit(int limit) =>
       isEnglish ? 'Current storage limit: $limit items' : '現在の保存上限：$limit件';
+  String productivityLimitMessage(int limit) => isEnglish
+      ? 'The current plan can save up to $limit records. The full plan can save up to 100 records.'
+      : '現在のプランでは最大$limit件まで保存できます。完全版では100件まで保存できます。';
   String get freeEstimateLimit => isEnglish
       ? 'The free plan can store up to 5 estimates'
       : '無料版では見積を5件まで保存できます';

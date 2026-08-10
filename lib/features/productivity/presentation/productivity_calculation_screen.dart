@@ -146,8 +146,10 @@ class _ProductivityCalculationScreenState
                   decoration: InputDecoration(labelText: strings.text('工種')),
                   items: _trades
                       .map(
-                        (value) =>
-                            DropdownMenuItem(value: value, child: Text(value)),
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(strings.text(value)),
+                        ),
                       )
                       .toList(),
                   onChanged: (value) => setState(() => _trade = value),
@@ -185,7 +187,7 @@ class _ProductivityCalculationScreenState
                             .map(
                               (value) => DropdownMenuItem(
                                 value: value,
-                                child: Text(value),
+                                child: Text(strings.productivityUnit(value)),
                               ),
                             )
                             .toList(),
@@ -288,21 +290,25 @@ class _ProductivityCalculationScreenState
           ),
           _resultRow(
             strings.text('実績歩掛'),
-            '${_f(result.actualLaborRate, 3)} 人工/${_unit ?? '単位'}',
+            _laborRate(strings, result.actualLaborRate),
           ),
           _resultRow(
             strings.text('1人工生産性'),
-            '${_f(result.productivityPerLabor, 2)} ${_unit ?? '単位'}/人工',
+            _productivity(strings, result.productivityPerLabor),
           ),
           if (result.laborRateDifference != null) ...[
             const Divider(),
             _resultRow(
               strings.text('基準歩掛'),
-              '${_f(_number(_standard)!, 3)} 人工/${_unit ?? '単位'}',
+              _laborRate(strings, _number(_standard)!),
             ),
             _resultRow(
               strings.text('差'),
-              '${result.laborRateDifference! >= 0 ? '+' : ''}${_f(result.laborRateDifference!, 3)} 人工/${_unit ?? '単位'}',
+              _laborRate(
+                strings,
+                result.laborRateDifference!,
+                showPositiveSign: true,
+              ),
             ),
             _resultRow(
               strings.text('効率差'),
@@ -329,7 +335,13 @@ class _ProductivityCalculationScreenState
     child: Row(
       children: [
         Expanded(child: Text(label)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
       ],
     ),
   );
@@ -352,11 +364,7 @@ class _ProductivityCalculationScreenState
         _task.text.trim().isEmpty ||
         _site.text.trim().isEmpty ||
         _unit == null) {
-      _message(
-        AppLocalizations.of(context).isEnglish
-            ? 'Enter category, work name, site, quantity, unit, workers and days'
-            : '工種・作業名称・現場名・数量・単位・人数・日数を入力してください',
-      );
+      _message(strings.text('工種・作業名称・現場名・数量・単位・人数・日数を入力してください'));
       return;
     }
     final now = DateTime.now();
@@ -389,9 +397,7 @@ class _ProductivityCalculationScreenState
         context: context,
         builder: (context) => AlertDialog(
           title: Text(AppLocalizations.of(context).text('保存上限に達しました')),
-          content: Text(
-            '現在のプランでは最大${error.limit}件まで保存できます。アルティメット版では100件まで保存できます。',
-          ),
+          content: Text(strings.productivityLimitMessage(error.limit)),
           actions: [
             FilledButton(
               onPressed: () => Navigator.pop(context),
@@ -415,6 +421,23 @@ class _ProductivityCalculationScreenState
   String _date(DateTime value) =>
       '${value.year}/${value.month.toString().padLeft(2, '0')}/${value.day.toString().padLeft(2, '0')}';
   String _f(double value, int digits) => value.toStringAsFixed(digits);
+
+  String _laborRate(
+    AppLocalizations strings,
+    double value, {
+    bool showPositiveSign = false,
+  }) {
+    final sign = showPositiveSign && value >= 0 ? '+' : '';
+    final unit = strings.productivityUnit(_unit ?? '単位');
+    final suffix = strings.isEnglish ? 'labor-days/$unit' : '人工/$unit';
+    return '$sign${_f(value, 3)} $suffix';
+  }
+
+  String _productivity(AppLocalizations strings, double value) {
+    final unit = strings.productivityUnit(_unit ?? '単位');
+    final suffix = strings.isEnglish ? '$unit/labor-day' : '$unit/人工';
+    return '${_f(value, 2)} $suffix';
+  }
 }
 
 class _Section extends StatelessWidget {
