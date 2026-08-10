@@ -175,7 +175,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(
-              _error!,
+              l10n.text(_error!),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],
@@ -188,8 +188,8 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
                 value: '${formatEarthworkNumber(result.bankVolume)} m³',
                 onSend: () => widget.onSendToEstimate(
                   EstimateItemDraft(
-                    trade: '土工',
-                    name: '掘削',
+                    trade: l10n.text('土工'),
+                    name: l10n.text('掘削'),
                     quantity: widget.settings.roundEstimateQuantity(
                       result.bankVolume,
                     ),
@@ -208,18 +208,20 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
                 label: l10n.text('ほぐし土量（搬出土量）'),
                 value: '${formatEarthworkNumber(result.looseVolume)} m³',
                 note:
-                    '地山掘削量 × ほぐし係数 ${formatEarthworkNumber(result.looseFactor)}',
+                    '${l10n.text('地山掘削量 × ほぐし係数')} '
+                    '${formatEarthworkNumber(result.looseFactor)}',
                 onSend: () => widget.onSendToEstimate(
                   EstimateItemDraft(
-                    trade: '土工',
-                    name: '搬出土',
+                    trade: l10n.text('土工'),
+                    name: l10n.text('搬出土'),
                     quantity: widget.settings.roundEstimateQuantity(
                       result.looseVolume,
                     ),
                     originalQuantity: result.looseVolume,
                     unit: 'm³',
                     specification:
-                        'ほぐし係数 ${formatEarthworkNumber(result.looseFactor)}',
+                        '${l10n.text('ほぐし係数')} '
+                        '${formatEarthworkNumber(result.looseFactor)}',
                     calculationBasis:
                         '${formatEarthworkNumber(result.bankVolume)} × '
                         '${formatEarthworkNumber(result.looseFactor)} = '
@@ -232,24 +234,25 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
               key: const Key('earthworkDumpResult'),
               child: EarthworkResultCard(
                 label: l10n.text('必要運搬回数'),
-                value: '${result.transportTrips} 回',
+                value: '${result.transportTrips} ${l10n.text('回')}',
                 note: l10n.text('端数切り上げ'),
                 onSend: () => widget.onSendToEstimate(
                   EstimateItemDraft(
-                    trade: '土工',
-                    name: '土砂運搬',
+                    trade: l10n.text('土工'),
+                    name: l10n.text('土砂運搬'),
                     quantity: widget.settings.roundEstimateQuantity(
                       result.transportTrips.toDouble(),
                     ),
                     originalQuantity: result.transportTrips.toDouble(),
-                    unit: '回',
+                    unit: l10n.text('回'),
                     specification:
-                        '${_selectedVehicle.name}・積載容量 '
-                        '${formatEarthworkNumber(result.loadCapacityCubicMeters)}m³/回',
+                        '${_selectedVehicle.isCustom ? _selectedVehicle.name : l10n.text(_selectedVehicle.name)}・'
+                        '${l10n.text('積載容量')} '
+                        '${formatEarthworkNumber(result.loadCapacityCubicMeters)}${l10n.text('m³/回')}',
                     calculationBasis:
                         '${formatEarthworkNumber(result.looseVolume)} ÷ '
                         '${formatEarthworkNumber(result.loadCapacityCubicMeters)} = '
-                        '${result.transportTrips}回（切り上げ）',
+                        '${result.transportTrips}${l10n.text('回（切り上げ）')}',
                   ),
                 ),
               ),

@@ -87,10 +87,11 @@ class _BackfillTabState extends State<BackfillTab> {
     required String basis,
     String specification = '',
   }) {
+    final l10n = AppLocalizations.of(context);
     return widget.onSendToEstimate(
       EstimateItemDraft(
-        trade: '土工',
-        name: name,
+        trade: l10n.text('土工'),
+        name: l10n.text(name),
         quantity: widget.settings.roundEstimateQuantity(quantity),
         originalQuantity: quantity,
         unit: 'm³',
@@ -171,7 +172,7 @@ class _BackfillTabState extends State<BackfillTab> {
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(
-              _error!,
+              l10n.text(_error!),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],
@@ -191,12 +192,13 @@ class _BackfillTabState extends State<BackfillTab> {
             EarthworkResultCard(
               label: l10n.text('埋戻し対象体積'),
               value: '${formatEarthworkNumber(result.backfillTargetVolume)} m³',
-              note: '掘削体積 − 控除する構造物体積',
+              note: l10n.text('掘削体積 − 控除する構造物体積'),
               onSend: () => _send(
                 name: '埋戻し',
                 quantity: result.backfillTargetVolume,
                 specification:
-                    '控除 ${formatEarthworkNumber(result.structureVolumeCubicMeters)}m³',
+                    '${l10n.text('控除')} '
+                    '${formatEarthworkNumber(result.structureVolumeCubicMeters)}m³',
                 basis:
                     '${formatEarthworkNumber(result.excavationVolume)} − '
                     '${formatEarthworkNumber(result.structureVolumeCubicMeters)} = '
@@ -207,12 +209,14 @@ class _BackfillTabState extends State<BackfillTab> {
               label: l10n.text('必要土量'),
               value: '${formatEarthworkNumber(result.requiredBankVolume)} m³',
               note:
-                  '埋戻し対象体積 ÷ 締固め係数 ${formatEarthworkNumber(result.compactionFactor)}',
+                  '${l10n.text('埋戻し対象体積 ÷ 締固め係数')} '
+                  '${formatEarthworkNumber(result.compactionFactor)}',
               onSend: () => _send(
                 name: '埋戻し必要土',
                 quantity: result.requiredBankVolume,
                 specification:
-                    '締固め係数 ${formatEarthworkNumber(result.compactionFactor)}',
+                    '${l10n.text('締固め係数')} '
+                    '${formatEarthworkNumber(result.compactionFactor)}',
                 basis:
                     '${formatEarthworkNumber(result.backfillTargetVolume)} ÷ '
                     '${formatEarthworkNumber(result.compactionFactor)} = '

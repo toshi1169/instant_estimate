@@ -122,10 +122,11 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
     String specification = '',
     String unit = 'm³',
   }) {
+    final l10n = AppLocalizations.of(context);
     return widget.onSendToEstimate(
       EstimateItemDraft(
-        trade: '土工',
-        name: name,
+        trade: l10n.text('土工'),
+        name: l10n.text(name),
         quantity: widget.settings.roundEstimateQuantity(quantity),
         originalQuantity: quantity,
         unit: unit,
@@ -136,10 +137,13 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
   }
 
   String _geometrySpecification(EmbankmentGeometry geometry) {
+    final l10n = AppLocalizations.of(context);
     final slope = geometry.hasSlope
-        ? '・法勾配 1:${formatEarthworkNumber(geometry.slopeRatioHorizontal)}'
-        : '・法面なし';
-    return '天端L=${formatEarthworkNumber(geometry.topLengthMeters)}m '
+        ? '・${l10n.text('法勾配（垂直1：水平）')} '
+              '1:${formatEarthworkNumber(geometry.slopeRatioHorizontal)}'
+        : '・${l10n.text('法面なし')}';
+    return '${l10n.text('天端')} L='
+        '${formatEarthworkNumber(geometry.topLengthMeters)}m '
         '× W=${formatEarthworkNumber(geometry.topWidthMeters)}m '
         '× H=${formatEarthworkNumber(geometry.heightMeters)}m$slope';
   }
@@ -273,7 +277,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(
-              _error!,
+              l10n.text(_error!),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],
@@ -281,17 +285,19 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
             const SizedBox(height: 12),
             Card(
               color: Theme.of(context).colorScheme.tertiaryContainer,
-              child: const Padding(
-                padding: EdgeInsets.all(14),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.warning_amber_rounded),
-                    SizedBox(width: 10),
+                    const Icon(Icons.warning_amber_rounded),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '注意\n盛土高さが大きい場合は、地盤条件・法面安定・排水条件・'
-                        '設計図書・関係法令等を確認してください。',
+                        l10n.text(
+                          '注意\n盛土高さが大きい場合は、地盤条件・法面安定・排水条件・'
+                          '設計図書・関係法令等を確認してください。',
+                        ),
                       ),
                     ),
                   ],
@@ -309,19 +315,22 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
                 quantity: result.completedVolume,
                 specification: _geometrySpecification(geometry),
                 basis:
-                    '完成形状 = ${formatEarthworkNumber(result.completedVolume)}m³',
+                    '${l10n.text('完成形状')} = '
+                    '${formatEarthworkNumber(result.completedVolume)}m³',
               ),
             ),
             EarthworkResultCard(
               label: l10n.text('締固めを考慮した必要土量'),
               value: '${formatEarthworkNumber(result.requiredBankVolume)} m³',
               note:
-                  '完成盛土量 ÷ 締固め係数 ${formatEarthworkNumber(result.compactionFactor)}',
+                  '${l10n.text('完成盛土量 ÷ 締固め係数')} '
+                  '${formatEarthworkNumber(result.compactionFactor)}',
               onSend: () => _send(
                 name: '盛土必要土',
                 quantity: result.requiredBankVolume,
                 specification:
-                    '締固め係数 ${formatEarthworkNumber(result.compactionFactor)}',
+                    '${l10n.text('締固め係数')} '
+                    '${formatEarthworkNumber(result.compactionFactor)}',
                 basis:
                     '${formatEarthworkNumber(result.completedVolume)} ÷ '
                     '${formatEarthworkNumber(result.compactionFactor)} = '
@@ -332,12 +341,15 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
               label: l10n.text('必要搬入土量'),
               value:
                   '${formatEarthworkNumber(result.requiredIncomingLooseVolume)} m³',
-              note: '必要土量 × ほぐし係数 ${formatEarthworkNumber(result.looseFactor)}',
+              note:
+                  '${l10n.text('必要土量 × ほぐし係数')} '
+                  '${formatEarthworkNumber(result.looseFactor)}',
               onSend: () => _send(
                 name: '搬入土',
                 quantity: result.requiredIncomingLooseVolume,
                 specification:
-                    'ほぐし係数 ${formatEarthworkNumber(result.looseFactor)}',
+                    '${l10n.text('ほぐし係数')} '
+                    '${formatEarthworkNumber(result.looseFactor)}',
                 basis:
                     '${formatEarthworkNumber(result.requiredBankVolume)} × '
                     '${formatEarthworkNumber(result.looseFactor)} = '
@@ -346,19 +358,20 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
             ),
             EarthworkResultCard(
               label: l10n.text('必要運搬回数'),
-              value: '${result.transportTrips} 回',
+              value: '${result.transportTrips} ${l10n.text('回')}',
               note: l10n.text('端数切り上げ'),
               onSend: () => _send(
                 name: '土砂運搬',
                 quantity: result.transportTrips.toDouble(),
-                unit: '回',
+                unit: l10n.text('回'),
                 specification:
-                    '${_selectedVehicle.name}・積載容量 '
-                    '${formatEarthworkNumber(result.loadCapacityCubicMeters)}m³/回',
+                    '${_selectedVehicle.isCustom ? _selectedVehicle.name : l10n.text(_selectedVehicle.name)}・'
+                    '${l10n.text('積載容量')} '
+                    '${formatEarthworkNumber(result.loadCapacityCubicMeters)}${l10n.text('m³/回')}',
                 basis:
                     '${formatEarthworkNumber(result.requiredIncomingLooseVolume)} ÷ '
                     '${formatEarthworkNumber(result.loadCapacityCubicMeters)} = '
-                    '${result.transportTrips}回（切り上げ）',
+                    '${result.transportTrips}${l10n.text('回（切り上げ）')}',
               ),
             ),
             if (geometry.hasSlope)
@@ -369,18 +382,21 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '法面形状（参考）',
+                        l10n.text('法面形状（参考）'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '片側水平距離：${formatEarthworkNumber(geometry.slopeHorizontalRun)} m',
+                        '${l10n.text('片側水平距離')}：'
+                        '${formatEarthworkNumber(geometry.slopeHorizontalRun)} m',
                       ),
                       Text(
-                        '法長：${formatEarthworkNumber(geometry.slopeLength)} m',
+                        '${l10n.text('法長')}：'
+                        '${formatEarthworkNumber(geometry.slopeLength)} m',
                       ),
                       Text(
-                        '底面：${formatEarthworkNumber(geometry.bottomLengthMeters)} m '
+                        '${l10n.text('底面')}：'
+                        '${formatEarthworkNumber(geometry.bottomLengthMeters)} m '
                         '× ${formatEarthworkNumber(geometry.bottomWidthMeters)} m',
                       ),
                     ],

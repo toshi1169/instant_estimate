@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/core/domain/transport_vehicle.dart';
+import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/earthwork/domain/earthwork_calculator.dart';
 import 'package:instant_estimate/features/earthwork/presentation/earthwork_calculation_screen.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
@@ -281,5 +282,29 @@ void main() {
           ?.text,
       '6',
     );
+  });
+
+  testWidgets('英語設定で土量計算の表示と入力エラーを英語化する', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        localizationsDelegates: const [AppLocalizationsDelegate()],
+        home: EarthworkCalculationScreen(onSendToEstimate: (_) async {}),
+      ),
+    );
+
+    expect(find.text('Earthwork calculation'), findsOneWidget);
+    expect(find.text('Excavation & haul'), findsOneWidget);
+    expect(find.text('Backfill'), findsOneWidget);
+    expect(find.text('Embankment'), findsOneWidget);
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -650));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('calculateEarthwork')));
+    await tester.pump();
+
+    expect(find.text('Enter a number greater than 0'), findsWidgets);
+    expect(find.text('0より大きい数値を入力'), findsNothing);
   });
 }

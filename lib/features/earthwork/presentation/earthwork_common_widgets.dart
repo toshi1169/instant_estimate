@@ -55,6 +55,7 @@ class EarthworkNumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return TextFormField(
       key: Key(keyName),
       controller: controller,
@@ -65,7 +66,10 @@ class EarthworkNumberField extends StatelessWidget {
         suffixText: suffix,
         helperText: helperText,
       ),
-      validator: validator,
+      validator: (value) {
+        final message = validator(value);
+        return message == null ? null : l10n.text(message);
+      },
     );
   }
 }
@@ -216,7 +220,7 @@ class TransportVehicleFields extends StatelessWidget {
           keyName: capacityKeyName,
           controller: capacityController,
           label: l10n.text('積載容量'),
-          suffix: 'm³/回',
+          suffix: l10n.text('m³/回'),
           helperText: l10n.text('※積載容量は車両・土質・積載条件により調整してください。'),
           validator: validatePositiveEarthworkNumber,
         ),

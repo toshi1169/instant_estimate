@@ -183,6 +183,48 @@ class AppLocalizations {
           'これ以上入力できません': 'No more digits can be entered',
           '分数に変換できません': 'Cannot convert to a fraction',
           '0より大きい数値を入力': 'Enter a number greater than 0',
+          '0以上の数値を入力': 'Enter a number of 0 or greater',
+          'm³/回': 'm³/trip',
+          '回': 'trips',
+          '回（切り上げ）': 'trips (rounded up)',
+          '完成形状': 'Completed shape',
+          '土工': 'Earthwork',
+          '掘削': 'Excavation',
+          '搬出土': 'Hauled soil',
+          '土砂運搬': 'Soil hauling',
+          '埋戻し必要土': 'Required backfill soil',
+          '余剰土': 'Surplus soil',
+          '不足土': 'Soil shortage',
+          '盛土必要土': 'Required embankment soil',
+          '搬入土': 'Delivered soil',
+          '地山掘削量 × ほぐし係数': 'Bank excavation volume × loosening factor',
+          '掘削体積 − 控除する構造物体積': 'Excavation volume − structure volume deduction',
+          '埋戻し対象体積 ÷ 締固め係数': 'Backfill target volume ÷ compaction factor',
+          '完成盛土量 ÷ 締固め係数': 'Completed embankment volume ÷ compaction factor',
+          '必要土量 × ほぐし係数': 'Required soil × loosening factor',
+          '控除': 'Deduction',
+          '法面形状（参考）': 'Side slope geometry (reference)',
+          '片側水平距離': 'Horizontal run per side',
+          '底面': 'Bottom dimensions',
+          '法面なし': 'No side slopes',
+          '天端': 'Top',
+          '注意\n盛土高さが大きい場合は、地盤条件・法面安定・排水条件・設計図書・関係法令等を確認してください。':
+              'Caution\nFor high embankments, check ground conditions, slope stability, drainage, design documents and applicable regulations.',
+          '寸法・ほぐし係数・積載容量には0より大きい数値を入力してください':
+              'Enter values greater than 0 for dimensions, loosening factor and load capacity',
+          '寸法・締固め係数には0より大きい数値を入力してください':
+              'Enter values greater than 0 for dimensions and compaction factor',
+          '控除する構造物体積には0以上の数値を入力してください':
+              'Enter a structure volume deduction of 0 or greater',
+          '控除する構造物体積が掘削体積を超えています':
+              'The structure volume deduction exceeds the excavation volume',
+          '寸法・係数・積載容量には0より大きい数値を入力してください':
+              'Enter values greater than 0 for dimensions, factors and load capacity',
+          '寸法・変化率・積載容量には0より大きい数値を入力してください':
+              'Enter values greater than 0 for dimensions, soil factor and load capacity',
+          '構造物体積には0以上の数値を入力してください': 'Enter a structure volume of 0 or greater',
+          '構造物体積が掘削量を超えています':
+              'The structure volume exceeds the excavation volume',
           '材料名を入力': 'Enter a material name',
           '同じ材料名が登録されています': 'A material with this name is already saved',
           '体積に0より大きい数値を入力してください': 'Enter a volume greater than 0',
