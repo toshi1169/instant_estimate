@@ -389,12 +389,9 @@ class CalculatorController extends ChangeNotifier {
   String? insertFunction(String label) {
     _pendingNotice = null;
     if (_activeFractionMarker != null) {
-      if (label == '√' && _activeFractionField != FractionField.wholeNumber) {
-        _insertFractionSquareRoot();
-        _updatePreviewResult();
-        return null;
-      }
-      return '分数の入力を完了してから関数を選択してください';
+      final notice = _insertFractionFunction(label);
+      if (notice == null) _updatePreviewResult();
+      return notice;
     }
 
     if (label == '1/x') {
@@ -1074,16 +1071,65 @@ class CalculatorController extends ChangeNotifier {
     }
   }
 
-  void _insertFractionSquareRoot() {
+  String? _insertFractionFunction(String label) {
     final fraction = _fractions[_activeFractionMarker]!;
     final field = _activeFractionField!;
-    if (field == FractionField.wholeNumber) return;
+    if (field == FractionField.wholeNumber) {
+      return '帯分数の整数部分には関数を入力できません';
+    }
+
     final value = _fractionFieldValue(fraction, field);
     final offset = _activeFractionCaretOffset.clamp(0, value.length);
     final previous = offset == 0 ? '' : value[offset - 1];
-    final prefix = _isDigit(previous) || previous == ')' ? '×' : '';
-    _insertIntoActiveFraction('$prefix√(');
+    final hasLeftOperand = _fractionCharacterIsOperand(previous);
+    final needsLeftOperand = const {'x²', 'x³', 'x!'}.contains(label);
+    if (needsLeftOperand && !hasLeftOperand) {
+      return '先に数値を入力してください';
+    }
+
+    final insertion = switch (label) {
+      'π' || 'e' || 'φ' => label,
+      'log' => 'log(',
+      'ln' => 'ln(',
+      'log₂' => 'log₂(',
+      '√' => '√(',
+      '³√' => '³√(',
+      '|x|' => 'abs(',
+      'x²' => '^2',
+      'x³' => '^3',
+      '1/x' => '1÷(',
+      '10ˣ' => '10^(',
+      'eˣ' => 'e^(',
+      'x!' => '!',
+      'sin' ||
+      'cos' ||
+      'tan' ||
+      'sin⁻¹' ||
+      'cos⁻¹' ||
+      'tan⁻¹' ||
+      'sinh' ||
+      'cosh' ||
+      'tanh' ||
+      'sinh⁻¹' ||
+      'cosh⁻¹' ||
+      'tanh⁻¹' => '$label(',
+      _ => null,
+    };
+    if (insertion == null) return 'この関数はまだ利用できません';
+
+    final prefix = !needsLeftOperand && hasLeftOperand ? '×' : '';
+    _insertIntoActiveFraction('$prefix$insertion');
+    return null;
   }
+
+  bool _fractionCharacterIsOperand(String character) =>
+      _isDigit(character) ||
+      character == ')' ||
+      character == '%' ||
+      character == '!' ||
+      character == 'π' ||
+      character == 'φ' ||
+      character == 'e';
 
   void _insertIntoActiveFraction(String insertion) {
     final fraction = _fractions[_activeFractionMarker]!;
@@ -1104,6 +1150,16 @@ class CalculatorController extends ChangeNotifier {
     final value = _fractionFieldValue(fraction, field);
     if (_activeFractionCaretOffset > 0) {
       final offset = _activeFractionCaretOffset.clamp(0, value.length);
+      final functionToken = _fractionFunctionTokenBeforeCaret(value, offset);
+      if (functionToken != null) {
+        final updated =
+            '${value.substring(0, offset - functionToken.length)}'
+            '${value.substring(offset)}';
+        _setFractionFieldValue(fraction, field, updated);
+        _activeFractionCaretOffset = offset - functionToken.length;
+        notifyListeners();
+        return;
+      }
       final updated =
           '${value.substring(0, offset - 1)}${value.substring(offset)}';
       _setFractionFieldValue(fraction, field, updated);
@@ -1136,6 +1192,39 @@ class CalculatorController extends ChangeNotifier {
       _caretPosition = index;
     }
     notifyListeners();
+  }
+
+  String? _fractionFunctionTokenBeforeCaret(String value, int offset) {
+    final beforeCaret = value.substring(0, offset);
+    for (final token in const [
+      'sinh⁻¹(',
+      'cosh⁻¹(',
+      'tanh⁻¹(',
+      'sin⁻¹(',
+      'cos⁻¹(',
+      'tan⁻¹(',
+      'sinh(',
+      'cosh(',
+      'tanh(',
+      'sin(',
+      'cos(',
+      'tan(',
+      'log₂(',
+      'abs(',
+      'log(',
+      '10^(',
+      '1÷(',
+      '³√(',
+      'ln(',
+      'e^(',
+      '√(',
+      '^2',
+      '^3',
+      '!',
+    ]) {
+      if (beforeCaret.endsWith(token)) return token;
+    }
+    return null;
   }
 
   String _fractionFieldValue(_EditableFraction fraction, FractionField field) {

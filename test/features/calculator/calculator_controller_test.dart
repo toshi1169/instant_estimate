@@ -550,6 +550,92 @@ void main() {
       expect(fraction.numerator, '12345+67890');
     });
 
+    test('関数一覧の全項目を分子と分母で入力して計算できる', () {
+      final functionInputs = <String, List<String>>{
+        'π': ['@π'],
+        'e': ['@e'],
+        'φ': ['@φ'],
+        'log': ['@log', '1', '0', '0'],
+        'ln': ['@ln', '@e'],
+        'log₂': ['@log₂', '8'],
+        '√': ['@√', '9'],
+        '³√': ['@³√', '2', '7'],
+        '|x|': ['@|x|', '−', '5'],
+        'x²': ['3', '@x²'],
+        'x³': ['2', '@x³'],
+        '1/x': ['@1/x', '4'],
+        'sin': ['@sin', '3', '0'],
+        'cos': ['@cos', '6', '0'],
+        'tan': ['@tan', '4', '5'],
+        'sin⁻¹': ['@sin⁻¹', '1'],
+        'cos⁻¹': ['@cos⁻¹', '0'],
+        'tan⁻¹': ['@tan⁻¹', '1'],
+        'sinh': ['@sinh', '1'],
+        'cosh': ['@cosh', '1'],
+        'tanh': ['@tanh', '1'],
+        'sinh⁻¹': ['@sinh⁻¹', '1'],
+        'cosh⁻¹': ['@cosh⁻¹', '2'],
+        'tanh⁻¹': ['@tanh⁻¹', '1', '÷', '2'],
+        '10ˣ': ['@10ˣ', '2'],
+        'eˣ': ['@eˣ', '1'],
+        'x!': ['5', '@x!'],
+      };
+
+      void enterActions(CalculatorController controller, List<String> actions) {
+        for (final action in actions) {
+          if (action.startsWith('@')) {
+            expect(
+              controller.insertFunction(action.substring(1)),
+              isNull,
+              reason: action,
+            );
+          } else {
+            expect(controller.press(action), isNull, reason: action);
+          }
+        }
+      }
+
+      for (final entry in functionInputs.entries) {
+        for (final functionInNumerator in [true, false]) {
+          final controller = CalculatorController();
+          controller.press('a/b');
+          if (functionInNumerator) {
+            enterActions(controller, entry.value);
+            controller.press('a/b');
+            controller.press('1');
+          } else {
+            controller.press('1');
+            controller.press('a/b');
+            enterActions(controller, entry.value);
+          }
+
+          controller.press('=');
+
+          expect(
+            controller.state,
+            CalculatorState.result,
+            reason:
+                '${entry.key} in '
+                '${functionInNumerator ? 'numerator' : 'denominator'}',
+          );
+          expect(controller.errorMessage, isNull, reason: entry.key);
+        }
+      }
+    });
+
+    test('分数内の関数はバックボタン1回で関数名ごと削除する', () {
+      final controller = CalculatorController();
+      controller.press('a/b');
+      controller.insertFunction('sinh⁻¹');
+
+      controller.backspace();
+
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.numerator, isEmpty);
+    });
+
     test('1京を超える解は10のべき乗で表示する', () {
       final controller = CalculatorController();
       controller.pasteAtCaret('10000000000000000×10');
