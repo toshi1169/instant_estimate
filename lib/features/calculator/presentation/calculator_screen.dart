@@ -9,6 +9,7 @@ import '../../../core/domain/angle_unit.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
+import '../../advertising/presentation/google_mobile_ads_banner.dart';
 import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -45,6 +46,7 @@ class CalculatorScreen extends StatefulWidget {
     this.productivityController,
     this.accessPlan = AppAccessPlan.free,
     this.onRequestRewardedAdAccess,
+    this.enableGoogleMobileAds = false,
     super.key,
   });
 
@@ -58,6 +60,7 @@ class CalculatorScreen extends StatefulWidget {
   final ProductivityController? productivityController;
   final AppAccessPlan accessPlan;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
+  final bool enableGoogleMobileAds;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -735,6 +738,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                       _AdBanner(
                         key: const Key('calculatorAdBanner'),
                         height: compact ? 50 : 58,
+                        enableGoogleMobileAds: widget.enableGoogleMobileAds,
                         onUpgrade: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => const AccessPlanScreen(
@@ -793,16 +797,22 @@ String _displayEstimateQuantity(double? value) {
 }
 
 class _AdBanner extends StatelessWidget {
-  const _AdBanner({required this.height, required this.onUpgrade, super.key});
+  const _AdBanner({
+    required this.height,
+    required this.onUpgrade,
+    required this.enableGoogleMobileAds,
+    super.key,
+  });
 
   final double height;
   final VoidCallback onUpgrade;
+  final bool enableGoogleMobileAds;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final strings = AppLocalizations.of(context);
-    return SizedBox(
+    final fallback = SizedBox(
       height: height,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -868,6 +878,8 @@ class _AdBanner extends StatelessWidget {
         ),
       ),
     );
+    if (!enableGoogleMobileAds) return fallback;
+    return GoogleMobileAdsBanner(height: height, fallback: fallback);
   }
 }
 

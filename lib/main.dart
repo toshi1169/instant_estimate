@@ -29,6 +29,7 @@ void main() {
       productivityRecordStore: PlatformProductivityRecordStore(),
       accessStateStore: PlatformAppAccessStateStore(),
       rewardedAdPresenter: const GoogleMobileAdsRewardedAdPresenter(),
+      enableGoogleMobileAds: true,
     ),
   );
 }

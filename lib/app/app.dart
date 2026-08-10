@@ -29,6 +29,7 @@ class InstantEstimateApp extends StatefulWidget {
     this.productivityRecordStore,
     this.accessStateStore,
     this.rewardedAdPresenter,
+    this.enableGoogleMobileAds = false,
     this.accessPlan = AppAccessPlan.free,
     super.key,
   });
@@ -40,6 +41,7 @@ class InstantEstimateApp extends StatefulWidget {
   final ProductivityRecordStore? productivityRecordStore;
   final AppAccessStateStore? accessStateStore;
   final RewardedAdPresenter? rewardedAdPresenter;
+  final bool enableGoogleMobileAds;
   final AppAccessPlan accessPlan;
 
   @override
@@ -148,6 +150,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
               onSettingsChanged: _changeSettings,
               onRequestRewardedAdAccess:
                   _rewardedAdAccessController.requestAccess,
+              enableGoogleMobileAds: widget.enableGoogleMobileAds,
             )
           : const ColoredBox(color: Colors.transparent),
     );
@@ -164,6 +167,7 @@ class _StartupGate extends StatefulWidget {
     required this.settings,
     required this.onSettingsChanged,
     required this.onRequestRewardedAdAccess,
+    required this.enableGoogleMobileAds,
   });
 
   final OnboardingPreferences onboardingPreferences;
@@ -174,6 +178,7 @@ class _StartupGate extends StatefulWidget {
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
   final Future<bool> Function(RewardedAdEntryPoint) onRequestRewardedAdAccess;
+  final bool enableGoogleMobileAds;
 
   @override
   State<_StartupGate> createState() => _StartupGateState();
@@ -238,6 +243,7 @@ class _StartupGateState extends State<_StartupGate> {
             settings: widget.settings,
             onSettingsChanged: widget.onSettingsChanged,
             onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
+            enableGoogleMobileAds: widget.enableGoogleMobileAds,
           );
         }
 
