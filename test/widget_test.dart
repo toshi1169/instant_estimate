@@ -573,6 +573,30 @@ void main() {
     expect(find.byKey(const Key('historyPanel')), findsOneWidget);
   });
 
+  testWidgets('新規利用者は簡体字中国語を選択して保存できる', (tester) async {
+    final preferences = FakeLanguageOnboardingPreferences(
+      hasSelected: false,
+      hasSelectedLanguageValue: false,
+    );
+    final settingsStore = FakeAppSettingsStore();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: preferences,
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('languageSimplifiedChinese')));
+    await tester.tap(find.byKey(const Key('completeLanguageSelection')));
+    await tester.pumpAndSettle();
+
+    expect(preferences.savedLanguage, AppLanguage.simplifiedChinese.name);
+    expect(settingsStore.settings.language, AppLanguage.simplifiedChinese);
+    expect(find.text('选择行业'), findsOneWidget);
+    expect(find.text('Civil supervisor'), findsOneWidget);
+  });
+
   testWidgets('設定から英語へ変更し日本語とローマ字の技術用語解説を表示できる', (tester) async {
     final settingsStore = FakeAppSettingsStore();
     await tester.pumpWidget(
@@ -886,6 +910,15 @@ void main() {
       expect(strings.isSpecializedUnit(id), isTrue);
       expect(strings.specializedUnitExplanation(id), isNotEmpty);
     }
+  });
+
+  test('簡体字中国語は主要文言を翻訳し未翻訳文言を英語へフォールバックする', () {
+    const strings = AppLocalizations(AppLanguage.simplifiedChinese);
+
+    expect(strings.chooseLanguage, '选择语言');
+    expect(strings.settings, '设置');
+    expect(strings.instantEstimate, '即时估算');
+    expect(strings.text('土量計算'), 'Earthwork calculation');
   });
 
   testWidgets('ヘルプを開き戻るとサイドメニューへ戻る', (tester) async {

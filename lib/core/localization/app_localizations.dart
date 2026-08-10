@@ -8,30 +8,74 @@ class AppLocalizations {
 
   final AppLanguage appLanguage;
 
-  bool get isEnglish => appLanguage == AppLanguage.english;
+  bool get isJapanese => appLanguage == AppLanguage.japanese;
+  bool get isSimplifiedChinese => appLanguage == AppLanguage.simplifiedChinese;
+
+  // English is also the safe fallback while a newly added language is being
+  // translated screen by screen. This prevents Japanese text leaking into a
+  // non-Japanese locale.
+  bool get isEnglish => !isJapanese;
+
+  String _pick({
+    required String japanese,
+    required String english,
+    required String simplifiedChinese,
+  }) => switch (appLanguage) {
+    AppLanguage.japanese => japanese,
+    AppLanguage.english => english,
+    AppLanguage.simplifiedChinese => simplifiedChinese,
+  };
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
         const AppLocalizations(AppLanguage.japanese);
   }
 
-  String get appTitle => isEnglish ? 'Instant Estimate' : 'インスタント見積';
-  String get language => isEnglish ? 'Language' : '言語';
-  String get chooseLanguage => isEnglish ? 'Choose language' : '言語を選択';
-  String get languageGuidance => isEnglish
-      ? 'Select the language used in the app. You can change it later in Settings.'
-      : 'アプリで使用する言語を選んでください。後から設定で変更できます。';
-  String get continueLabel => isEnglish ? 'Continue' : '次へ';
-  String get japanese => isEnglish ? 'Japanese' : '日本語';
+  String get appTitle => _pick(
+    japanese: 'インスタント見積',
+    english: 'Instant Estimate',
+    simplifiedChinese: '即时估算',
+  );
+  String get language =>
+      _pick(japanese: '言語', english: 'Language', simplifiedChinese: '语言');
+  String get chooseLanguage => _pick(
+    japanese: '言語を選択',
+    english: 'Choose language',
+    simplifiedChinese: '选择语言',
+  );
+  String get languageGuidance => _pick(
+    japanese: 'アプリで使用する言語を選んでください。後から設定で変更できます。',
+    english:
+        'Select the language used in the app. You can change it later in Settings.',
+    simplifiedChinese: '请选择应用中使用的语言。之后可在设置中更改。',
+  );
+  String get continueLabel =>
+      _pick(japanese: '次へ', english: 'Continue', simplifiedChinese: '继续');
+  String get japanese =>
+      _pick(japanese: '日本語', english: 'Japanese', simplifiedChinese: '日语');
   String get english => 'English';
-  String get occupationTitle => isEnglish ? 'Choose occupation' : '業種を選択';
-  String get occupationPrompt =>
-      isEnglish ? 'Select your main occupation' : 'あなたの主な業種を選んでください';
-  String get occupationGuidance => isEnglish
-      ? 'This is used to prepare the initial calculators and estimate items. You can change it later in Settings.'
-      : '表示する計算機能や見積項目の初期設定に使用します。後から設定で変更できます。';
-  String get startWithOccupation =>
-      isEnglish ? 'Start with this occupation' : 'この業種で始める';
+  String get simplifiedChinese => '简体中文';
+  String get occupationTitle => _pick(
+    japanese: '業種を選択',
+    english: 'Choose occupation',
+    simplifiedChinese: '选择行业',
+  );
+  String get occupationPrompt => _pick(
+    japanese: 'あなたの主な業種を選んでください',
+    english: 'Select your main occupation',
+    simplifiedChinese: '请选择您的主要行业',
+  );
+  String get occupationGuidance => _pick(
+    japanese: '表示する計算機能や見積項目の初期設定に使用します。後から設定で変更できます。',
+    english:
+        'This is used to prepare the initial calculators and estimate items. You can change it later in Settings.',
+    simplifiedChinese: '用于设置初始计算功能和估算项目。之后可在设置中更改。',
+  );
+  String get startWithOccupation => _pick(
+    japanese: 'この業種で始める',
+    english: 'Start with this occupation',
+    simplifiedChinese: '以此行业开始',
+  );
 
   String occupation(String value) => switch (value) {
     '建築監督' => isEnglish ? 'Building supervisor' : value,
@@ -43,22 +87,47 @@ class AppLocalizations {
     _ => isEnglish ? 'Other' : value,
   };
 
-  String get settings => isEnglish ? 'Settings' : '設定';
-  String get help => isEnglish ? 'Help' : 'ヘルプ';
-  String get adFreePlan =>
-      isEnglish ? 'Ad-free (one-time purchase)' : '広告なし版（買い切り）';
-  String get fullPlan => isEnglish ? 'Full plan (monthly)' : '完全版（月額）';
-  String get convenientCalculations =>
-      isEnglish ? 'Convenient calculations' : '便利計算一覧';
-  String get unitConversion => isEnglish ? 'Unit conversion' : '単位変換';
-  String get instantEstimate => isEnglish ? 'Instant estimate' : 'インスタント見積';
-  String get unitPriceMaster => isEnglish ? 'Unit price master' : '単価マスタ';
+  String get settings =>
+      _pick(japanese: '設定', english: 'Settings', simplifiedChinese: '设置');
+  String get help =>
+      _pick(japanese: 'ヘルプ', english: 'Help', simplifiedChinese: '帮助');
+  String get adFreePlan => _pick(
+    japanese: '広告なし版（買い切り）',
+    english: 'Ad-free (one-time purchase)',
+    simplifiedChinese: '无广告版（一次性购买）',
+  );
+  String get fullPlan => _pick(
+    japanese: '完全版（月額）',
+    english: 'Full plan (monthly)',
+    simplifiedChinese: '完整版（按月订阅）',
+  );
+  String get convenientCalculations => _pick(
+    japanese: '便利計算一覧',
+    english: 'Convenient calculations',
+    simplifiedChinese: '实用计算',
+  );
+  String get unitConversion => _pick(
+    japanese: '単位変換',
+    english: 'Unit conversion',
+    simplifiedChinese: '单位换算',
+  );
+  String get instantEstimate => _pick(
+    japanese: 'インスタント見積',
+    english: 'Instant estimate',
+    simplifiedChinese: '即时估算',
+  );
+  String get unitPriceMaster => _pick(
+    japanese: '単価マスタ',
+    english: 'Unit price master',
+    simplifiedChinese: '单价资料库',
+  );
   String get productivityMaster => isEnglish ? '歩掛：BUGAKARI' : '歩掛・生産性マスタ';
   String get productivityTermTitle => isEnglish ? '歩掛：BUGAKARI' : '歩掛';
   String get productivityTermExplanation => isEnglish
       ? 'Bugakari is a Japanese construction term for the labor required per unit of completed work. It is managed together with productivity records in this app.'
       : '歩掛は、施工数量1単位あたりに必要な人工や作業量を表す建設実務用語です。';
-  String get adArea => isEnglish ? 'Ad area' : '広告エリア';
+  String get adArea =>
+      _pick(japanese: '広告エリア', english: 'Ad area', simplifiedChinese: '广告区域');
 
   String text(String japanese) {
     if (!isEnglish) return japanese;
@@ -695,13 +764,15 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 
   @override
   bool isSupported(Locale locale) =>
-      const {'ja', 'en'}.contains(locale.languageCode);
+      const {'ja', 'en', 'zh'}.contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) {
-    final language = locale.languageCode == 'en'
-        ? AppLanguage.english
-        : AppLanguage.japanese;
+    final language = switch (locale.languageCode) {
+      'en' => AppLanguage.english,
+      'zh' => AppLanguage.simplifiedChinese,
+      _ => AppLanguage.japanese,
+    };
     return SynchronousFuture(AppLocalizations(language));
   }
 

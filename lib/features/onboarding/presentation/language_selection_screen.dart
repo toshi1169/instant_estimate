@@ -66,6 +66,11 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                       value: AppLanguage.english,
                       title: const Text('English'),
                     ),
+                    RadioListTile<AppLanguage>(
+                      key: const Key('languageSimplifiedChinese'),
+                      value: AppLanguage.simplifiedChinese,
+                      title: const Text('简体中文'),
+                    ),
                   ],
                 ),
               ),
