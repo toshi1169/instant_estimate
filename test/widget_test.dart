@@ -967,6 +967,18 @@ void main() {
     expect(strings.deleteUnitPriceQuestion('挖掘'), '要从单价主数据中删除“挖掘”吗？');
   });
 
+  test('繁体字中国語は便利計算・土量・比重の文言を翻訳する', () {
+    const strings = AppLocalizations(AppLanguage.traditionalChinese);
+
+    expect(strings.text('土量計算'), '土方計算');
+    expect(strings.text('掘削・搬出'), '開挖・外運');
+    expect(strings.text('材料と体積から重量を算出'), '根據材料和體積計算重量');
+    expect(strings.text('材料を追加'), '新增材料');
+    expect(strings.text('運搬車両'), '運輸車輛');
+    expect(strings.text('必要運搬回数'), '所需運輸次數');
+    expect(strings.text('締固め係数'), '壓實係數');
+  });
+
   testWidgets('ヘルプを開き戻るとサイドメニューへ戻る', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

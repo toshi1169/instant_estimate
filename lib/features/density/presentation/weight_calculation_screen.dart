@@ -250,6 +250,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                               japanese: '${material.name}（登録）',
                               english: '${material.name} (Saved)',
                               simplifiedChinese: '${material.name}（已保存）',
+                              traditionalChinese: '${material.name}（已儲存）',
                             ),
                           ),
                         ),
