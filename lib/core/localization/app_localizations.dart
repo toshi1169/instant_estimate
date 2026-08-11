@@ -78,13 +78,37 @@ class AppLocalizations {
   );
 
   String occupation(String value) => switch (value) {
-    '建築監督' => isEnglish ? 'Building supervisor' : value,
-    '土木監督' => isEnglish ? 'Civil supervisor' : value,
-    '建築基礎' => isEnglish ? 'Building foundations' : value,
-    '外構' => isEnglish ? 'Exterior works' : value,
-    '内装' => isEnglish ? 'Interior works' : value,
-    '多能工' => isEnglish ? 'Multi-skilled worker' : value,
-    _ => isEnglish ? 'Other' : value,
+    '建築監督' => _pick(
+      japanese: value,
+      english: 'Building supervisor',
+      simplifiedChinese: '建筑监理',
+    ),
+    '土木監督' => _pick(
+      japanese: value,
+      english: 'Civil supervisor',
+      simplifiedChinese: '土木监理',
+    ),
+    '建築基礎' => _pick(
+      japanese: value,
+      english: 'Building foundations',
+      simplifiedChinese: '建筑基础',
+    ),
+    '外構' => _pick(
+      japanese: value,
+      english: 'Exterior works',
+      simplifiedChinese: '室外工程',
+    ),
+    '内装' => _pick(
+      japanese: value,
+      english: 'Interior works',
+      simplifiedChinese: '室内装修',
+    ),
+    '多能工' => _pick(
+      japanese: value,
+      english: 'Multi-skilled worker',
+      simplifiedChinese: '多技能工',
+    ),
+    _ => _pick(japanese: value, english: 'Other', simplifiedChinese: '其他'),
   };
 
   String get settings =>
@@ -121,16 +145,148 @@ class AppLocalizations {
     english: 'Unit price master',
     simplifiedChinese: '单价资料库',
   );
-  String get productivityMaster => isEnglish ? '歩掛：BUGAKARI' : '歩掛・生産性マスタ';
-  String get productivityTermTitle => isEnglish ? '歩掛：BUGAKARI' : '歩掛';
-  String get productivityTermExplanation => isEnglish
-      ? 'Bugakari is a Japanese construction term for the labor required per unit of completed work. It is managed together with productivity records in this app.'
-      : '歩掛は、施工数量1単位あたりに必要な人工や作業量を表す建設実務用語です。';
+  String get productivityMaster => _pick(
+    japanese: '歩掛・生産性マスタ',
+    english: '歩掛：BUGAKARI',
+    simplifiedChinese: '步挂：BUGAKARI・生产率资料库',
+  );
+  String get productivityTermTitle => _pick(
+    japanese: '歩掛',
+    english: '歩掛：BUGAKARI',
+    simplifiedChinese: '步挂：BUGAKARI',
+  );
+  String get productivityTermExplanation => _pick(
+    japanese: '歩掛は、施工数量1単位あたりに必要な人工や作業量を表す建設実務用語です。',
+    english:
+        'Bugakari is a Japanese construction term for the labor required per unit of completed work. It is managed together with productivity records in this app.',
+    simplifiedChinese:
+        '“步挂（BUGAKARI）”是日本建筑行业术语，表示每单位完工数量所需的人工或工作量。本应用将其与生产率记录一并管理。',
+  );
   String get adArea =>
       _pick(japanese: '広告エリア', english: 'Ad area', simplifiedChinese: '广告区域');
 
   String text(String japanese) {
-    if (!isEnglish) return japanese;
+    if (isJapanese) return japanese;
+    if (isSimplifiedChinese) {
+      final translated = const <String, String>{
+        '便利計算一覧': '实用计算',
+        '土量計算': '土方计算',
+        '掘削・搬出': '开挖・外运',
+        '埋戻し': '回填',
+        '盛土': '填土',
+        '比重・重量計算': '密度・重量计算',
+        '勾配計算': '坡度计算',
+        '面積計算': '面积计算',
+        '5辺以上の面積計算': '五边以上面积计算',
+        '対比計算': '比例计算',
+        '歩掛・生産性計算': '步挂・生产率计算',
+        'クリア': '清除',
+        '見積へ': '添加到估算',
+        'コピー': '复制',
+        'カット': '剪切',
+        'ペースト': '粘贴',
+        '消去': '清除',
+        '共有': '分享',
+        '編集': '编辑',
+        '削除': '删除',
+        'スター': '星标',
+        '関数一覧': '函数列表',
+        '計算履歴': '计算历史',
+        '履歴の並び順': '历史排序',
+        '昇順': '升序',
+        '降順': '降序',
+        '計算式・解を検索': '搜索算式和结果',
+        '検索を消去': '清除搜索',
+        '検索をクリア': '清除搜索',
+        '一致する履歴がありません': '没有匹配的历史记录',
+        '計算履歴はまだありません': '暂无计算历史',
+        '履歴メニュー': '历史菜单',
+        '履歴を削除': '删除历史记录',
+        'この計算履歴を削除しますか？': '要删除这条计算历史吗？',
+        '小数': '小数',
+        '仮分数': '假分数',
+        '帯分数': '带分数',
+        '見積へ送る': '发送到估算',
+        '見積を開く': '打开估算',
+        '送信内容': '发送内容',
+        '送信先': '发送位置',
+        '送信内容の確認': '确认发送内容',
+        '次へ': '下一步',
+        '式': '算式',
+        '解': '结果',
+        '式＋解': '算式＋结果',
+        '角度単位': '角度单位',
+        'DEG（度）': 'DEG（度）',
+        'RAD（ラジアン）': 'RAD（弧度）',
+        '新しい見積': '新建估算',
+        '名称未設定の見積': '未命名估算',
+        '見積メニュー': '估算菜单',
+        '見積基本情報': '估算基本信息',
+        '見積名': '估算名称',
+        '見積番号': '估算编号',
+        '現場': '现场',
+        '現場名': '现场名称',
+        '宛名': '客户名称',
+        '作成日': '创建日期',
+        '備考': '备注',
+        '基本情報を保存': '保存基本信息',
+        '見積明細はまだありません': '暂无估算明细',
+        '明細を追加': '添加明细',
+        '追加先': '添加位置',
+        '追加先の見積を選択': '选择要添加到的估算',
+        '変更': '更改',
+        '変更を保存': '保存更改',
+        '工種': '工种',
+        '名称': '名称',
+        '名称（必須）': '名称（必填）',
+        '名称を入力してください': '请输入名称',
+        '名称未入力': '未输入名称',
+        '仕様': '规格',
+        '数量': '数量',
+        '単位': '单位',
+        '単価': '单价',
+        '金額（数量 × 単価）': '金额（数量 × 单价）',
+        '摘要': '摘要',
+        '計算根拠': '计算依据',
+        '詳細未入力': '未输入详细信息',
+        '金額未設定': '未设置金额',
+        '工種小計': '工种小计',
+        '税抜合計': '未税合计',
+        '消費税（10%）': '消费税（10%）',
+        '税込': '含税',
+        '税込総額': '含税总额',
+        '工種・名称・仕様・単位・摘要を検索': '搜索工种、名称、规格、单位或摘要',
+        '過去の名称・工種・現場などを検索': '搜索历史名称、工种或现场',
+        '単価を検索': '搜索单价',
+        '単価マスタから選択': '从单价资料库选择',
+        '単価マスタ（登録なし）': '单价资料库（无记录）',
+        '過去の見積から選択': '从历史估算选择',
+        '過去の見積（履歴なし）': '历史估算（无记录）',
+        '一致する単価がありません': '没有匹配的单价',
+        '一致する過去明細がありません': '没有匹配的历史明细',
+        'この内容を単価マスタへ登録': '将此内容保存到单价资料库',
+        '追加して見積を開く': '添加并打开估算',
+        '同じ計算内容があります': '已存在相同的计算内容',
+        'そのまま追加': '仍然添加',
+        '既存明細を更新': '更新现有明细',
+        '既存明細へ数量を加算': '数量加到现有明细',
+        '既存明細へ加算': '加到现有明细',
+        '別明細として追加': '作为新明细添加',
+        '複製': '复制明细',
+        'キャンセル': '取消',
+        '未入力': '未输入',
+        '未購入': '未购买',
+        '購入済み': '已购买',
+        '未契約': '未订阅',
+        '契約中': '订阅中',
+        '完全版特典で有効': '完整版权益已启用',
+        '完全版：件数制限なし': '完整版：无数量限制',
+        '広告スペース': '广告区域',
+        '広告なし版で非表示に！': '购买无广告版后隐藏！',
+        '今すぐ\nアップグレード': '立即\n升级',
+      }[japanese];
+      if (translated != null) return translated;
+    }
     return const <String, String>{
           'プライバシー': 'Privacy',
           '広告のプライバシー設定': 'Ad privacy choices',
@@ -626,7 +782,11 @@ class AppLocalizations {
         japanese;
   }
 
-  String itemCount(int count) => isEnglish ? '$count items' : '$count件';
+  String itemCount(int count) => _pick(
+    japanese: '$count件',
+    english: '$count items',
+    simplifiedChinese: '$count项',
+  );
   String productivityUnit(String value) {
     if (!isEnglish) return value;
     return switch (value) {
@@ -640,16 +800,27 @@ class AppLocalizations {
     };
   }
 
-  String itemCountWithLimit(int count, int limit) =>
-      isEnglish ? '$count / $limit items' : '$count / $limit件';
-  String currentSaveLimit(int limit) =>
-      isEnglish ? 'Current storage limit: $limit items' : '現在の保存上限：$limit件';
-  String productivityLimitMessage(int limit) => isEnglish
-      ? 'The current plan can save up to $limit records. The full plan can save up to 100 records.'
-      : '現在のプランでは最大$limit件まで保存できます。完全版では100件まで保存できます。';
-  String get freeEstimateLimit => isEnglish
-      ? 'The free plan can store up to 5 estimates'
-      : '無料版では見積を5件まで保存できます';
+  String itemCountWithLimit(int count, int limit) => _pick(
+    japanese: '$count / $limit件',
+    english: '$count / $limit items',
+    simplifiedChinese: '$count / $limit项',
+  );
+  String currentSaveLimit(int limit) => _pick(
+    japanese: '現在の保存上限：$limit件',
+    english: 'Current storage limit: $limit items',
+    simplifiedChinese: '当前保存上限：$limit项',
+  );
+  String productivityLimitMessage(int limit) => _pick(
+    japanese: '現在のプランでは最大$limit件まで保存できます。完全版では100件まで保存できます。',
+    english:
+        'The current plan can save up to $limit records. The full plan can save up to 100 records.',
+    simplifiedChinese: '当前方案最多可保存$limit条记录。完整版最多可保存100条记录。',
+  );
+  String get freeEstimateLimit => _pick(
+    japanese: '無料版では見積を5件まで保存できます',
+    english: 'The free plan can store up to 5 estimates',
+    simplifiedChinese: '免费版最多可保存5份估算',
+  );
 
   String specializedUnit(String id, String japanese) {
     if (!isEnglish) return japanese;
@@ -717,46 +888,117 @@ class AppLocalizations {
     };
   }
 
-  String estimateDetails(int count) =>
-      isEnglish ? '$count details' : '$count明細';
+  String estimateDetails(int count) => _pick(
+    japanese: '$count明細',
+    english: '$count details',
+    simplifiedChinese: '$count项明细',
+  );
 
-  String deleteEstimateQuestion(String name) => isEnglish
-      ? 'Delete "$name"?\nAll details in this estimate will also be deleted.'
-      : '「$name」を削除しますか？\n含まれる明細もすべて削除されます。';
+  String deleteEstimateQuestion(String name) => _pick(
+    japanese: '「$name」を削除しますか？\n含まれる明細もすべて削除されます。',
+    english:
+        'Delete "$name"?\nAll details in this estimate will also be deleted.',
+    simplifiedChinese: '要删除“$name”吗？\n该估算中的所有明细也会被删除。',
+  );
 
-  String get displayAndCalculation =>
-      isEnglish ? 'Display & calculation' : '表示・計算';
-  String get theme => isEnglish ? 'Theme' : 'テーマ';
-  String get systemTheme => isEnglish ? 'Follow device setting' : '端末に合わせる';
-  String get whiteTheme => isEnglish ? 'White' : '白';
-  String get grayTheme => isEnglish ? 'Gray' : 'グレー';
-  String get blackTheme => isEnglish ? 'Black' : '黒';
-  String get decimalPlaces => isEnglish ? 'Decimal places' : '小数点以下の表示桁数';
-  String digits(int count) => isEnglish ? '$count places' : '$count桁';
-  String get roundingMethod => isEnglish ? 'Rounding method' : '丸め方法';
-  String get roundHalfUp => isEnglish ? 'Round half up' : '四捨五入';
-  String get roundUp => isEnglish ? 'Round up' : '切上げ';
-  String get roundDown => isEnglish ? 'Round down' : '切捨て';
-  String get angleUnit => isEnglish ? 'Angle unit' : '角度単位';
-  String get degrees => isEnglish ? 'Degrees (DEG)' : '度（DEG）';
-  String get radians => isEnglish ? 'Radians (RAD)' : 'ラジアン（RAD）';
-  String get calculationHistory => isEnglish ? 'Calculation history' : '計算履歴';
-  String get ascendingHistory =>
-      isEnglish ? 'Show history ascending' : '履歴を昇順で表示';
-  String get ascendingOldest =>
-      isEnglish ? 'Ascending (oldest first)' : '昇順（古い順）';
-  String get descendingNewest =>
-      isEnglish ? 'Descending (newest first)' : '降順（新しい順）';
-  String get confirmHistoryDeletion =>
-      isEnglish ? 'Confirm before deleting history' : '履歴削除時に確認する';
-  String get clearAllHistory => isEnglish ? 'Delete all history' : '履歴をすべて削除';
-  String get clearHistoryQuestion => isEnglish
-      ? 'Delete all calculation history except starred entries?'
-      : 'スター付き以外の計算履歴をすべて削除します。よろしいですか？';
-  String get cancel => isEnglish ? 'Cancel' : 'キャンセル';
-  String get delete => isEnglish ? 'Delete' : '削除';
-  String get historyCleared =>
-      isEnglish ? 'Calculation history was deleted' : '計算履歴をすべて削除しました';
+  String get displayAndCalculation => _pick(
+    japanese: '表示・計算',
+    english: 'Display & calculation',
+    simplifiedChinese: '显示与计算',
+  );
+  String get theme =>
+      _pick(japanese: 'テーマ', english: 'Theme', simplifiedChinese: '主题');
+  String get systemTheme => _pick(
+    japanese: '端末に合わせる',
+    english: 'Follow device setting',
+    simplifiedChinese: '跟随设备设置',
+  );
+  String get whiteTheme =>
+      _pick(japanese: '白', english: 'White', simplifiedChinese: '白色');
+  String get grayTheme =>
+      _pick(japanese: 'グレー', english: 'Gray', simplifiedChinese: '灰色');
+  String get blackTheme =>
+      _pick(japanese: '黒', english: 'Black', simplifiedChinese: '黑色');
+  String get decimalPlaces => _pick(
+    japanese: '小数点以下の表示桁数',
+    english: 'Decimal places',
+    simplifiedChinese: '小数位数',
+  );
+  String digits(int count) => _pick(
+    japanese: '$count桁',
+    english: '$count places',
+    simplifiedChinese: '$count位',
+  );
+  String get roundingMethod => _pick(
+    japanese: '丸め方法',
+    english: 'Rounding method',
+    simplifiedChinese: '舍入方式',
+  );
+  String get roundHalfUp => _pick(
+    japanese: '四捨五入',
+    english: 'Round half up',
+    simplifiedChinese: '四舍五入',
+  );
+  String get roundUp =>
+      _pick(japanese: '切上げ', english: 'Round up', simplifiedChinese: '向上取整');
+  String get roundDown =>
+      _pick(japanese: '切捨て', english: 'Round down', simplifiedChinese: '向下取整');
+  String get angleUnit =>
+      _pick(japanese: '角度単位', english: 'Angle unit', simplifiedChinese: '角度单位');
+  String get degrees => _pick(
+    japanese: '度（DEG）',
+    english: 'Degrees (DEG)',
+    simplifiedChinese: '度（DEG）',
+  );
+  String get radians => _pick(
+    japanese: 'ラジアン（RAD）',
+    english: 'Radians (RAD)',
+    simplifiedChinese: '弧度（RAD）',
+  );
+  String get calculationHistory => _pick(
+    japanese: '計算履歴',
+    english: 'Calculation history',
+    simplifiedChinese: '计算历史',
+  );
+  String get ascendingHistory => _pick(
+    japanese: '履歴を昇順で表示',
+    english: 'Show history ascending',
+    simplifiedChinese: '按升序显示历史',
+  );
+  String get ascendingOldest => _pick(
+    japanese: '昇順（古い順）',
+    english: 'Ascending (oldest first)',
+    simplifiedChinese: '升序（最早优先）',
+  );
+  String get descendingNewest => _pick(
+    japanese: '降順（新しい順）',
+    english: 'Descending (newest first)',
+    simplifiedChinese: '降序（最新优先）',
+  );
+  String get confirmHistoryDeletion => _pick(
+    japanese: '履歴削除時に確認する',
+    english: 'Confirm before deleting history',
+    simplifiedChinese: '删除历史前确认',
+  );
+  String get clearAllHistory => _pick(
+    japanese: '履歴をすべて削除',
+    english: 'Delete all history',
+    simplifiedChinese: '删除全部历史',
+  );
+  String get clearHistoryQuestion => _pick(
+    japanese: 'スター付き以外の計算履歴をすべて削除します。よろしいですか？',
+    english: 'Delete all calculation history except starred entries?',
+    simplifiedChinese: '要删除除星标记录以外的全部计算历史吗？',
+  );
+  String get cancel =>
+      _pick(japanese: 'キャンセル', english: 'Cancel', simplifiedChinese: '取消');
+  String get delete =>
+      _pick(japanese: '削除', english: 'Delete', simplifiedChinese: '删除');
+  String get historyCleared => _pick(
+    japanese: '計算履歴をすべて削除しました',
+    english: 'Calculation history was deleted',
+    simplifiedChinese: '计算历史已全部删除',
+  );
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

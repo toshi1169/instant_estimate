@@ -594,7 +594,7 @@ void main() {
     expect(preferences.savedLanguage, AppLanguage.simplifiedChinese.name);
     expect(settingsStore.settings.language, AppLanguage.simplifiedChinese);
     expect(find.text('选择行业'), findsOneWidget);
-    expect(find.text('Civil supervisor'), findsOneWidget);
+    expect(find.text('土木监理'), findsOneWidget);
   });
 
   testWidgets('設定から英語へ変更し日本語とローマ字の技術用語解説を表示できる', (tester) async {
@@ -918,7 +918,15 @@ void main() {
     expect(strings.chooseLanguage, '选择语言');
     expect(strings.settings, '设置');
     expect(strings.instantEstimate, '即时估算');
-    expect(strings.text('土量計算'), 'Earthwork calculation');
+    expect(strings.text('土量計算'), '土方计算');
+    expect(strings.calculationHistory, '计算历史');
+    expect(strings.text('計算式・解を検索'), '搜索算式和结果');
+    expect(strings.text('新しい見積'), '新建估算');
+    expect(strings.text('税抜合計'), '未税合计');
+    expect(
+      strings.text('法長は高さより大きい数値を入力してください'),
+      'Enter a slope length greater than the height',
+    );
   });
 
   testWidgets('ヘルプを開き戻るとサイドメニューへ戻る', (tester) async {
