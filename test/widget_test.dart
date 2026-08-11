@@ -912,7 +912,7 @@ void main() {
     }
   });
 
-  test('簡体字中国語は主要文言を翻訳し未翻訳文言を英語へフォールバックする', () {
+  test('簡体字中国語は主要画面と専門計算の文言を翻訳する', () {
     const strings = AppLocalizations(AppLanguage.simplifiedChinese);
 
     expect(strings.chooseLanguage, '选择语言');
@@ -923,10 +923,11 @@ void main() {
     expect(strings.text('計算式・解を検索'), '搜索算式和结果');
     expect(strings.text('新しい見積'), '新建估算');
     expect(strings.text('税抜合計'), '未税合计');
-    expect(
-      strings.text('法長は高さより大きい数値を入力してください'),
-      'Enter a slope length greater than the height',
-    );
+    expect(strings.text('材料と体積から重量を算出'), '根据材料和体积计算重量');
+    expect(strings.text('4辺面積計算'), '四边形面积计算');
+    expect(strings.text('必要人工'), '所需人工');
+    expect(strings.text('変換する種類'), '换算类别');
+    expect(strings.text('法長は高さより大きい数値を入力してください'), '请输入大于高度的边坡长度');
   });
 
   testWidgets('ヘルプを開き戻るとサイドメニューへ戻る', (tester) async {
