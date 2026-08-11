@@ -50,7 +50,11 @@ void main() {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: const [Locale('ja'), Locale('en')],
+        supportedLocales: const [
+          Locale('ja'),
+          Locale('en'),
+          Locale('zh', 'CN'),
+        ],
         locale: const Locale('ja'),
         home: AccessPlanScreen(
           plan: AppAccessPlan.adFree,
@@ -145,6 +149,53 @@ void main() {
     await tester.tap(find.byKey(const Key('purchasePlanButton')));
     await tester.pump();
     expect(store.purchasedPlan, AppAccessPlan.adFree);
+  });
+
+  testWidgets('簡体字中国語で購入プランを表示できる', (tester) async {
+    final store = _FakePurchaseStore(
+      const PurchaseStoreState(
+        operation: PurchaseOperation.ready,
+        products: [
+          PurchaseProduct(
+            id: PurchaseProductIds.fullMonthly,
+            plan: AppAccessPlan.full,
+            displayPrice: '¥500',
+          ),
+        ],
+      ),
+    );
+    addTearDown(store.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('ja'),
+          Locale('en'),
+          Locale('zh', 'CN'),
+        ],
+        locale: const Locale('zh', 'CN'),
+        home: AccessPlanScreen(plan: AppAccessPlan.full, purchaseStore: store),
+      ),
+    );
+
+    expect(find.text('完整版'), findsWidgets);
+    expect(find.text('首次使用可免费试用7天'), findsOneWidget);
+    expect(find.text('使用今后新增的完整版功能'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('purchasePlanButton')),
+      200,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('购买'), findsOneWidget);
+    expect(find.text('恢复购买记录'), findsOneWidget);
   });
 }
 

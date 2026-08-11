@@ -20,45 +20,78 @@ class AccessPlanScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isFull = plan == AppAccessPlan.full;
-    final benefits = l10n.isEnglish
-        ? (isFull
-              ? const [
-                  'Remove all ads',
-                  'Unlimited saved estimates',
-                  'Unlimited unit price master records',
-                  'Save up to 100 productivity records',
-                  'Access future full-plan features',
-                ]
-              : const [
-                  'Remove banner and video ads',
-                  'One-time purchase',
-                  'Save up to 5 estimates',
-                  'Save up to 10 unit price records',
-                ])
-        : (isFull
-              ? const [
-                  'すべての広告を非表示',
-                  '見積の保存件数を無制限に拡張',
-                  '単価マスタの保存件数を無制限に拡張',
-                  '歩掛・生産性実績を100件まで保存',
-                  '将来追加される完全版対象機能',
-                ]
-              : const [
-                  'バナー広告と動画広告をすべて非表示',
-                  '一度の購入で継続利用',
-                  '見積は5件まで保存',
-                  '単価マスタは10件まで保存',
-                ]);
-    final planName = l10n.isEnglish
-        ? (isFull ? 'Full plan' : 'Ad-free plan')
-        : (isFull ? '完全版' : '広告なし版');
-    final fallbackPriceLabel = l10n.isEnglish
-        ? switch (plan) {
-            AppAccessPlan.free => 'Free',
-            AppAccessPlan.adFree => '¥300 (one-time purchase)',
-            AppAccessPlan.full => '¥500 / month',
-          }
-        : plan.priceLabel;
+    final benefits = (isFull
+        ? [
+            l10n.choose(
+              japanese: 'すべての広告を非表示',
+              english: 'Remove all ads',
+              simplifiedChinese: '移除全部广告',
+            ),
+            l10n.choose(
+              japanese: '見積の保存件数を無制限に拡張',
+              english: 'Unlimited saved estimates',
+              simplifiedChinese: '无限保存估算',
+            ),
+            l10n.choose(
+              japanese: '単価マスタの保存件数を無制限に拡張',
+              english: 'Unlimited unit price master records',
+              simplifiedChinese: '无限保存单价资料',
+            ),
+            l10n.choose(
+              japanese: '歩掛・生産性実績を100件まで保存',
+              english: 'Save up to 100 productivity records',
+              simplifiedChinese: '最多保存100条步挂与生产率记录',
+            ),
+            l10n.choose(
+              japanese: '将来追加される完全版対象機能',
+              english: 'Access future full-plan features',
+              simplifiedChinese: '使用今后新增的完整版功能',
+            ),
+          ]
+        : [
+            l10n.choose(
+              japanese: 'バナー広告と動画広告をすべて非表示',
+              english: 'Remove banner and video ads',
+              simplifiedChinese: '移除横幅广告和视频广告',
+            ),
+            l10n.choose(
+              japanese: '一度の購入で継続利用',
+              english: 'One-time purchase',
+              simplifiedChinese: '一次购买，持续使用',
+            ),
+            l10n.choose(
+              japanese: '見積は5件まで保存',
+              english: 'Save up to 5 estimates',
+              simplifiedChinese: '最多保存5份估算',
+            ),
+            l10n.choose(
+              japanese: '単価マスタは10件まで保存',
+              english: 'Save up to 10 unit price records',
+              simplifiedChinese: '最多保存10条单价资料',
+            ),
+          ]);
+    final planName = l10n.choose(
+      japanese: isFull ? '完全版' : '広告なし版',
+      english: isFull ? 'Full plan' : 'Ad-free plan',
+      simplifiedChinese: isFull ? '完整版' : '无广告版',
+    );
+    final fallbackPriceLabel = switch (plan) {
+      AppAccessPlan.free => l10n.choose(
+        japanese: '無料',
+        english: 'Free',
+        simplifiedChinese: '免费',
+      ),
+      AppAccessPlan.adFree => l10n.choose(
+        japanese: '¥300（買い切り）',
+        english: '¥300 (one-time purchase)',
+        simplifiedChinese: '¥300（一次性购买）',
+      ),
+      AppAccessPlan.full => l10n.choose(
+        japanese: '¥500／月',
+        english: '¥500 / month',
+        simplifiedChinese: '¥500／月',
+      ),
+    };
 
     final store = purchaseStore;
     if (store != null) {
@@ -134,9 +167,11 @@ class AccessPlanScreen extends StatelessWidget {
                     if (plan.hasSevenDayTrial) ...[
                       const SizedBox(height: 6),
                       Text(
-                        l10n.isEnglish
-                            ? '7-day free trial for first-time users'
-                            : '初回のみ7日間無料体験',
+                        l10n.choose(
+                          japanese: '初回のみ7日間無料体験',
+                          english: '7-day free trial for first-time users',
+                          simplifiedChinese: '首次使用可免费试用7天',
+                        ),
                       ),
                     ],
                   ],
@@ -166,10 +201,22 @@ class AccessPlanScreen extends StatelessWidget {
                     : const Icon(Icons.shopping_bag_outlined),
                 label: Text(
                   isCurrentPlan
-                      ? (l10n.isEnglish ? 'Current plan' : '現在のプラン')
+                      ? l10n.choose(
+                          japanese: '現在のプラン',
+                          english: 'Current plan',
+                          simplifiedChinese: '当前方案',
+                        )
                       : product == null
-                      ? (l10n.isEnglish ? 'Connect to store' : 'ストアへ接続')
-                      : (l10n.isEnglish ? 'Purchase' : '購入する'),
+                      ? l10n.choose(
+                          japanese: 'ストアへ接続',
+                          english: 'Connect to store',
+                          simplifiedChinese: '连接商店',
+                        )
+                      : l10n.choose(
+                          japanese: '購入する',
+                          english: 'Purchase',
+                          simplifiedChinese: '购买',
+                        ),
                 ),
               ),
               TextButton.icon(
@@ -178,7 +225,13 @@ class AccessPlanScreen extends StatelessWidget {
                     ? null
                     : store.restorePurchases,
                 icon: const Icon(Icons.restore),
-                label: Text(l10n.isEnglish ? 'Restore purchases' : '購入履歴を復元'),
+                label: Text(
+                  l10n.choose(
+                    japanese: '購入履歴を復元',
+                    english: 'Restore purchases',
+                    simplifiedChinese: '恢复购买记录',
+                  ),
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -188,9 +241,12 @@ class AccessPlanScreen extends StatelessWidget {
               ),
             ] else
               Text(
-                l10n.isEnglish
-                    ? 'Purchases will be enabled when the store release is prepared.'
-                    : '購入手続きはストア公開準備の工程で有効になります。',
+                l10n.choose(
+                  japanese: '購入手続きはストア公開準備の工程で有効になります。',
+                  english:
+                      'Purchases will be enabled when the store release is prepared.',
+                  simplifiedChinese: '完成应用商店发布准备后将启用购买功能。',
+                ),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -202,26 +258,41 @@ class AccessPlanScreen extends StatelessWidget {
 
   String _purchaseStatusText(AppLocalizations l10n, PurchaseStoreState? state) {
     return switch (state?.operation) {
-      PurchaseOperation.loading =>
-        l10n.isEnglish ? 'Connecting to the store…' : 'ストアへ接続しています…',
-      PurchaseOperation.purchasing =>
-        l10n.isEnglish ? 'Processing purchase…' : '購入手続き中です…',
-      PurchaseOperation.restoring =>
-        l10n.isEnglish ? 'Restoring purchases…' : '購入履歴を復元しています…',
-      PurchaseOperation.completed =>
-        l10n.isEnglish ? 'Purchase restored.' : '購入内容を反映しました',
-      PurchaseOperation.unavailable =>
-        l10n.isEnglish
-            ? 'This product is not available in the current store.'
-            : '現在のストアでは商品を取得できません',
-      PurchaseOperation.error =>
-        l10n.isEnglish
-            ? 'Could not complete the store operation. Please try again.'
-            : 'ストア処理を完了できませんでした。再度お試しください',
-      _ =>
-        l10n.isEnglish
-            ? 'The price and trial terms shown by the store apply.'
-            : '価格・無料体験期間はストアに表示される内容が適用されます',
+      PurchaseOperation.loading => l10n.choose(
+        japanese: 'ストアへ接続しています…',
+        english: 'Connecting to the store…',
+        simplifiedChinese: '正在连接商店…',
+      ),
+      PurchaseOperation.purchasing => l10n.choose(
+        japanese: '購入手続き中です…',
+        english: 'Processing purchase…',
+        simplifiedChinese: '正在处理购买…',
+      ),
+      PurchaseOperation.restoring => l10n.choose(
+        japanese: '購入履歴を復元しています…',
+        english: 'Restoring purchases…',
+        simplifiedChinese: '正在恢复购买记录…',
+      ),
+      PurchaseOperation.completed => l10n.choose(
+        japanese: '購入内容を反映しました',
+        english: 'Purchase restored.',
+        simplifiedChinese: '购买内容已恢复。',
+      ),
+      PurchaseOperation.unavailable => l10n.choose(
+        japanese: '現在のストアでは商品を取得できません',
+        english: 'This product is not available in the current store.',
+        simplifiedChinese: '当前商店无法获取此商品。',
+      ),
+      PurchaseOperation.error => l10n.choose(
+        japanese: 'ストア処理を完了できませんでした。再度お試しください',
+        english: 'Could not complete the store operation. Please try again.',
+        simplifiedChinese: '无法完成商店操作，请重试。',
+      ),
+      _ => l10n.choose(
+        japanese: '価格・無料体験期間はストアに表示される内容が適用されます',
+        english: 'The price and trial terms shown by the store apply.',
+        simplifiedChinese: '价格和免费试用期限以商店显示内容为准。',
+      ),
     };
   }
 }

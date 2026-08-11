@@ -26,6 +26,16 @@ class AppLocalizations {
     AppLanguage.simplifiedChinese => simplifiedChinese,
   };
 
+  String choose({
+    required String japanese,
+    required String english,
+    required String simplifiedChinese,
+  }) => _pick(
+    japanese: japanese,
+    english: english,
+    simplifiedChinese: simplifiedChinese,
+  );
+
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
         const AppLocalizations(AppLanguage.japanese);
