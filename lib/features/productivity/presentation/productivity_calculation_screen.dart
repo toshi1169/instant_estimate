@@ -433,6 +433,7 @@ class _ProductivityCalculationScreenState
       japanese: '人工/$unit',
       english: 'labor-days/$unit',
       simplifiedChinese: '人工/$unit',
+      traditionalChinese: '人工/$unit',
     );
     return '$sign${_f(value, 3)} $suffix';
   }
@@ -443,6 +444,7 @@ class _ProductivityCalculationScreenState
       japanese: '$unit/人工',
       english: '$unit/labor-day',
       simplifiedChinese: '$unit/人工',
+      traditionalChinese: '$unit/人工',
     );
     return '${_f(value, 2)} $suffix';
   }
@@ -451,13 +453,22 @@ class _ProductivityCalculationScreenState
     japanese: '人工',
     english: 'labor-days',
     simplifiedChinese: '人工',
+    traditionalChinese: '人工',
   );
 
-  String _dayUnit(AppLocalizations strings) =>
-      strings.choose(japanese: '日', english: 'days', simplifiedChinese: '天');
+  String _dayUnit(AppLocalizations strings) => strings.choose(
+    japanese: '日',
+    english: 'days',
+    simplifiedChinese: '天',
+    traditionalChinese: '天',
+  );
 
-  String _hourUnit(AppLocalizations strings) =>
-      strings.choose(japanese: '時間', english: 'hours', simplifiedChinese: '小时');
+  String _hourUnit(AppLocalizations strings) => strings.choose(
+    japanese: '時間',
+    english: 'hours',
+    simplifiedChinese: '小时',
+    traditionalChinese: '小時',
+  );
 }
 
 class _Section extends StatelessWidget {

@@ -967,7 +967,7 @@ void main() {
     expect(strings.deleteUnitPriceQuestion('挖掘'), '要从单价主数据中删除“挖掘”吗？');
   });
 
-  test('繁体字中国語は便利計算・土量・比重の文言を翻訳する', () {
+  test('繁体字中国語は便利計算・土量・比重・面積・歩掛の文言を翻訳する', () {
     const strings = AppLocalizations(AppLanguage.traditionalChinese);
 
     expect(strings.text('土量計算'), '土方計算');
@@ -977,6 +977,15 @@ void main() {
     expect(strings.text('運搬車両'), '運輸車輛');
     expect(strings.text('必要運搬回数'), '所需運輸次數');
     expect(strings.text('締固め係数'), '壓實係數');
+    expect(strings.text('勾配・法面計算'), '坡度・邊坡計算');
+    expect(strings.text('4辺面積計算'), '四邊形面積計算');
+    expect(strings.text('5辺以上面積計算'), '五邊以上面積計算');
+    expect(strings.text('自動計算'), '自動計算');
+    expect(strings.text('必要人工'), '所需人工');
+    expect(
+      strings.productivityLimitMessage(5),
+      '目前方案最多可儲存5筆紀錄。完整版最多可儲存100筆紀錄。',
+    );
   });
 
   testWidgets('ヘルプを開き戻るとサイドメニューへ戻る', (tester) async {

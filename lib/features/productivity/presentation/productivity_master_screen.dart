@@ -85,6 +85,7 @@ class ProductivityMasterScreen extends StatelessWidget {
             japanese: '${record.siteName}の実績を削除しますか？',
             english: 'Delete the actual record for ${record.siteName}?',
             simplifiedChinese: '要删除${record.siteName}的实际记录吗？',
+            traditionalChinese: '要刪除${record.siteName}的實績紀錄嗎？',
           ),
         ),
         actions: [
@@ -125,6 +126,8 @@ class _SummaryCard extends StatelessWidget {
                 '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} records',
             simplifiedChinese:
                 '${l10n.text(summary.trade)}・${l10n.productivityUnit(summary.unit)}・${summary.recordCount}条记录',
+            traditionalChinese:
+                '${l10n.text(summary.trade)}・${l10n.productivityUnit(summary.unit)}・${summary.recordCount}筆實績',
           ),
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -185,6 +188,7 @@ class _SummaryCard extends StatelessWidget {
       japanese: '人工/$unit',
       english: 'labor-days/$unit',
       simplifiedChinese: '人工/$unit',
+      traditionalChinese: '人工/$unit',
     );
     return '${value.toStringAsFixed(3)} $suffix';
   }
@@ -199,6 +203,7 @@ class _SummaryCard extends StatelessWidget {
       japanese: '$unit/人工',
       english: '$unit/labor-day',
       simplifiedChinese: '$unit/人工',
+      traditionalChinese: '$unit/人工',
     );
     return '${value.toStringAsFixed(2)} $suffix';
   }
@@ -214,6 +219,8 @@ class _SummaryCard extends StatelessWidget {
       english:
           '${record.workers} workers × ${record.workDays} days = ${record.actualLabor.toStringAsFixed(2)} labor-days',
       simplifiedChinese:
+          '${record.workers}人 × ${record.workDays}天 = ${record.actualLabor.toStringAsFixed(2)}人工',
+      traditionalChinese:
           '${record.workers}人 × ${record.workDays}天 = ${record.actualLabor.toStringAsFixed(2)}人工',
     );
     return '${_date(record.workDate)}　${record.quantity} $unit\n$work${record.conditions.isEmpty ? '' : '\n${record.conditions}'}';

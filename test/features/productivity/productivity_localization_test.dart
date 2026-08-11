@@ -147,6 +147,74 @@ void main() {
     expect(find.text('20.00 张/人工'), findsOneWidget);
     expect(find.textContaining('3.0人 × 2.0天'), findsOneWidget);
   });
+
+  testWidgets('繁体字中国語で歩掛計算の主要項目と単位を表示する', (tester) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        ProductivityCalculationScreen(
+          controller: ProductivityController(
+            store: MemoryProductivityRecordStore(),
+          ),
+        ),
+        const Locale('zh', 'TW'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('步掛・生產率計算'), findsOneWidget);
+    expect(find.text('所需人工'), findsOneWidget);
+    expect(find.text('工種'), findsOneWidget);
+
+    await tester.enterText(find.widgetWithText(TextField, '施工數量'), '120');
+    await tester.enterText(
+      find.widgetWithText(TextField, '基準步掛（BUGAKARI）（人工/單位）'),
+      '0.05',
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('6.00 人工'), findsOneWidget);
+  });
+
+  testWidgets('繁体字中国語で保存実績の動的単位を表示する', (tester) async {
+    final controller = ProductivityController(
+      store: MemoryProductivityRecordStore(),
+    );
+    await controller.load();
+    await controller.add(
+      ProductivityRecord(
+        id: 'tw-1',
+        createdAt: DateTime(2026, 8, 11),
+        trade: '型枠工事',
+        taskName: '基礎模板',
+        siteName: '現場A',
+        workDate: DateTime(2026, 8, 10),
+        quantity: 120,
+        unit: '枚',
+        workers: 3,
+        workDays: 2,
+        actualLabor: 6,
+        standardLaborRate: 0.06,
+        actualLaborRate: 0.05,
+        productivityPerLabor: 20,
+      ),
+    );
+
+    await tester.pumpWidget(
+      _localizedApp(
+        ProductivityMasterScreen(controller: controller),
+        const Locale('zh', 'TW'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('模板工程・張・1筆實績'), findsOneWidget);
+    await tester.tap(find.text('基礎模板'));
+    await tester.pumpAndSettle();
+    expect(find.text('0.060 人工/張'), findsOneWidget);
+    expect(find.text('20.00 張/人工'), findsOneWidget);
+    expect(find.textContaining('3.0人 × 2.0天'), findsOneWidget);
+  });
 }
 
 Widget _englishApp(Widget home) => MaterialApp(
@@ -163,7 +231,12 @@ Widget _englishApp(Widget home) => MaterialApp(
 
 Widget _localizedApp(Widget home, Locale locale) => MaterialApp(
   locale: locale,
-  supportedLocales: const [Locale('ja'), Locale('en'), Locale('zh', 'CN')],
+  supportedLocales: const [
+    Locale('ja'),
+    Locale('en'),
+    Locale('zh', 'CN'),
+    Locale('zh', 'TW'),
+  ],
   localizationsDelegates: const [
     AppLocalizationsDelegate(),
     GlobalMaterialLocalizations.delegate,
