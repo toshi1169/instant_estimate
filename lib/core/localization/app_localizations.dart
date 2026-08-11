@@ -10,6 +10,8 @@ class AppLocalizations {
 
   bool get isJapanese => appLanguage == AppLanguage.japanese;
   bool get isSimplifiedChinese => appLanguage == AppLanguage.simplifiedChinese;
+  bool get isTraditionalChinese =>
+      appLanguage == AppLanguage.traditionalChinese;
 
   // English is also the safe fallback while a newly added language is being
   // translated screen by screen. This prevents Japanese text leaking into a
@@ -20,20 +22,24 @@ class AppLocalizations {
     required String japanese,
     required String english,
     required String simplifiedChinese,
+    String? traditionalChinese,
   }) => switch (appLanguage) {
     AppLanguage.japanese => japanese,
     AppLanguage.english => english,
     AppLanguage.simplifiedChinese => simplifiedChinese,
+    AppLanguage.traditionalChinese => traditionalChinese ?? english,
   };
 
   String choose({
     required String japanese,
     required String english,
     required String simplifiedChinese,
+    String? traditionalChinese,
   }) => _pick(
     japanese: japanese,
     english: english,
     simplifiedChinese: simplifiedChinese,
+    traditionalChinese: traditionalChinese,
   );
 
   static AppLocalizations of(BuildContext context) {
@@ -45,46 +51,66 @@ class AppLocalizations {
     japanese: 'インスタント見積',
     english: 'Instant Estimate',
     simplifiedChinese: '即时估算',
+    traditionalChinese: '即時估算',
   );
-  String get language =>
-      _pick(japanese: '言語', english: 'Language', simplifiedChinese: '语言');
+  String get language => _pick(
+    japanese: '言語',
+    english: 'Language',
+    simplifiedChinese: '语言',
+    traditionalChinese: '語言',
+  );
   String get chooseLanguage => _pick(
     japanese: '言語を選択',
     english: 'Choose language',
     simplifiedChinese: '选择语言',
+    traditionalChinese: '選擇語言',
   );
   String get languageGuidance => _pick(
     japanese: 'アプリで使用する言語を選んでください。後から設定で変更できます。',
     english:
         'Select the language used in the app. You can change it later in Settings.',
     simplifiedChinese: '请选择应用中使用的语言。之后可在设置中更改。',
+    traditionalChinese: '請選擇應用程式使用的語言。之後可在設定中變更。',
   );
-  String get continueLabel =>
-      _pick(japanese: '次へ', english: 'Continue', simplifiedChinese: '继续');
-  String get japanese =>
-      _pick(japanese: '日本語', english: 'Japanese', simplifiedChinese: '日语');
+  String get continueLabel => _pick(
+    japanese: '次へ',
+    english: 'Continue',
+    simplifiedChinese: '继续',
+    traditionalChinese: '繼續',
+  );
+  String get japanese => _pick(
+    japanese: '日本語',
+    english: 'Japanese',
+    simplifiedChinese: '日语',
+    traditionalChinese: '日文',
+  );
   String get english => 'English';
   String get simplifiedChinese => '简体中文';
+  String get traditionalChinese => '繁體中文';
   String get occupationTitle => _pick(
     japanese: '業種を選択',
     english: 'Choose occupation',
     simplifiedChinese: '选择行业',
+    traditionalChinese: '選擇行業',
   );
   String get occupationPrompt => _pick(
     japanese: 'あなたの主な業種を選んでください',
     english: 'Select your main occupation',
     simplifiedChinese: '请选择您的主要行业',
+    traditionalChinese: '請選擇您的主要行業',
   );
   String get occupationGuidance => _pick(
     japanese: '表示する計算機能や見積項目の初期設定に使用します。後から設定で変更できます。',
     english:
         'This is used to prepare the initial calculators and estimate items. You can change it later in Settings.',
     simplifiedChinese: '用于设置初始计算功能和估算项目。之后可在设置中更改。',
+    traditionalChinese: '用於設定初始計算功能和估算項目。之後可在設定中變更。',
   );
   String get startWithOccupation => _pick(
     japanese: 'この業種で始める',
     english: 'Start with this occupation',
     simplifiedChinese: '以此行业开始',
+    traditionalChinese: '以此行業開始',
   );
 
   String occupation(String value) => switch (value) {
@@ -92,78 +118,105 @@ class AppLocalizations {
       japanese: value,
       english: 'Building supervisor',
       simplifiedChinese: '建筑监理',
+      traditionalChinese: '建築監督',
     ),
     '土木監督' => _pick(
       japanese: value,
       english: 'Civil supervisor',
       simplifiedChinese: '土木监理',
+      traditionalChinese: '土木監督',
     ),
     '建築基礎' => _pick(
       japanese: value,
       english: 'Building foundations',
       simplifiedChinese: '建筑基础',
+      traditionalChinese: '建築基礎',
     ),
     '外構' => _pick(
       japanese: value,
       english: 'Exterior works',
       simplifiedChinese: '室外工程',
+      traditionalChinese: '外構工程',
     ),
     '内装' => _pick(
       japanese: value,
       english: 'Interior works',
       simplifiedChinese: '室内装修',
+      traditionalChinese: '室內裝修',
     ),
     '多能工' => _pick(
       japanese: value,
       english: 'Multi-skilled worker',
       simplifiedChinese: '多技能工',
+      traditionalChinese: '多技能工',
     ),
-    _ => _pick(japanese: value, english: 'Other', simplifiedChinese: '其他'),
+    _ => _pick(
+      japanese: value,
+      english: 'Other',
+      simplifiedChinese: '其他',
+      traditionalChinese: '其他',
+    ),
   };
 
-  String get settings =>
-      _pick(japanese: '設定', english: 'Settings', simplifiedChinese: '设置');
-  String get help =>
-      _pick(japanese: 'ヘルプ', english: 'Help', simplifiedChinese: '帮助');
+  String get settings => _pick(
+    japanese: '設定',
+    english: 'Settings',
+    simplifiedChinese: '设置',
+    traditionalChinese: '設定',
+  );
+  String get help => _pick(
+    japanese: 'ヘルプ',
+    english: 'Help',
+    simplifiedChinese: '帮助',
+    traditionalChinese: '說明',
+  );
   String get adFreePlan => _pick(
     japanese: '広告なし版（買い切り）',
     english: 'Ad-free (one-time purchase)',
     simplifiedChinese: '无广告版（一次性购买）',
+    traditionalChinese: '無廣告版（一次性購買）',
   );
   String get fullPlan => _pick(
     japanese: '完全版（月額）',
     english: 'Full plan (monthly)',
     simplifiedChinese: '完整版（按月订阅）',
+    traditionalChinese: '完整版（按月訂閱）',
   );
   String get convenientCalculations => _pick(
     japanese: '便利計算一覧',
     english: 'Convenient calculations',
     simplifiedChinese: '实用计算',
+    traditionalChinese: '實用計算',
   );
   String get unitConversion => _pick(
     japanese: '単位変換',
     english: 'Unit conversion',
     simplifiedChinese: '单位换算',
+    traditionalChinese: '單位換算',
   );
   String get instantEstimate => _pick(
     japanese: 'インスタント見積',
     english: 'Instant estimate',
     simplifiedChinese: '即时估算',
+    traditionalChinese: '即時估算',
   );
   String get unitPriceMaster => _pick(
     japanese: '単価マスタ',
     english: 'Unit price master',
     simplifiedChinese: '单价资料库',
+    traditionalChinese: '單價資料庫',
   );
   String get productivityMaster => _pick(
     japanese: '歩掛・生産性マスタ',
     english: '歩掛：BUGAKARI',
     simplifiedChinese: '步挂：BUGAKARI・生产率资料库',
+    traditionalChinese: '步掛：BUGAKARI・生產率資料庫',
   );
   String get productivityTermTitle => _pick(
     japanese: '歩掛',
     english: '歩掛：BUGAKARI',
     simplifiedChinese: '步挂：BUGAKARI',
+    traditionalChinese: '步掛：BUGAKARI',
   );
   String get productivityTermExplanation => _pick(
     japanese: '歩掛は、施工数量1単位あたりに必要な人工や作業量を表す建設実務用語です。',
@@ -171,12 +224,53 @@ class AppLocalizations {
         'Bugakari is a Japanese construction term for the labor required per unit of completed work. It is managed together with productivity records in this app.',
     simplifiedChinese:
         '“步挂（BUGAKARI）”是日本建筑行业术语，表示每单位完工数量所需的人工或工作量。本应用将其与生产率记录一并管理。',
+    traditionalChinese:
+        '「步掛（BUGAKARI）」是日本建築業術語，表示每單位完工數量所需的人工或工作量。本應用程式會與生產率紀錄一併管理。',
   );
-  String get adArea =>
-      _pick(japanese: '広告エリア', english: 'Ad area', simplifiedChinese: '广告区域');
+  String get adArea => _pick(
+    japanese: '広告エリア',
+    english: 'Ad area',
+    simplifiedChinese: '广告区域',
+    traditionalChinese: '廣告區域',
+  );
 
   String text(String japanese) {
     if (isJapanese) return japanese;
+    if (isTraditionalChinese) {
+      final translated = const <String, String>{
+        '便利計算一覧': '實用計算',
+        '土量計算': '土方計算',
+        '比重・重量計算': '密度・重量計算',
+        '勾配計算': '坡度計算',
+        '面積計算': '面積計算',
+        '5辺以上の面積計算': '五邊以上面積計算',
+        '対比計算': '比例計算',
+        '歩掛・生産性計算': '步掛・生產率計算',
+        'クリア': '清除',
+        'コピー': '複製',
+        'カット': '剪下',
+        'ペースト': '貼上',
+        '消去': '清除',
+        '共有': '分享',
+        '編集': '編輯',
+        '削除': '刪除',
+        'スター': '星號',
+        '関数一覧': '函數列表',
+        '計算履歴': '計算歷史',
+        '履歴の並び順': '歷史排序',
+        '昇順': '升序',
+        '降順': '降序',
+        '計算式・解を検索': '搜尋算式和結果',
+        'キャンセル': '取消',
+        '見積へ送る': '傳送到估算',
+        '設定': '設定',
+        'ヘルプ': '說明',
+        '単位変換': '單位換算',
+        'インスタント見積': '即時估算',
+        '単価マスタ': '單價資料庫',
+      }[japanese];
+      if (translated != null) return translated;
+    }
     if (isSimplifiedChinese) {
       final translated = const <String, String>{
         '便利計算一覧': '实用计算',
@@ -1088,6 +1182,15 @@ class AppLocalizations {
         '式' => '项',
         _ => text(value),
       },
+      AppLanguage.traditionalChinese => switch (value) {
+        '本' => '根',
+        '枚' => '張',
+        '個' => '個',
+        '箇所' => '處',
+        '組' => '組',
+        '式' => '項',
+        _ => text(value),
+      },
     };
   }
 
@@ -1279,99 +1382,151 @@ class AppLocalizations {
     japanese: '表示・計算',
     english: 'Display & calculation',
     simplifiedChinese: '显示与计算',
+    traditionalChinese: '顯示與計算',
   );
-  String get theme =>
-      _pick(japanese: 'テーマ', english: 'Theme', simplifiedChinese: '主题');
+  String get theme => _pick(
+    japanese: 'テーマ',
+    english: 'Theme',
+    simplifiedChinese: '主题',
+    traditionalChinese: '主題',
+  );
   String get systemTheme => _pick(
     japanese: '端末に合わせる',
     english: 'Follow device setting',
     simplifiedChinese: '跟随设备设置',
+    traditionalChinese: '跟隨裝置設定',
   );
-  String get whiteTheme =>
-      _pick(japanese: '白', english: 'White', simplifiedChinese: '白色');
-  String get grayTheme =>
-      _pick(japanese: 'グレー', english: 'Gray', simplifiedChinese: '灰色');
-  String get blackTheme =>
-      _pick(japanese: '黒', english: 'Black', simplifiedChinese: '黑色');
+  String get whiteTheme => _pick(
+    japanese: '白',
+    english: 'White',
+    simplifiedChinese: '白色',
+    traditionalChinese: '白色',
+  );
+  String get grayTheme => _pick(
+    japanese: 'グレー',
+    english: 'Gray',
+    simplifiedChinese: '灰色',
+    traditionalChinese: '灰色',
+  );
+  String get blackTheme => _pick(
+    japanese: '黒',
+    english: 'Black',
+    simplifiedChinese: '黑色',
+    traditionalChinese: '黑色',
+  );
   String get decimalPlaces => _pick(
     japanese: '小数点以下の表示桁数',
     english: 'Decimal places',
     simplifiedChinese: '小数位数',
+    traditionalChinese: '小數位數',
   );
   String digits(int count) => _pick(
     japanese: '$count桁',
     english: '$count places',
     simplifiedChinese: '$count位',
+    traditionalChinese: '$count位',
   );
   String get roundingMethod => _pick(
     japanese: '丸め方法',
     english: 'Rounding method',
     simplifiedChinese: '舍入方式',
+    traditionalChinese: '捨入方式',
   );
   String get roundHalfUp => _pick(
     japanese: '四捨五入',
     english: 'Round half up',
     simplifiedChinese: '四舍五入',
+    traditionalChinese: '四捨五入',
   );
-  String get roundUp =>
-      _pick(japanese: '切上げ', english: 'Round up', simplifiedChinese: '向上取整');
-  String get roundDown =>
-      _pick(japanese: '切捨て', english: 'Round down', simplifiedChinese: '向下取整');
-  String get angleUnit =>
-      _pick(japanese: '角度単位', english: 'Angle unit', simplifiedChinese: '角度单位');
+  String get roundUp => _pick(
+    japanese: '切上げ',
+    english: 'Round up',
+    simplifiedChinese: '向上取整',
+    traditionalChinese: '無條件進位',
+  );
+  String get roundDown => _pick(
+    japanese: '切捨て',
+    english: 'Round down',
+    simplifiedChinese: '向下取整',
+    traditionalChinese: '無條件捨去',
+  );
+  String get angleUnit => _pick(
+    japanese: '角度単位',
+    english: 'Angle unit',
+    simplifiedChinese: '角度单位',
+    traditionalChinese: '角度單位',
+  );
   String get degrees => _pick(
     japanese: '度（DEG）',
     english: 'Degrees (DEG)',
     simplifiedChinese: '度（DEG）',
+    traditionalChinese: '度（DEG）',
   );
   String get radians => _pick(
     japanese: 'ラジアン（RAD）',
     english: 'Radians (RAD)',
     simplifiedChinese: '弧度（RAD）',
+    traditionalChinese: '弧度（RAD）',
   );
   String get calculationHistory => _pick(
     japanese: '計算履歴',
     english: 'Calculation history',
     simplifiedChinese: '计算历史',
+    traditionalChinese: '計算記錄',
   );
   String get ascendingHistory => _pick(
     japanese: '履歴を昇順で表示',
     english: 'Show history ascending',
     simplifiedChinese: '按升序显示历史',
+    traditionalChinese: '依升冪顯示記錄',
   );
   String get ascendingOldest => _pick(
     japanese: '昇順（古い順）',
     english: 'Ascending (oldest first)',
     simplifiedChinese: '升序（最早优先）',
+    traditionalChinese: '升冪（最舊優先）',
   );
   String get descendingNewest => _pick(
     japanese: '降順（新しい順）',
     english: 'Descending (newest first)',
     simplifiedChinese: '降序（最新优先）',
+    traditionalChinese: '降冪（最新優先）',
   );
   String get confirmHistoryDeletion => _pick(
     japanese: '履歴削除時に確認する',
     english: 'Confirm before deleting history',
     simplifiedChinese: '删除历史前确认',
+    traditionalChinese: '刪除記錄前確認',
   );
   String get clearAllHistory => _pick(
     japanese: '履歴をすべて削除',
     english: 'Delete all history',
     simplifiedChinese: '删除全部历史',
+    traditionalChinese: '刪除全部記錄',
   );
   String get clearHistoryQuestion => _pick(
     japanese: 'スター付き以外の計算履歴をすべて削除します。よろしいですか？',
     english: 'Delete all calculation history except starred entries?',
     simplifiedChinese: '要删除除星标记录以外的全部计算历史吗？',
+    traditionalChinese: '要刪除星號項目以外的全部計算記錄嗎？',
   );
-  String get cancel =>
-      _pick(japanese: 'キャンセル', english: 'Cancel', simplifiedChinese: '取消');
-  String get delete =>
-      _pick(japanese: '削除', english: 'Delete', simplifiedChinese: '删除');
+  String get cancel => _pick(
+    japanese: 'キャンセル',
+    english: 'Cancel',
+    simplifiedChinese: '取消',
+    traditionalChinese: '取消',
+  );
+  String get delete => _pick(
+    japanese: '削除',
+    english: 'Delete',
+    simplifiedChinese: '删除',
+    traditionalChinese: '刪除',
+  );
   String get historyCleared => _pick(
     japanese: '計算履歴をすべて削除しました',
     english: 'Calculation history was deleted',
     simplifiedChinese: '计算历史已全部删除',
+    traditionalChinese: '已刪除全部計算記錄',
   );
 }
 
@@ -1384,11 +1539,13 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 
   @override
   Future<AppLocalizations> load(Locale locale) {
-    final language = switch (locale.languageCode) {
-      'en' => AppLanguage.english,
-      'zh' => AppLanguage.simplifiedChinese,
-      _ => AppLanguage.japanese,
-    };
+    final language = locale.languageCode == 'en'
+        ? AppLanguage.english
+        : locale.languageCode == 'zh'
+        ? const {'TW', 'HK', 'MO'}.contains(locale.countryCode)
+              ? AppLanguage.traditionalChinese
+              : AppLanguage.simplifiedChinese
+        : AppLanguage.japanese;
     return SynchronousFuture(AppLocalizations(language));
   }
 

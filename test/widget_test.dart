@@ -597,6 +597,30 @@ void main() {
     expect(find.text('土木监理'), findsOneWidget);
   });
 
+  testWidgets('新規利用者は繁体字中国語を選択して保存できる', (tester) async {
+    final preferences = FakeLanguageOnboardingPreferences(
+      hasSelected: false,
+      hasSelectedLanguageValue: false,
+    );
+    final settingsStore = FakeAppSettingsStore();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: preferences,
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('languageTraditionalChinese')));
+    await tester.tap(find.byKey(const Key('completeLanguageSelection')));
+    await tester.pumpAndSettle();
+
+    expect(preferences.savedLanguage, AppLanguage.traditionalChinese.name);
+    expect(settingsStore.settings.language, AppLanguage.traditionalChinese);
+    expect(find.text('選擇行業'), findsOneWidget);
+    expect(find.text('土木監督'), findsOneWidget);
+  });
+
   testWidgets('設定から英語へ変更し日本語とローマ字の技術用語解説を表示できる', (tester) async {
     final settingsStore = FakeAppSettingsStore();
     await tester.pumpWidget(

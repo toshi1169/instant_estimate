@@ -218,7 +218,12 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       title: 'Instant Estimate',
       debugShowCheckedModeBanner: false,
       locale: _settings.language.locale,
-      supportedLocales: const [Locale('ja'), Locale('en'), Locale('zh', 'CN')],
+      supportedLocales: const [
+        Locale('ja'),
+        Locale('en'),
+        Locale('zh', 'CN'),
+        Locale('zh', 'TW'),
+      ],
       localizationsDelegates: const [
         AppLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,

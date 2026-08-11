@@ -25,6 +25,16 @@ void main() {
     expect(restored.language.locale.countryCode, 'CN');
   });
 
+  test('繁体字中国語の設定を保存・復元できる', () {
+    const settings = AppSettings(language: AppLanguage.traditionalChinese);
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.language, AppLanguage.traditionalChinese);
+    expect(restored.language.locale.languageCode, 'zh');
+    expect(restored.language.locale.countryCode, 'TW');
+  });
+
   test('ユーザー登録車両を設定データに保存・復元できる', () {
     const vehicle = TransportVehicle(
       id: 'custom_test',
