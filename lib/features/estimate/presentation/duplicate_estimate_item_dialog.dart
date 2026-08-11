@@ -18,9 +18,12 @@ Future<DuplicateEstimateItemAction> showDuplicateEstimateItemDialog(
         builder: (context) => AlertDialog(
           title: Text(l10n.text('同じ計算内容があります')),
           content: Text(
-            l10n.isEnglish
-                ? '“$name” has already been added to the current estimate.'
-                : '「$name」は、現在の見積にすでに追加されています。',
+            l10n.choose(
+              japanese: '「$name」は、現在の見積にすでに追加されています。',
+              english:
+                  '“$name” has already been added to the current estimate.',
+              simplifiedChinese: '“$name”已添加到当前估算中。',
+            ),
           ),
           actions: [
             TextButton(

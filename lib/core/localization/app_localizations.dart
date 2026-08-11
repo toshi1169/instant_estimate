@@ -1068,15 +1068,26 @@ class AppLocalizations {
     simplifiedChinese: '$count项',
   );
   String productivityUnit(String value) {
-    if (!isEnglish) return value;
-    return switch (value) {
-      '本' => 'pcs',
-      '枚' => 'sheets',
-      '個' => 'items',
-      '箇所' => 'locations',
-      '組' => 'sets',
-      '式' => 'lump sum',
-      _ => text(value),
+    return switch (appLanguage) {
+      AppLanguage.japanese => value,
+      AppLanguage.english => switch (value) {
+        '本' => 'pcs',
+        '枚' => 'sheets',
+        '個' => 'items',
+        '箇所' => 'locations',
+        '組' => 'sets',
+        '式' => 'lump sum',
+        _ => text(value),
+      },
+      AppLanguage.simplifiedChinese => switch (value) {
+        '本' => '根',
+        '枚' => '张',
+        '個' => '个',
+        '箇所' => '处',
+        '組' => '组',
+        '式' => '项',
+        _ => text(value),
+      },
     };
   }
 

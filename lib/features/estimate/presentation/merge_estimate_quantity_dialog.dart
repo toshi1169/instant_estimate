@@ -21,13 +21,20 @@ Future<MergeEstimateQuantityAction> showMergeEstimateQuantityDialog(
         builder: (context) => AlertDialog(
           title: Text(l10n.text('既存明細へ数量を加算')),
           content: Text(
-            l10n.isEnglish
-                ? 'Add the quantity to “$name”?\n\n'
-                      'Existing: $currentQuantity $unit\n'
-                      'New: $incomingQuantity $unit'
-                : '「$name」に数量を加算しますか？\n\n'
-                      '既存：$currentQuantity $unit\n'
-                      '今回：$incomingQuantity $unit',
+            l10n.choose(
+              japanese:
+                  '「$name」に数量を加算しますか？\n\n'
+                  '既存：$currentQuantity $unit\n'
+                  '今回：$incomingQuantity $unit',
+              english:
+                  'Add the quantity to “$name”?\n\n'
+                  'Existing: $currentQuantity $unit\n'
+                  'New: $incomingQuantity $unit',
+              simplifiedChinese:
+                  '要将数量加到“$name”吗？\n\n'
+                  '现有：$currentQuantity $unit\n'
+                  '本次：$incomingQuantity $unit',
+            ),
           ),
           actions: [
             TextButton(

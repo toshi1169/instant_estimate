@@ -259,17 +259,17 @@ class _ProductivityCalculationScreenState
           : [
               _resultRow(
                 strings.text('必要人工'),
-                '${_f(result.requiredLabor, 2)} ${strings.isEnglish ? 'labor-days' : '人工'}',
+                '${_f(result.requiredLabor, 2)} ${_laborDayUnit(strings)}',
               ),
               if (result.requiredDays != null)
                 _resultRow(
                   strings.text('必要日数'),
-                  '${_f(result.requiredDays!, 2)} ${strings.isEnglish ? 'days' : '日'}',
+                  '${_f(result.requiredDays!, 2)} ${_dayUnit(strings)}',
                 ),
               if (_mode == _Mode.days && result.totalWorkHours != null)
                 _resultRow(
                   strings.text('延べ作業時間'),
-                  '${_f(result.totalWorkHours!, 2)} ${strings.isEnglish ? 'hours' : '時間'}',
+                  '${_f(result.totalWorkHours!, 2)} ${_hourUnit(strings)}',
                 ),
             ],
     );
@@ -286,7 +286,7 @@ class _ProductivityCalculationScreenState
         else ...[
           _resultRow(
             strings.text('実人工'),
-            '${_f(result.actualLabor, 2)} ${strings.isEnglish ? 'labor-days' : '人工'}',
+            '${_f(result.actualLabor, 2)} ${_laborDayUnit(strings)}',
           ),
           _resultRow(
             strings.text('実績歩掛'),
@@ -429,15 +429,35 @@ class _ProductivityCalculationScreenState
   }) {
     final sign = showPositiveSign && value >= 0 ? '+' : '';
     final unit = strings.productivityUnit(_unit ?? '単位');
-    final suffix = strings.isEnglish ? 'labor-days/$unit' : '人工/$unit';
+    final suffix = strings.choose(
+      japanese: '人工/$unit',
+      english: 'labor-days/$unit',
+      simplifiedChinese: '人工/$unit',
+    );
     return '$sign${_f(value, 3)} $suffix';
   }
 
   String _productivity(AppLocalizations strings, double value) {
     final unit = strings.productivityUnit(_unit ?? '単位');
-    final suffix = strings.isEnglish ? '$unit/labor-day' : '$unit/人工';
+    final suffix = strings.choose(
+      japanese: '$unit/人工',
+      english: '$unit/labor-day',
+      simplifiedChinese: '$unit/人工',
+    );
     return '${_f(value, 2)} $suffix';
   }
+
+  String _laborDayUnit(AppLocalizations strings) => strings.choose(
+    japanese: '人工',
+    english: 'labor-days',
+    simplifiedChinese: '人工',
+  );
+
+  String _dayUnit(AppLocalizations strings) =>
+      strings.choose(japanese: '日', english: 'days', simplifiedChinese: '天');
+
+  String _hourUnit(AppLocalizations strings) =>
+      strings.choose(japanese: '時間', english: 'hours', simplifiedChinese: '小时');
 }
 
 class _Section extends StatelessWidget {

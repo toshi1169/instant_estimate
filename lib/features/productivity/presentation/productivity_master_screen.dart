@@ -81,9 +81,11 @@ class ProductivityMasterScreen extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: Text(AppLocalizations.of(context).text('実績を削除')),
         content: Text(
-          AppLocalizations.of(context).isEnglish
-              ? 'Delete the actual record for ${record.siteName}?'
-              : '${record.siteName}の実績を削除しますか？',
+          AppLocalizations.of(context).choose(
+            japanese: '${record.siteName}の実績を削除しますか？',
+            english: 'Delete the actual record for ${record.siteName}?',
+            simplifiedChinese: '要删除${record.siteName}的实际记录吗？',
+          ),
         ),
         actions: [
           TextButton(
@@ -116,9 +118,14 @@ class _SummaryCard extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         subtitle: Text(
-          l10n.isEnglish
-              ? '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} records'
-              : '${summary.trade}・${summary.unit}・実績${summary.recordCount}件',
+          l10n.choose(
+            japanese:
+                '${summary.trade}・${summary.unit}・実績${summary.recordCount}件',
+            english:
+                '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} records',
+            simplifiedChinese:
+                '${l10n.text(summary.trade)}・${l10n.productivityUnit(summary.unit)}・${summary.recordCount}条记录',
+          ),
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         children: [
@@ -174,7 +181,11 @@ class _SummaryCard extends StatelessWidget {
     String storedUnit,
   ) {
     final unit = l10n.productivityUnit(storedUnit);
-    final suffix = l10n.isEnglish ? 'labor-days/$unit' : '人工/$unit';
+    final suffix = l10n.choose(
+      japanese: '人工/$unit',
+      english: 'labor-days/$unit',
+      simplifiedChinese: '人工/$unit',
+    );
     return '${value.toStringAsFixed(3)} $suffix';
   }
 
@@ -184,7 +195,11 @@ class _SummaryCard extends StatelessWidget {
     String storedUnit,
   ) {
     final unit = l10n.productivityUnit(storedUnit);
-    final suffix = l10n.isEnglish ? '$unit/labor-day' : '$unit/人工';
+    final suffix = l10n.choose(
+      japanese: '$unit/人工',
+      english: '$unit/labor-day',
+      simplifiedChinese: '$unit/人工',
+    );
     return '${value.toStringAsFixed(2)} $suffix';
   }
 
@@ -193,9 +208,14 @@ class _SummaryCard extends StatelessWidget {
     ProductivityRecord record,
   ) {
     final unit = l10n.productivityUnit(record.unit);
-    final work = l10n.isEnglish
-        ? '${record.workers} workers × ${record.workDays} days = ${record.actualLabor.toStringAsFixed(2)} labor-days'
-        : '${record.workers}人 × ${record.workDays}日 = ${record.actualLabor.toStringAsFixed(2)}人工';
+    final work = l10n.choose(
+      japanese:
+          '${record.workers}人 × ${record.workDays}日 = ${record.actualLabor.toStringAsFixed(2)}人工',
+      english:
+          '${record.workers} workers × ${record.workDays} days = ${record.actualLabor.toStringAsFixed(2)} labor-days',
+      simplifiedChinese:
+          '${record.workers}人 × ${record.workDays}天 = ${record.actualLabor.toStringAsFixed(2)}人工',
+    );
     return '${_date(record.workDate)}　${record.quantity} $unit\n$work${record.conditions.isEmpty ? '' : '\n${record.conditions}'}';
   }
 }
