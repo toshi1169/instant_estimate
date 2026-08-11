@@ -927,6 +927,12 @@ void main() {
     expect(strings.text('4辺面積計算'), '四边形面积计算');
     expect(strings.text('必要人工'), '所需人工');
     expect(strings.text('変換する種類'), '换算类别');
+    expect(strings.text('土量変換'), '土方状态换算');
+    expect(strings.text('掘削後のほぐし土量と運搬回数を算出します。'), '计算开挖后的松散土方和运输次数。');
+    expect(strings.text('運搬車両'), '运输车辆');
+    expect(strings.text('必要運搬回数'), '所需运输次数');
+    expect(strings.text('履歴をコピーしました'), '已复制历史记录');
+    expect(strings.text('0で割ることはできません'), '不能除以0');
     expect(strings.text('法長は高さより大きい数値を入力してください'), '请输入大于高度的边坡长度');
   });
 
