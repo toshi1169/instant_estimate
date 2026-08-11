@@ -967,7 +967,7 @@ void main() {
     expect(strings.deleteUnitPriceQuestion('挖掘'), '要从单价主数据中删除“挖掘”吗？');
   });
 
-  test('繁体字中国語は便利計算・土量・比重・面積・歩掛の文言を翻訳する', () {
+  test('繁体字中国語は便利計算・見積・出力の文言を翻訳する', () {
     const strings = AppLocalizations(AppLanguage.traditionalChinese);
 
     expect(strings.text('土量計算'), '土方計算');
@@ -985,6 +985,21 @@ void main() {
     expect(
       strings.productivityLimitMessage(5),
       '目前方案最多可儲存5筆紀錄。完整版最多可儲存100筆紀錄。',
+    );
+    expect(strings.printA4Landscape, '以A4橫向列印');
+    expect(strings.exportA4LandscapeExcel, '匯出A4橫向Excel');
+    expect(strings.copyTableForExcel, '複製Excel用表格');
+    expect(strings.copiedEstimateDetails(3), '已複製估算明細（3項）');
+    expect(strings.mergedEstimateQuantity('12.5'), '已將數量加到現有明細。新數量：12.5');
+    expect(strings.deleteEstimateItemQuestion('挖掘'), '要刪除「挖掘」嗎？');
+    expect(strings.estimateItemAddedWithCount('見積へ追加しました', 2), '已新增至估算（2項）');
+    expect(strings.deleteUnitPriceQuestion('挖掘'), '要從單價資料庫刪除「挖掘」嗎？');
+    expect(strings.selectUnitPriceMasterCount(5), '從單價資料庫選擇（5項）');
+    expect(strings.selectPastEstimateCount(3), '從過去的估算選擇（3項）');
+    expect(strings.estimateDetails(4), '4項明細');
+    expect(
+      strings.deleteEstimateQuestion('測試估算'),
+      '要刪除「測試估算」嗎？\n此估算中的所有明細也會被刪除。',
     );
   });
 

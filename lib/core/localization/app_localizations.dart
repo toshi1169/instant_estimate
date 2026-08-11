@@ -291,6 +291,7 @@ class AppLocalizations {
         '比重': '密度',
         '登録材料を削除': '刪除已儲存材料',
         '見積明細へ追加': '加入估算明細',
+        '見積へ追加しました': '已新增至估算',
         '計算結果': '計算結果',
         '追加': '新增',
         '重量を計算': '計算重量',
@@ -1553,24 +1554,28 @@ class AppLocalizations {
     japanese: 'A4横で印刷',
     english: 'Print in A4 landscape',
     simplifiedChinese: '以A4横向打印',
+    traditionalChinese: '以A4橫向列印',
   );
 
   String get exportA4LandscapeExcel => _pick(
     japanese: 'A4横のExcelを出力',
     english: 'Export A4 landscape Excel',
     simplifiedChinese: '导出A4横向Excel',
+    traditionalChinese: '匯出A4橫向Excel',
   );
 
   String get copyTableForExcel => _pick(
     japanese: 'Excel用に表をコピー',
     english: 'Copy table for Excel',
     simplifiedChinese: '复制Excel用表格',
+    traditionalChinese: '複製Excel用表格',
   );
 
   String copiedEstimateDetails(int count) => _pick(
     japanese: '見積明細をコピーしました（$count件）',
     english: 'Copied $count estimate details',
     simplifiedChinese: '已复制估算明细（$count项）',
+    traditionalChinese: '已複製估算明細（$count項）',
   );
 
   String mergedEstimateQuantity(String quantity) => _pick(
@@ -1578,36 +1583,42 @@ class AppLocalizations {
     english:
         'Added the quantity to the existing detail. New quantity: $quantity',
     simplifiedChinese: '已将数量加到现有明细。新数量：$quantity',
+    traditionalChinese: '已將數量加到現有明細。新數量：$quantity',
   );
 
   String deleteEstimateItemQuestion(String name) => _pick(
     japanese: '「$name」を削除しますか？',
     english: 'Delete "$name"?',
     simplifiedChinese: '要删除“$name”吗？',
+    traditionalChinese: '要刪除「$name」嗎？',
   );
 
   String estimateItemAddedWithCount(String message, int count) => _pick(
     japanese: '${text(message)}（$count件）',
     english: '${text(message)} ($count details)',
     simplifiedChinese: '${text(message)}（$count项）',
+    traditionalChinese: '${text(message)}（$count項）',
   );
 
   String deleteUnitPriceQuestion(String name) => _pick(
     japanese: '「$name」を単価マスタから削除しますか？',
     english: 'Delete "$name" from the unit price master?',
     simplifiedChinese: '要从单价主数据中删除“$name”吗？',
+    traditionalChinese: '要從單價資料庫刪除「$name」嗎？',
   );
 
   String selectUnitPriceMasterCount(int count) => _pick(
     japanese: '単価マスタから選択（$count件）',
     english: 'Select from unit price master ($count)',
     simplifiedChinese: '从单价主数据选择（$count项）',
+    traditionalChinese: '從單價資料庫選擇（$count項）',
   );
 
   String selectPastEstimateCount(int count) => _pick(
     japanese: '過去の見積から選択（$count件）',
     english: 'Select from past estimates ($count)',
     simplifiedChinese: '从过去的估算选择（$count项）',
+    traditionalChinese: '從過去的估算選擇（$count項）',
   );
 
   String get listSeparator => isJapanese ? ' ／ ' : ' / ';
@@ -1616,6 +1627,7 @@ class AppLocalizations {
     japanese: '$count明細',
     english: '$count details',
     simplifiedChinese: '$count项明细',
+    traditionalChinese: '$count項明細',
   );
 
   String deleteEstimateQuestion(String name) => _pick(
@@ -1623,6 +1635,7 @@ class AppLocalizations {
     english:
         'Delete "$name"?\nAll details in this estimate will also be deleted.',
     simplifiedChinese: '要删除“$name”吗？\n该估算中的所有明细也会被删除。',
+    traditionalChinese: '要刪除「$name」嗎？\n此估算中的所有明細也會被刪除。',
   );
 
   String get displayAndCalculation => _pick(
