@@ -76,19 +76,25 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
   Future<void> _sendToEstimate() async {
     final result = _result;
     if (result == null) return;
+    final strings = AppLocalizations.of(context);
     final values = [for (var index = 0; index < 5; index++) _valueAt(index)];
     final specification =
         'A=${_format(values[0])}m B=${_format(values[1])}m '
         'C=${_format(values[2])}m D=${_format(values[3])}m '
-        '対角線=${_format(values[4])}m';
+        '${strings.text('対角線')}=${_format(values[4])}m';
+    final triangle = strings.choose(
+      japanese: '三角形',
+      english: 'Triangle',
+      simplifiedChinese: '三角形',
+    );
     final calculationBasis =
         '$specification\n'
-        '三角形① ${_format(result.firstTriangleArea)}m² ＋ '
-        '三角形② ${_format(result.secondTriangleArea)}m² '
+        '$triangle① ${_format(result.firstTriangleArea)}m² ＋ '
+        '$triangle② ${_format(result.secondTriangleArea)}m² '
         '＝ ${_format(result.totalArea)}m²';
     await widget.onSendToEstimate(
       EstimateItemDraft(
-        name: '面積',
+        name: strings.text('面積'),
         specification: specification,
         quantity: widget.settings.roundEstimateQuantity(result.totalArea),
         unit: 'm²',
@@ -131,7 +137,10 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 18),
-            _ShapeGuide(color: theme.colorScheme.onSurfaceVariant),
+            _ShapeGuide(
+              color: theme.colorScheme.onSurfaceVariant,
+              diagonalLabel: strings.text('対角線'),
+            ),
             const SizedBox(height: 20),
             Form(
               key: _formKey,
@@ -207,11 +216,17 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                     ),
                     const Divider(height: 26),
                     Text(
-                      strings.isEnglish
-                          ? 'Triangle 1 ${_format(result.firstTriangleArea)} m²'
-                                '  +  Triangle 2 ${_format(result.secondTriangleArea)} m²'
-                          : '三角形① ${_format(result.firstTriangleArea)} m²'
-                                '  ＋  三角形② ${_format(result.secondTriangleArea)} m²',
+                      strings.choose(
+                        japanese:
+                            '三角形① ${_format(result.firstTriangleArea)} m²'
+                            '  ＋  三角形② ${_format(result.secondTriangleArea)} m²',
+                        english:
+                            'Triangle 1 ${_format(result.firstTriangleArea)} m²'
+                            '  +  Triangle 2 ${_format(result.secondTriangleArea)} m²',
+                        simplifiedChinese:
+                            '三角形① ${_format(result.firstTriangleArea)} m²'
+                            '  ＋  三角形② ${_format(result.secondTriangleArea)} m²',
+                      ),
                       textAlign: TextAlign.right,
                       style: theme.textTheme.bodyMedium,
                     ),
@@ -246,23 +261,25 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
 }
 
 class _ShapeGuide extends StatelessWidget {
-  const _ShapeGuide({required this.color});
+  const _ShapeGuide({required this.color, required this.diagonalLabel});
 
   final Color color;
+  final String diagonalLabel;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 126,
-      child: CustomPaint(painter: _ShapeGuidePainter(color)),
+      child: CustomPaint(painter: _ShapeGuidePainter(color, diagonalLabel)),
     );
   }
 }
 
 class _ShapeGuidePainter extends CustomPainter {
-  const _ShapeGuidePainter(this.color);
+  const _ShapeGuidePainter(this.color, this.diagonalLabel);
 
   final Color color;
+  final String diagonalLabel;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -294,14 +311,14 @@ class _ShapeGuidePainter extends CustomPainter {
       ('B', Offset(size.width * .53, size.height * .12)),
       ('C', Offset(size.width * .82, size.height * .50)),
       ('D', Offset(size.width * .52, size.height * .84)),
-      ('対角線', Offset(size.width * .46, size.height * .48)),
+      (diagonalLabel, Offset(size.width * .46, size.height * .48)),
     ];
     for (final (label, offset) in labels) {
       final painter = TextPainter(
         text: TextSpan(
           text: label,
           style: TextStyle(
-            color: label == '対角線' ? AppColors.accent : color,
+            color: label == diagonalLabel ? AppColors.accent : color,
             fontSize: 13,
           ),
         ),
@@ -313,5 +330,5 @@ class _ShapeGuidePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ShapeGuidePainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color || oldDelegate.diagonalLabel != diagonalLabel;
 }

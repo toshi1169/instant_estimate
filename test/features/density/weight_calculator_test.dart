@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/density/domain/weight_calculator.dart';
 import 'package:instant_estimate/features/density/presentation/weight_calculation_screen.dart';
@@ -139,7 +140,12 @@ void main() {
       MaterialApp(
         locale: const Locale('en'),
         supportedLocales: const [Locale('ja'), Locale('en')],
-        localizationsDelegates: const [AppLocalizationsDelegate()],
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: WeightCalculationScreen(onSendToEstimate: (_) async {}),
       ),
     );
@@ -149,5 +155,44 @@ void main() {
 
     expect(find.text('Enter a number greater than 0'), findsOneWidget);
     expect(find.text('0より大きい数値を入力'), findsNothing);
+  });
+
+  testWidgets('簡体字設定で材料と見積データを中国語表示する', (tester) async {
+    EstimateItemDraft? sentDraft;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [
+          Locale('ja'),
+          Locale('en'),
+          Locale('zh', 'CN'),
+        ],
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: WeightCalculationScreen(
+          onSendToEstimate: (draft) async => sentDraft = draft,
+        ),
+      ),
+    );
+
+    expect(find.text('钢筋混凝土'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('densityVolume')), '2');
+    await tester.tap(find.byKey(const Key('calculateWeight')));
+    await tester.pump();
+
+    final sendButton = find.byKey(const Key('sendWeightToEstimate'));
+    await tester.ensureVisible(sendButton);
+    await tester.pumpAndSettle();
+    await tester.tap(sendButton);
+    await tester.pump();
+
+    expect(sentDraft?.name, '钢筋混凝土');
+    expect(sentDraft?.specification, contains('材料=钢筋混凝土'));
+    expect(sentDraft?.specification, contains('体积=2m³'));
+    expect(sentDraft?.specification, contains('密度=2.4t/m³'));
   });
 }

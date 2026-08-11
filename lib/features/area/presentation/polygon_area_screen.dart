@@ -94,17 +94,29 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
   Future<void> _sendToEstimate() async {
     final result = _result;
     if (result == null) return;
+    final strings = AppLocalizations.of(context);
     final outerSides = _values(_outerControllers);
     final diagonals = _values(_diagonalControllers);
+    final outerLabel = strings.choose(
+      japanese: '外周',
+      english: 'Outer sides',
+      simplifiedChinese: '外周边',
+    );
     final specification =
-        '外周 ${outerSides.map((value) => '${_format(value)}m').join('・')} / '
-        '対角線 ${diagonals.map((value) => '${_format(value)}m').join('・')}';
+        '$outerLabel ${outerSides.map((value) => '${_format(value)}m').join('・')} / '
+        '${strings.text('対角線')} '
+        '${diagonals.map((value) => '${_format(value)}m').join('・')}';
+    final triangle = strings.choose(
+      japanese: '三角形',
+      english: 'Triangle',
+      simplifiedChinese: '三角形',
+    );
     final triangleText = result.triangleAreas.indexed
-        .map((entry) => '三角形${entry.$1 + 1} ${_format(entry.$2)}m²')
+        .map((entry) => '$triangle${entry.$1 + 1} ${_format(entry.$2)}m²')
         .join(' ＋ ');
     await widget.onSendToEstimate(
       EstimateItemDraft(
-        name: '面積',
+        name: strings.text('面積'),
         specification: specification,
         quantity: widget.settings.roundEstimateQuantity(result.totalArea),
         unit: 'm²',
@@ -146,9 +158,11 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
             Row(
               children: [
                 Text(
-                  strings.isEnglish
-                      ? '${_outerControllers.length} sides'
-                      : '${_outerControllers.length}辺',
+                  strings.choose(
+                    japanese: '${_outerControllers.length}辺',
+                    english: '${_outerControllers.length} sides',
+                    simplifiedChinese: '${_outerControllers.length}条边',
+                  ),
                   key: const Key('polygonSideCount'),
                   style: theme.textTheme.titleMedium,
                 ),
@@ -183,9 +197,14 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     _lengthField(
                       controller: _outerControllers[index],
                       fieldKey: Key('polygonOuterSide$index'),
-                      label: strings.isEnglish
-                          ? 'Side ${_vertexName(index)}${_vertexName(index + 1)}'
-                          : '辺 ${_vertexName(index)}${_vertexName(index + 1)}',
+                      label: strings.choose(
+                        japanese:
+                            '辺 ${_vertexName(index)}${_vertexName(index + 1)}',
+                        english:
+                            'Side ${_vertexName(index)}${_vertexName(index + 1)}',
+                        simplifiedChinese:
+                            '边 ${_vertexName(index)}${_vertexName(index + 1)}',
+                      ),
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -203,9 +222,11 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     _lengthField(
                       controller: _diagonalControllers[index],
                       fieldKey: Key('polygonDiagonal$index'),
-                      label: strings.isEnglish
-                          ? 'Diagonal A${_vertexName(index + 2)}'
-                          : '対角線 A${_vertexName(index + 2)}',
+                      label: strings.choose(
+                        japanese: '対角線 A${_vertexName(index + 2)}',
+                        english: 'Diagonal A${_vertexName(index + 2)}',
+                        simplifiedChinese: '对角线 A${_vertexName(index + 2)}',
+                      ),
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -264,9 +285,12 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     const Divider(height: 26),
                     for (final (index, area) in result.triangleAreas.indexed)
                       Text(
-                        strings.isEnglish
-                            ? 'Triangle ${index + 1}  ${_format(area)} m²'
-                            : '三角形${index + 1}　${_format(area)} m²',
+                        strings.choose(
+                          japanese: '三角形${index + 1}　${_format(area)} m²',
+                          english: 'Triangle ${index + 1}  ${_format(area)} m²',
+                          simplifiedChinese:
+                              '三角形${index + 1}　${_format(area)} m²',
+                        ),
                         textAlign: TextAlign.right,
                       ),
                   ],

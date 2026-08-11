@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/area/domain/polygon_area_calculator.dart';
@@ -144,7 +145,12 @@ void main() {
       MaterialApp(
         locale: const Locale('en'),
         supportedLocales: const [Locale('ja'), Locale('en')],
-        localizationsDelegates: const [AppLocalizationsDelegate()],
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: PolygonAreaScreen(onSendToEstimate: (_) async {}),
       ),
     );
@@ -160,5 +166,63 @@ void main() {
 
     expect(find.text('Enter a number greater than 0'), findsWidgets);
     expect(find.text('0より大きい数値を入力'), findsNothing);
+  });
+
+  testWidgets('簡体字設定で5辺面積を中国語で見積へ送る', (tester) async {
+    EstimateItemDraft? sentDraft;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [
+          Locale('ja'),
+          Locale('en'),
+          Locale('zh', 'CN'),
+        ],
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: PolygonAreaScreen(
+          onSendToEstimate: (draft) async => sentDraft = draft,
+        ),
+      ),
+    );
+
+    expect(find.text('5条边'), findsOneWidget);
+    expect(find.text('边 AB'), findsOneWidget);
+    expect(find.text('对角线 AC'), findsOneWidget);
+    for (final (index, value) in ['3', '4', '6', '4', '3'].indexed) {
+      await tester.enterText(find.byKey(Key('polygonOuterSide$index')), value);
+    }
+    for (final (index, value) in ['5', '5'].indexed) {
+      await tester.enterText(find.byKey(Key('polygonDiagonal$index')), value);
+    }
+    final calculateButton = find.byKey(const Key('calculatePolygonArea'));
+    await tester.scrollUntilVisible(
+      calculateButton,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(calculateButton);
+    await tester.pump();
+
+    expect(find.textContaining('三角形1'), findsOneWidget);
+    final sendButton = find.byKey(const Key('sendPolygonAreaToEstimate'));
+    await tester.scrollUntilVisible(
+      sendButton,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(ListView), const Offset(0, -100));
+    await tester.pump();
+    await tester.tap(sendButton);
+    await tester.pump();
+
+    expect(sentDraft?.name, '面积');
+    expect(sentDraft?.specification, contains('外周边'));
+    expect(sentDraft?.specification, contains('对角线'));
+    expect(sentDraft?.calculationBasis, contains('三角形3'));
   });
 }

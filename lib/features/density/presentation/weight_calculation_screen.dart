@@ -161,13 +161,21 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
   Future<void> _sendToEstimate() async {
     final result = _result;
     if (result == null) return;
+    final strings = AppLocalizations.of(context);
     final volume = _formatNumber(result.volumeCubicMeters);
     final density = _formatNumber(result.densityTonnesPerCubicMeter);
     final weight = _formatNumber(result.weightTonnes);
-    final specification = '材料=$_materialName 体積=${volume}m³ 比重=${density}t/m³';
+    final materialName =
+        densityMaterialPresets.any((material) => material.name == _materialName)
+        ? strings.text(_materialName)
+        : _materialName;
+    final specification =
+        '${strings.text('材料')}=$materialName '
+        '${strings.text('体積')}=${volume}m³ '
+        '${strings.text('比重')}=${density}t/m³';
     await widget.onSendToEstimate(
       EstimateItemDraft(
-        name: _materialName,
+        name: materialName,
         specification: specification,
         quantity: widget.settings.roundEstimateQuantity(result.weightTonnes),
         unit: 't',
@@ -238,9 +246,11 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                         DropdownMenuItem(
                           value: material.name,
                           child: Text(
-                            strings.isEnglish
-                                ? '${material.name} (Saved)'
-                                : '${material.name}（登録）',
+                            strings.choose(
+                              japanese: '${material.name}（登録）',
+                              english: '${material.name} (Saved)',
+                              simplifiedChinese: '${material.name}（已保存）',
+                            ),
                           ),
                         ),
                       DropdownMenuItem(

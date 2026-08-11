@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/area/domain/quadrilateral_area_calculator.dart';
@@ -126,7 +127,12 @@ void main() {
       MaterialApp(
         locale: const Locale('en'),
         supportedLocales: const [Locale('ja'), Locale('en')],
-        localizationsDelegates: const [AppLocalizationsDelegate()],
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: QuadrilateralAreaScreen(onSendToEstimate: (_) async {}),
       ),
     );
@@ -145,5 +151,51 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('入力した長さでは三角形を作れません'), findsNothing);
+  });
+
+  testWidgets('簡体字設定で4辺面積を中国語で見積へ送る', (tester) async {
+    EstimateItemDraft? sentDraft;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [
+          Locale('ja'),
+          Locale('en'),
+          Locale('zh', 'CN'),
+        ],
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: QuadrilateralAreaScreen(
+          onSendToEstimate: (draft) async => sentDraft = draft,
+        ),
+      ),
+    );
+
+    for (final (index, value) in ['3', '4', '3', '4', '5'].indexed) {
+      await tester.enterText(
+        find.byKey(Key('quadrilateralLength$index')),
+        value,
+      );
+    }
+    await tester.tap(find.byKey(const Key('calculateQuadrilateralArea')));
+    await tester.pump();
+
+    expect(find.textContaining('三角形① 6 m²'), findsOneWidget);
+    final sendButton = find.byKey(const Key('sendQuadrilateralAreaToEstimate'));
+    await tester.scrollUntilVisible(
+      sendButton,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(sendButton);
+    await tester.pump();
+
+    expect(sentDraft?.name, '面积');
+    expect(sentDraft?.specification, contains('对角线=5m'));
+    expect(sentDraft?.calculationBasis, contains('三角形'));
   });
 }

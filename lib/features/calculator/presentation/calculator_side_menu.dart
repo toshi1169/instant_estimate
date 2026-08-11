@@ -108,10 +108,10 @@ class CalculatorSideMenu extends StatelessWidget {
               key: const Key('sideMenuProductivityMaster'),
               icon: Icons.analytics_outlined,
               label: strings.productivityMaster,
-              infoTitle: strings.isEnglish
+              infoTitle: !strings.isJapanese
                   ? strings.productivityTermTitle
                   : null,
-              infoExplanation: strings.isEnglish
+              infoExplanation: !strings.isJapanese
                   ? strings.productivityTermExplanation
                   : null,
               onTap: () =>
