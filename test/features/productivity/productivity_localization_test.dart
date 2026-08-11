@@ -25,7 +25,10 @@ void main() {
     expect(find.text('Productivity calculation'), findsOneWidget);
     expect(find.text('Required labor'), findsOneWidget);
     expect(find.text('Work category'), findsOneWidget);
-    expect(find.text('Standard BUGAKARI (labor/unit)'), findsOneWidget);
+    expect(
+      find.text('Daily output per person (unit/person-day)'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('productivityTrade')));
     await tester.pumpAndSettle();
@@ -52,6 +55,7 @@ void main() {
         workDays: 2,
         actualLabor: 6,
         standardLaborRate: 0.06,
+        standardProductivity: 20,
         actualLaborRate: 0.05,
         productivityPerLabor: 20,
       ),
@@ -67,8 +71,8 @@ void main() {
 
     await tester.tap(find.text('Foundation formwork'));
     await tester.pumpAndSettle();
-    expect(find.text('0.060 labor-days/m²'), findsOneWidget);
-    expect(find.text('20.00 m²/labor-day'), findsOneWidget);
+    expect(find.text('20.00 m²/person-day'), findsNWidgets(2));
+    expect(find.text('0.050 labor-days/m²'), findsOneWidget);
     expect(find.textContaining('3.0 workers × 2.0 days'), findsOneWidget);
   });
 
@@ -99,8 +103,8 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextField, '施工数量'), '120');
     await tester.enterText(
-      find.widgetWithText(TextField, '基准步挂（BUGAKARI）（人工/单位）'),
-      '0.05',
+      find.widgetWithText(TextField, '每人每日施工量（单位/人日）'),
+      '20',
     );
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView), const Offset(0, -500));
@@ -127,6 +131,7 @@ void main() {
         workDays: 2,
         actualLabor: 6,
         standardLaborRate: 0.06,
+        standardProductivity: 20,
         actualLaborRate: 0.05,
         productivityPerLabor: 20,
       ),
@@ -143,8 +148,8 @@ void main() {
     expect(find.text('模板工程・张・1条记录'), findsOneWidget);
     await tester.tap(find.text('基础模板'));
     await tester.pumpAndSettle();
-    expect(find.text('0.060 人工/张'), findsOneWidget);
-    expect(find.text('20.00 张/人工'), findsOneWidget);
+    expect(find.text('20.00 张/人日'), findsNWidgets(2));
+    expect(find.text('0.050 人工/张'), findsOneWidget);
     expect(find.textContaining('3.0人 × 2.0天'), findsOneWidget);
   });
 
@@ -167,8 +172,8 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextField, '施工數量'), '120');
     await tester.enterText(
-      find.widgetWithText(TextField, '基準步掛（BUGAKARI）（人工/單位）'),
-      '0.05',
+      find.widgetWithText(TextField, '每人每日施工量（單位/人日）'),
+      '20',
     );
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView), const Offset(0, -500));
@@ -195,6 +200,7 @@ void main() {
         workDays: 2,
         actualLabor: 6,
         standardLaborRate: 0.06,
+        standardProductivity: 20,
         actualLaborRate: 0.05,
         productivityPerLabor: 20,
       ),
@@ -211,8 +217,8 @@ void main() {
     expect(find.text('模板工程・張・1筆實績'), findsOneWidget);
     await tester.tap(find.text('基礎模板'));
     await tester.pumpAndSettle();
-    expect(find.text('0.060 人工/張'), findsOneWidget);
-    expect(find.text('20.00 張/人工'), findsOneWidget);
+    expect(find.text('20.00 張/人日'), findsNWidgets(2));
+    expect(find.text('0.050 人工/張'), findsOneWidget);
     expect(find.textContaining('3.0人 × 2.0天'), findsOneWidget);
   });
 }

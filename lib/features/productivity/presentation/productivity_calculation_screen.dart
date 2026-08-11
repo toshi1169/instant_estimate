@@ -45,7 +45,7 @@ class _ProductivityCalculationScreenState
   final _task = TextEditingController();
   final _site = TextEditingController();
   final _quantity = TextEditingController();
-  final _standard = TextEditingController();
+  final _productivity = TextEditingController();
   final _workers = TextEditingController();
   final _days = TextEditingController();
   final _hours = TextEditingController();
@@ -61,7 +61,7 @@ class _ProductivityCalculationScreenState
       _task,
       _site,
       _quantity,
-      _standard,
+      _productivity,
       _workers,
       _days,
       _hours,
@@ -75,35 +75,49 @@ class _ProductivityCalculationScreenState
   double? _number(TextEditingController controller) =>
       double.tryParse(controller.text.trim());
   LaborPlanResult? get _plan {
-    final quantity = _number(_quantity), standard = _number(_standard);
-    if (quantity == null || quantity <= 0 || standard == null || standard < 0) {
+    final quantity = _number(_quantity);
+    final dailyProductivity = _number(_productivity);
+    final workers = _number(_workers);
+    final hours = _number(_hours);
+    if (quantity == null ||
+        quantity <= 0 ||
+        dailyProductivity == null ||
+        dailyProductivity <= 0 ||
+        (_mode == _Mode.days && (workers == null || workers <= 0)) ||
+        (workers != null && workers <= 0) ||
+        (hours != null && hours < 0)) {
       return null;
     }
     return ProductivityCalculator.plan(
       quantity: quantity,
-      standardLaborRate: standard,
-      workers: _number(_workers),
-      hoursPerDay: _number(_hours),
+      dailyProductivity: dailyProductivity,
+      workers: workers,
+      hoursPerDay: hours,
     );
   }
 
   ProductivityResult? get _actual {
     final quantity = _number(_quantity),
         workers = _number(_workers),
-        days = _number(_days);
+        days = _number(_days),
+        hours = _number(_hours),
+        baselineProductivity = _number(_productivity);
     if (quantity == null ||
         quantity <= 0 ||
         workers == null ||
         workers <= 0 ||
         days == null ||
-        days <= 0) {
+        days <= 0 ||
+        (hours != null && hours < 0) ||
+        (baselineProductivity != null && baselineProductivity <= 0)) {
       return null;
     }
     return ProductivityCalculator.actual(
       quantity: quantity,
       workers: workers,
       workDays: days,
-      standardLaborRate: _number(_standard),
+      hoursPerDay: hours,
+      baselineProductivity: baselineProductivity,
     );
   }
 
@@ -197,9 +211,11 @@ class _ProductivityCalculationScreenState
                   ],
                 ),
                 _field(
-                  _standard,
+                  _productivity,
                   strings.text(
-                    _mode == _Mode.actual ? '基準歩掛（任意・人工/単位）' : '基準歩掛（人工/単位）',
+                    _mode == _Mode.actual
+                        ? '基準生産性（任意・単位/人日）'
+                        : '1人1日の施工量（単位/人日）',
                   ),
                   numeric: true,
                 ),
@@ -208,14 +224,12 @@ class _ProductivityCalculationScreenState
                   strings.text(_mode == _Mode.labor ? '作業人数（任意）' : '作業人数'),
                   numeric: true,
                 ),
-                if (_mode == _Mode.labor)
-                  _field(_days, strings.text('作業日数（任意・小数可）'), numeric: true),
                 if (_mode == _Mode.actual)
                   _field(_days, strings.text('作業日数（小数可）'), numeric: true),
                 _field(
                   _hours,
                   strings.text(
-                    _mode == _Mode.actual ? '実作業時間（任意）' : '1日の作業時間（任意）',
+                    _mode == _Mode.actual ? '1日の実働時間（任意）' : '1日の標準作業時間（任意）',
                   ),
                   numeric: true,
                 ),
@@ -255,7 +269,15 @@ class _ProductivityCalculationScreenState
     return _Section(
       title: strings.text('計算結果'),
       children: result == null
-          ? [Text(strings.text('施工数量と基準歩掛を入力してください'))]
+          ? [
+              Text(
+                strings.text(
+                  _mode == _Mode.days
+                      ? '施工数量・1人1日の施工量・作業人数を入力してください'
+                      : '施工数量と1人1日の施工量を入力してください',
+                ),
+              ),
+            ]
           : [
               _resultRow(
                 strings.text('必要人工'),
@@ -266,10 +288,27 @@ class _ProductivityCalculationScreenState
                   strings.text('必要日数'),
                   '${_f(result.requiredDays!, 2)} ${_dayUnit(strings)}',
                 ),
-              if (_mode == _Mode.days && result.totalWorkHours != null)
+              if (result.teamDailyProductivity != null)
                 _resultRow(
-                  strings.text('延べ作業時間'),
-                  '${_f(result.totalWorkHours!, 2)} ${_hourUnit(strings)}',
+                  strings.text('チーム1日の施工量'),
+                  _formatProductivity(strings, result.teamDailyProductivity!),
+                ),
+              if (result.totalPersonHours != null)
+                _resultRow(
+                  strings.text('延べ人工時間'),
+                  '${_f(result.totalPersonHours!, 2)} ${_personHourUnit(strings)}',
+                ),
+              if (result.requiredDays != null &&
+                  _number(_hours) != null &&
+                  result.requiredDays! % 1 != 0)
+                Text(
+                  _dayBreakdown(
+                    strings,
+                    result.requiredDays!.floor(),
+                    (result.requiredDays! % 1) * _number(_hours)!,
+                  ),
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
             ],
     );
@@ -289,30 +328,32 @@ class _ProductivityCalculationScreenState
             '${_f(result.actualLabor, 2)} ${_laborDayUnit(strings)}',
           ),
           _resultRow(
-            strings.text('実績歩掛'),
-            _laborRate(strings, result.actualLaborRate),
+            strings.text('実績生産性'),
+            _formatProductivity(strings, result.actualProductivity),
           ),
           _resultRow(
-            strings.text('1人工生産性'),
-            _productivity(strings, result.productivityPerLabor),
+            strings.text('実績歩掛（内部値）'),
+            _laborRate(strings, result.actualLaborRate),
           ),
-          if (result.laborRateDifference != null) ...[
+          if (result.totalPersonHours != null) ...[
+            _resultRow(
+              strings.text('延べ人工時間'),
+              '${_f(result.totalPersonHours!, 2)} ${_personHourUnit(strings)}',
+            ),
+            _resultRow(
+              strings.text('時間当たり生産性'),
+              _hourlyProductivity(strings, result.hourlyProductivity!),
+            ),
+          ],
+          if (result.productivityDifferencePercent != null) ...[
             const Divider(),
             _resultRow(
-              strings.text('基準歩掛'),
-              _laborRate(strings, _number(_standard)!),
+              strings.text('基準生産性'),
+              _formatProductivity(strings, result.baselineProductivity!),
             ),
             _resultRow(
-              strings.text('差'),
-              _laborRate(
-                strings,
-                result.laborRateDifference!,
-                showPositiveSign: true,
-              ),
-            ),
-            _resultRow(
-              strings.text('効率差'),
-              '${result.efficiencyDifferencePercent! >= 0 ? '+' : ''}${_f(result.efficiencyDifferencePercent!, 1)} %',
+              strings.text('生産性差'),
+              '${result.productivityDifferencePercent! >= 0 ? '+' : ''}${_f(result.productivityDifferencePercent!, 1)} %',
             ),
           ],
           const SizedBox(height: 12),
@@ -381,9 +422,15 @@ class _ProductivityCalculationScreenState
       workDays: _number(_days)!,
       actualWorkHours: _number(_hours),
       actualLabor: result.actualLabor,
-      standardLaborRate: _number(_standard),
+      standardLaborRate: result.baselineProductivity == null
+          ? null
+          : 1 / result.baselineProductivity!,
+      standardProductivity: result.baselineProductivity,
       actualLaborRate: result.actualLaborRate,
       productivityPerLabor: result.productivityPerLabor,
+      totalPersonHours: result.totalPersonHours,
+      hourlyProductivity: result.hourlyProductivity,
+      productivityDifferencePercent: result.productivityDifferencePercent,
       conditions: _conditions.text.trim(),
     );
     try {
@@ -438,13 +485,24 @@ class _ProductivityCalculationScreenState
     return '$sign${_f(value, 3)} $suffix';
   }
 
-  String _productivity(AppLocalizations strings, double value) {
+  String _formatProductivity(AppLocalizations strings, double value) {
     final unit = strings.productivityUnit(_unit ?? '単位');
     final suffix = strings.choose(
-      japanese: '$unit/人工',
-      english: '$unit/labor-day',
-      simplifiedChinese: '$unit/人工',
-      traditionalChinese: '$unit/人工',
+      japanese: '$unit/人日',
+      english: '$unit/person-day',
+      simplifiedChinese: '$unit/人日',
+      traditionalChinese: '$unit/人日',
+    );
+    return '${_f(value, 2)} $suffix';
+  }
+
+  String _hourlyProductivity(AppLocalizations strings, double value) {
+    final unit = strings.productivityUnit(_unit ?? '単位');
+    final suffix = strings.choose(
+      japanese: '$unit/人時',
+      english: '$unit/person-hour',
+      simplifiedChinese: '$unit/人工时',
+      traditionalChinese: '$unit/人工時',
     );
     return '${_f(value, 2)} $suffix';
   }
@@ -463,11 +521,22 @@ class _ProductivityCalculationScreenState
     traditionalChinese: '天',
   );
 
-  String _hourUnit(AppLocalizations strings) => strings.choose(
-    japanese: '時間',
-    english: 'hours',
-    simplifiedChinese: '小时',
-    traditionalChinese: '小時',
+  String _personHourUnit(AppLocalizations strings) => strings.choose(
+    japanese: '人工時',
+    english: 'person-hours',
+    simplifiedChinese: '人工时',
+    traditionalChinese: '人工時',
+  );
+
+  String _dayBreakdown(
+    AppLocalizations strings,
+    int wholeDays,
+    double remainingHours,
+  ) => strings.choose(
+    japanese: '目安：$wholeDays日＋${_f(remainingHours, 1)}時間',
+    english: 'Approx. $wholeDays days + ${_f(remainingHours, 1)} hours',
+    simplifiedChinese: '约 $wholeDays 天＋${_f(remainingHours, 1)} 小时',
+    traditionalChinese: '約 $wholeDays 天＋${_f(remainingHours, 1)} 小時',
   );
 }
 

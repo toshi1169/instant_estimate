@@ -133,19 +133,32 @@ class _SummaryCard extends StatelessWidget {
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
         children: [
           _row(
-            l10n.text('基準歩掛'),
-            summary.standardLaborRate == null
+            l10n.text('基準生産性'),
+            summary.standardProductivity == null
                 ? '—'
-                : _laborRate(l10n, summary.standardLaborRate!, summary.unit),
+                : _productivity(
+                    l10n,
+                    summary.standardProductivity!,
+                    summary.unit,
+                  ),
           ),
           _row(
-            l10n.text('平均実績歩掛'),
-            _laborRate(l10n, summary.averageActualLaborRate, summary.unit),
-          ),
-          _row(
-            l10n.text('平均生産性'),
+            l10n.text('平均実績生産性'),
             _productivity(l10n, summary.averageProductivity, summary.unit),
           ),
+          _row(
+            l10n.text('平均実績歩掛（内部値）'),
+            _laborRate(l10n, summary.averageActualLaborRate, summary.unit),
+          ),
+          if (summary.averageHourlyProductivity != null)
+            _row(
+              l10n.text('平均時間当たり生産性'),
+              _hourlyProductivity(
+                l10n,
+                summary.averageHourlyProductivity!,
+                summary.unit,
+              ),
+            ),
           _row(l10n.text('最小歩掛'), summary.minimumLaborRate.toStringAsFixed(3)),
           _row(l10n.text('最大歩掛'), summary.maximumLaborRate.toStringAsFixed(3)),
           const Divider(height: 24),
@@ -200,10 +213,25 @@ class _SummaryCard extends StatelessWidget {
   ) {
     final unit = l10n.productivityUnit(storedUnit);
     final suffix = l10n.choose(
-      japanese: '$unit/人工',
-      english: '$unit/labor-day',
-      simplifiedChinese: '$unit/人工',
-      traditionalChinese: '$unit/人工',
+      japanese: '$unit/人日',
+      english: '$unit/person-day',
+      simplifiedChinese: '$unit/人日',
+      traditionalChinese: '$unit/人日',
+    );
+    return '${value.toStringAsFixed(2)} $suffix';
+  }
+
+  static String _hourlyProductivity(
+    AppLocalizations l10n,
+    double value,
+    String storedUnit,
+  ) {
+    final unit = l10n.productivityUnit(storedUnit);
+    final suffix = l10n.choose(
+      japanese: '$unit/人時',
+      english: '$unit/person-hour',
+      simplifiedChinese: '$unit/人工时',
+      traditionalChinese: '$unit/人工時',
     );
     return '${value.toStringAsFixed(2)} $suffix';
   }
@@ -223,6 +251,15 @@ class _SummaryCard extends StatelessWidget {
       traditionalChinese:
           '${record.workers}人 × ${record.workDays}天 = ${record.actualLabor.toStringAsFixed(2)}人工',
     );
-    return '${_date(record.workDate)}　${record.quantity} $unit\n$work${record.conditions.isEmpty ? '' : '\n${record.conditions}'}';
+    final details = <String>[
+      '${_date(record.workDate)}　${record.quantity} $unit',
+      work,
+      if (record.totalPersonHours != null)
+        '${l10n.text('延べ人工時間')} ${record.totalPersonHours!.toStringAsFixed(2)}',
+      if (record.hourlyProductivity != null)
+        '${l10n.text('時間当たり生産性')} ${_hourlyProductivity(l10n, record.hourlyProductivity!, record.unit)}',
+      if (record.conditions.isNotEmpty) record.conditions,
+    ];
+    return details.join('\n');
   }
 }

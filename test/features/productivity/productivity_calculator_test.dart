@@ -6,30 +6,70 @@ import 'package:instant_estimate/features/productivity/domain/productivity_calcu
 import 'package:instant_estimate/features/productivity/domain/productivity_record.dart';
 
 void main() {
-  test('必要人工・必要日数・延べ作業時間を計算する', () {
+  test('施工量400・1人1日100で必要人工は4', () {
     final result = ProductivityCalculator.plan(
-      quantity: 120,
-      standardLaborRate: 0.05,
-      workers: 3,
-      hoursPerDay: 8,
+      quantity: 400,
+      dailyProductivity: 100,
     );
-    expect(result.requiredLabor, 6);
-    expect(result.requiredDays, 2);
-    expect(result.totalWorkHours, 16);
+    expect(result.requiredLabor, 4);
+    expect(result.requiredDays, isNull);
+    expect(result.teamDailyProductivity, isNull);
   });
 
-  test('施工実績から実績歩掛・生産性・効率差を計算する', () {
-    final result = ProductivityCalculator.actual(
-      quantity: 120,
-      workers: 3,
-      workDays: 2,
-      standardLaborRate: 0.06,
+  test('作業人数1人なら必要日数は4日', () {
+    final result = ProductivityCalculator.plan(
+      quantity: 400,
+      dailyProductivity: 100,
+      workers: 1,
     );
-    expect(result.actualLabor, 6);
-    expect(result.actualLaborRate, 0.05);
-    expect(result.productivityPerLabor, 20);
-    expect(result.laborRateDifference, closeTo(-0.01, 0.000001));
-    expect(result.efficiencyDifferencePercent, closeTo(20, 0.000001));
+    expect(result.requiredLabor, 4);
+    expect(result.requiredDays, 4);
+    expect(result.teamDailyProductivity, 100);
+  });
+
+  test('作業人数2人なら必要日数2日・チーム施工量200', () {
+    final result = ProductivityCalculator.plan(
+      quantity: 400,
+      dailyProductivity: 100,
+      workers: 2,
+    );
+    expect(result.requiredLabor, 4);
+    expect(result.requiredDays, 2);
+    expect(result.teamDailyProductivity, 200);
+  });
+
+  test('施工量550・2人なら必要日数は2.75日', () {
+    final result = ProductivityCalculator.plan(
+      quantity: 550,
+      dailyProductivity: 100,
+      workers: 2,
+    );
+    expect(result.requiredDays, 2.75);
+  });
+
+  test('施工実績から人工・生産性・歩掛・人時生産性を計算する', () {
+    final result = ProductivityCalculator.actual(
+      quantity: 400,
+      workers: 2,
+      workDays: 2,
+      hoursPerDay: 8,
+    );
+    expect(result.actualLabor, 4);
+    expect(result.actualProductivity, 100);
+    expect(result.actualLaborRate, 0.01);
+    expect(result.totalPersonHours, 32);
+    expect(result.hourlyProductivity, 12.5);
+  });
+
+  test('基準生産性100・実績120なら生産性差はプラス20パーセント', () {
+    final result = ProductivityCalculator.actual(
+      quantity: 480,
+      workers: 2,
+      workDays: 2,
+      baselineProductivity: 100,
+    );
+    expect(result.actualProductivity, 120);
+    expect(result.productivityDifferencePercent, closeTo(20, 0.000001));
   });
 
   test('同一作業の複数実績を個別保持して集計する', () async {
@@ -47,6 +87,7 @@ void main() {
     final summary = controller.summaries.single;
     expect(summary.recordCount, 4);
     expect(summary.standardLaborRate, 0.06);
+    expect(summary.standardProductivity, closeTo(16.6666667, 0.000001));
     expect(summary.averageActualLaborRate, closeTo(0.05125, 0.000001));
     expect(summary.minimumLaborRate, 0.046);
     expect(summary.maximumLaborRate, 0.057);
