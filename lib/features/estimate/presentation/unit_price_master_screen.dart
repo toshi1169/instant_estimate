@@ -221,9 +221,7 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
           builder: (context) => AlertDialog(
             title: Text(AppLocalizations.of(context).text('単価を削除')),
             content: Text(
-              AppLocalizations.of(context).isEnglish
-                  ? 'Delete "${price.name}" from the unit price master?'
-                  : '「${price.name}」を単価マスタから削除しますか？',
+              AppLocalizations.of(context).deleteUnitPriceQuestion(price.name),
             ),
             actions: [
               TextButton(
@@ -270,9 +268,7 @@ String _subtitle(UnitPriceMaster price, AppLocalizations l10n) {
       '${l10n.text('単位')}: ${l10n.productivityUnit(price.unit)}',
     if (price.description.isNotEmpty) price.description,
   ];
-  return parts.isEmpty
-      ? l10n.text('詳細未入力')
-      : parts.join(l10n.isEnglish ? ' / ' : ' ／ ');
+  return parts.isEmpty ? l10n.text('詳細未入力') : parts.join(l10n.listSeparator);
 }
 
 String _displayPrice(double value) {

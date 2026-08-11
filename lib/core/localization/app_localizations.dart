@@ -1114,7 +1114,7 @@ class AppLocalizations {
   );
 
   String specializedUnit(String id, String japanese) {
-    if (!isEnglish) return japanese;
+    if (isJapanese) return japanese;
     return switch (id) {
       'shaku' => '尺：SHAKU',
       'sun' => '寸：SUN',
@@ -1139,12 +1139,32 @@ class AppLocalizations {
     'compacted',
   }.contains(id);
 
-  String get unitInformation => isEnglish ? 'Unit information' : '単位の説明';
+  String get unitInformation => _pick(
+    japanese: '単位の説明',
+    english: 'Unit information',
+    simplifiedChinese: '单位说明',
+  );
 
-  String get showUnitInformation =>
-      isEnglish ? 'Show unit information' : '単位の説明を表示';
+  String get showUnitInformation => _pick(
+    japanese: '単位の説明を表示',
+    english: 'Show unit information',
+    simplifiedChinese: '显示单位说明',
+  );
 
   String specializedUnitExplanation(String id) {
+    if (isSimplifiedChinese) {
+      return switch (id) {
+        'shaku' => '尺（SHAKU）是日本传统长度单位。本应用按1尺＝10/33米（约0.30303米）换算。',
+        'sun' => '寸（SUN）是日本传统长度单位。本应用按1寸＝1/10尺＝1/33米（约0.030303米）换算。',
+        'ken' => '间（KEN）是日本传统长度单位。本应用按1间＝6尺＝20/11米（约1.81818米）换算。',
+        'tsubo' => '坪（TSUBO）是日本传统面积单位。本应用按1坪＝400/121平方米（约3.30579平方米）换算。',
+        'hyo' => '俵（HYO）是日本传统重量单位，重量因物品而异。本应用以1俵大米＝60千克作为参考值。',
+        'natural' => '地山（JIYAMA）是开挖前自然状态的土方量，作为土方状态换算的基准体积。',
+        'loose' => 'ほぐし（HOGUSHI）是开挖后膨松状态的土方量。松散土方量＝地山土方量×松方系数。',
+        'compacted' => '締固め（SHIMEKATAME）是压实后的土方量。压实土方量＝地山土方量×压实系数。',
+        _ => '',
+      };
+    }
     if (isEnglish) {
       return switch (id) {
         'shaku' =>
@@ -1178,6 +1198,69 @@ class AppLocalizations {
       _ => '',
     };
   }
+
+  String get printA4Landscape => _pick(
+    japanese: 'A4横で印刷',
+    english: 'Print in A4 landscape',
+    simplifiedChinese: '以A4横向打印',
+  );
+
+  String get exportA4LandscapeExcel => _pick(
+    japanese: 'A4横のExcelを出力',
+    english: 'Export A4 landscape Excel',
+    simplifiedChinese: '导出A4横向Excel',
+  );
+
+  String get copyTableForExcel => _pick(
+    japanese: 'Excel用に表をコピー',
+    english: 'Copy table for Excel',
+    simplifiedChinese: '复制Excel用表格',
+  );
+
+  String copiedEstimateDetails(int count) => _pick(
+    japanese: '見積明細をコピーしました（$count件）',
+    english: 'Copied $count estimate details',
+    simplifiedChinese: '已复制估算明细（$count项）',
+  );
+
+  String mergedEstimateQuantity(String quantity) => _pick(
+    japanese: '既存明細の数量を$quantityへ加算しました',
+    english:
+        'Added the quantity to the existing detail. New quantity: $quantity',
+    simplifiedChinese: '已将数量加到现有明细。新数量：$quantity',
+  );
+
+  String deleteEstimateItemQuestion(String name) => _pick(
+    japanese: '「$name」を削除しますか？',
+    english: 'Delete "$name"?',
+    simplifiedChinese: '要删除“$name”吗？',
+  );
+
+  String estimateItemAddedWithCount(String message, int count) => _pick(
+    japanese: '${text(message)}（$count件）',
+    english: '${text(message)} ($count details)',
+    simplifiedChinese: '${text(message)}（$count项）',
+  );
+
+  String deleteUnitPriceQuestion(String name) => _pick(
+    japanese: '「$name」を単価マスタから削除しますか？',
+    english: 'Delete "$name" from the unit price master?',
+    simplifiedChinese: '要从单价主数据中删除“$name”吗？',
+  );
+
+  String selectUnitPriceMasterCount(int count) => _pick(
+    japanese: '単価マスタから選択（$count件）',
+    english: 'Select from unit price master ($count)',
+    simplifiedChinese: '从单价主数据选择（$count项）',
+  );
+
+  String selectPastEstimateCount(int count) => _pick(
+    japanese: '過去の見積から選択（$count件）',
+    english: 'Select from past estimates ($count)',
+    simplifiedChinese: '从过去的估算选择（$count项）',
+  );
+
+  String get listSeparator => isJapanese ? ' ／ ' : ' / ';
 
   String estimateDetails(int count) => _pick(
     japanese: '$count明細',

@@ -934,6 +934,13 @@ void main() {
     expect(strings.text('履歴をコピーしました'), '已复制历史记录');
     expect(strings.text('0で割ることはできません'), '不能除以0');
     expect(strings.text('法長は高さより大きい数値を入力してください'), '请输入大于高度的边坡长度');
+    expect(strings.specializedUnit('ken', '間'), '間：KEN');
+    expect(strings.unitInformation, '单位说明');
+    expect(strings.showUnitInformation, '显示单位说明');
+    expect(strings.specializedUnitExplanation('ken'), contains('日本传统长度单位'));
+    expect(strings.printA4Landscape, '以A4横向打印');
+    expect(strings.copiedEstimateDetails(3), '已复制估算明细（3项）');
+    expect(strings.deleteUnitPriceQuestion('挖掘'), '要从单价主数据中删除“挖掘”吗？');
   });
 
   testWidgets('ヘルプを開き戻るとサイドメニューへ戻る', (tester) async {

@@ -43,21 +43,19 @@ class EstimateItemsScreen extends StatelessWidget {
         actions: [
           IconButton(
             key: const Key('printEstimatePdf'),
-            tooltip: l10n.isEnglish ? 'Print in A4 landscape' : 'A4横で印刷',
+            tooltip: l10n.printA4Landscape,
             onPressed: () => _printEstimate(context),
             icon: const Icon(Icons.print_outlined),
           ),
           IconButton(
             key: const Key('exportEstimateExcel'),
-            tooltip: l10n.isEnglish
-                ? 'Export A4 landscape Excel'
-                : 'A4横のExcelを出力',
+            tooltip: l10n.exportA4LandscapeExcel,
             onPressed: () => _exportExcel(context),
             icon: const Icon(Icons.file_download_outlined),
           ),
           IconButton(
             key: const Key('copyEstimateTable'),
-            tooltip: l10n.isEnglish ? 'Copy table for Excel' : 'Excel用に表をコピー',
+            tooltip: l10n.copyTableForExcel,
             onPressed: () => _copyTable(context),
             icon: const Icon(Icons.table_view_outlined),
           ),
@@ -228,9 +226,9 @@ class EstimateItemsScreen extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).isEnglish
-                  ? 'Copied ${controller.items.length} estimate details'
-                  : '見積明細をコピーしました（${controller.items.length}件）',
+              AppLocalizations.of(
+                context,
+              ).copiedEstimateDetails(controller.items.length),
             ),
           ),
         );
@@ -330,9 +328,9 @@ class EstimateItemsScreen extends StatelessWidget {
                         ? AppLocalizations.of(
                             context,
                           ).text('数量を加算し単価マスタへ追加しました')
-                        : AppLocalizations.of(context).isEnglish
-                        ? 'Added the quantity to the existing detail. New quantity: ${_displayQuantity(merged.quantity)}'
-                        : '既存明細の数量を${_displayQuantity(merged.quantity)}へ加算しました',
+                        : AppLocalizations.of(context).mergedEstimateQuantity(
+                            _displayQuantity(merged.quantity),
+                          ),
                   ),
                 ),
               );
@@ -467,7 +465,9 @@ class EstimateItemsScreen extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  addedToMaster ? '見積明細を更新し単価マスタへ追加しました' : '見積明細を更新しました',
+                  AppLocalizations.of(context).text(
+                    addedToMaster ? '見積明細を更新し単価マスタへ追加しました' : '見積明細を更新しました',
+                  ),
                 ),
               ),
             );
@@ -489,9 +489,11 @@ class EstimateItemsScreen extends StatelessWidget {
           builder: (context) => AlertDialog(
             title: Text(AppLocalizations.of(context).text('見積明細を削除')),
             content: Text(
-              AppLocalizations.of(context).isEnglish
-                  ? 'Delete "${item.name.isEmpty ? AppLocalizations.of(context).text('名称未入力') : item.name}"?'
-                  : '「${item.name.isEmpty ? '名称未入力' : item.name}」を削除しますか？',
+              AppLocalizations.of(context).deleteEstimateItemQuestion(
+                item.name.isEmpty
+                    ? AppLocalizations.of(context).text('名称未入力')
+                    : item.name,
+              ),
             ),
             actions: [
               TextButton(
@@ -551,9 +553,7 @@ class EstimateItemsScreen extends StatelessWidget {
         SnackBar(
           duration: const Duration(seconds: 5),
           content: Text(
-            l10n.isEnglish
-                ? '${l10n.text(message)} (${controller.items.length} details)'
-                : '$message（${controller.items.length}件）',
+            l10n.estimateItemAddedWithCount(message, controller.items.length),
           ),
           action: SnackBarAction(
             key: const Key('undoEstimateItemAdd'),

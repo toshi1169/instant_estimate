@@ -273,7 +273,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                                     price.specification,
                                   if (price.unit.isNotEmpty)
                                     l10n.productivityUnit(price.unit),
-                                ].join(l10n.isEnglish ? ' / ' : ' ／ '),
+                                ].join(l10n.listSeparator),
                               ),
                               trailing: Text(
                                 price.unitPrice == null
@@ -472,9 +472,9 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 label: Text(
                   widget.unitPriceMasters.isEmpty
                       ? l10n.text('単価マスタ（登録なし）')
-                      : l10n.isEnglish
-                      ? 'Select from unit price master (${widget.unitPriceMasters.length})'
-                      : '単価マスタから選択（${widget.unitPriceMasters.length}件）',
+                      : l10n.selectUnitPriceMasterCount(
+                          widget.unitPriceMasters.length,
+                        ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -487,9 +487,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 label: Text(
                   _pastUnitPrices.isEmpty
                       ? l10n.text('過去の見積（履歴なし）')
-                      : l10n.isEnglish
-                      ? 'Select from past estimates (${_pastUnitPrices.length})'
-                      : '過去の見積から選択（${_pastUnitPrices.length}件）',
+                      : l10n.selectPastEstimateCount(_pastUnitPrices.length),
                 ),
               ),
               const SizedBox(height: 12),
@@ -656,7 +654,7 @@ class _PastUnitPriceCandidate {
       if (item.specification.isNotEmpty) item.specification,
       if (item.unit.isNotEmpty) l10n.productivityUnit(item.unit),
     ];
-    return parts.join(l10n.isEnglish ? ' / ' : ' ／ ');
+    return parts.join(l10n.listSeparator);
   }
 
   bool matches(String query) {
