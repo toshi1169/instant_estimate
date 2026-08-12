@@ -10,6 +10,117 @@ import 'package:instant_estimate/features/productivity/presentation/productivity
 import 'package:instant_estimate/features/productivity/presentation/productivity_master_screen.dart';
 
 void main() {
+  testWidgets('日数内訳は正の標準作業時間がある場合だけ表示する', (tester) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        ProductivityCalculationScreen(
+          controller: ProductivityController(
+            store: MemoryProductivityRecordStore(),
+          ),
+        ),
+        const Locale('ja'),
+      ),
+    );
+    await tester.tap(find.text('必要日数'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '施工数量'), '100');
+    await tester.enterText(
+      find.widgetWithText(TextField, '1人1日の施工量（単位/人日）'),
+      '10',
+    );
+    await tester.enterText(find.widgetWithText(TextField, '作業人数'), '4');
+    await tester.enterText(
+      find.widgetWithText(TextField, '1日の標準作業時間（任意）'),
+      '0',
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('＋0.0時間'), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '1日の標準作業時間（任意）'),
+      '8',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('目安：2日＋4.0時間'), findsOneWidget);
+  });
+
+  testWidgets('基準生産性が未入力または0でも基準比較以外を表示する', (tester) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        ProductivityCalculationScreen(
+          controller: ProductivityController(
+            store: MemoryProductivityRecordStore(),
+          ),
+        ),
+        const Locale('ja'),
+      ),
+    );
+    await tester.tap(find.text('生産性・実績'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '施工数量'), '100');
+    await tester.enterText(find.widgetWithText(TextField, '作業人数'), '2');
+    await tester.enterText(find.widgetWithText(TextField, '作業日数（小数可）'), '2');
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -700));
+    await tester.pumpAndSettle();
+
+    expect(find.text('実人工'), findsOneWidget);
+    expect(find.text('実績生産性'), findsOneWidget);
+    expect(find.text('実績歩掛'), findsOneWidget);
+    expect(find.textContaining('内部値'), findsNothing);
+    expect(find.text('生産性差'), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '基準生産性（任意・単位/人日）'),
+      '0',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('実人工'), findsOneWidget);
+    expect(find.text('生産性差'), findsNothing);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, '基準生産性（任意・単位/人日）'),
+      '10',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('生産性差'), findsOneWidget);
+    expect(find.text('+150.0 %'), findsOneWidget);
+  });
+
+  testWidgets('歩掛集計の単位と人数・日数を販売向けに整形する', (tester) async {
+    final controller = ProductivityController(
+      store: MemoryProductivityRecordStore(),
+    );
+    await controller.load();
+    await controller.add(
+      _displayRecord(id: 'display-1', workDays: 2, rate: 0.045),
+    );
+    await controller.add(
+      _displayRecord(id: 'display-2', workDays: 2.5, rate: 0.05),
+    );
+
+    await tester.pumpWidget(
+      _localizedApp(
+        ProductivityMasterScreen(controller: controller),
+        const Locale('ja'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('クロス張'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('平均実績歩掛'), findsOneWidget);
+    expect(find.textContaining('内部値'), findsNothing);
+    expect(find.text('0.045 人工/m²'), findsOneWidget);
+    expect(find.text('0.050 人工/m²'), findsOneWidget);
+    expect(find.textContaining('2人 × 2日'), findsOneWidget);
+    expect(find.textContaining('2人 × 2.5日'), findsOneWidget);
+  });
+
   testWidgets('英語設定で歩掛計算の主要項目を英語表示する', (tester) async {
     await tester.pumpWidget(
       _englishApp(
@@ -72,8 +183,8 @@ void main() {
     await tester.tap(find.text('Foundation formwork'));
     await tester.pumpAndSettle();
     expect(find.text('20.00 m²/person-day'), findsNWidgets(2));
-    expect(find.text('0.050 labor-days/m²'), findsOneWidget);
-    expect(find.textContaining('3.0 workers × 2.0 days'), findsOneWidget);
+    expect(find.text('0.050 labor-days/m²'), findsNWidgets(3));
+    expect(find.textContaining('3 workers × 2 days'), findsOneWidget);
   });
 
   test('歩掛保存上限の案内を英語表示する', () {
@@ -149,8 +260,8 @@ void main() {
     await tester.tap(find.text('基础模板'));
     await tester.pumpAndSettle();
     expect(find.text('20.00 张/人日'), findsNWidgets(2));
-    expect(find.text('0.050 人工/张'), findsOneWidget);
-    expect(find.textContaining('3.0人 × 2.0天'), findsOneWidget);
+    expect(find.text('0.050 人工/张'), findsNWidgets(3));
+    expect(find.textContaining('3人 × 2天'), findsOneWidget);
   });
 
   testWidgets('繁体字中国語で歩掛計算の主要項目と単位を表示する', (tester) async {
@@ -218,8 +329,8 @@ void main() {
     await tester.tap(find.text('基礎模板'));
     await tester.pumpAndSettle();
     expect(find.text('20.00 張/人日'), findsNWidgets(2));
-    expect(find.text('0.050 人工/張'), findsOneWidget);
-    expect(find.textContaining('3.0人 × 2.0天'), findsOneWidget);
+    expect(find.text('0.050 人工/張'), findsNWidgets(3));
+    expect(find.textContaining('3人 × 2天'), findsOneWidget);
   });
 }
 
@@ -251,3 +362,25 @@ Widget _localizedApp(Widget home, Locale locale) => MaterialApp(
   ],
   home: home,
 );
+
+ProductivityRecord _displayRecord({
+  required String id,
+  required double workDays,
+  required double rate,
+}) {
+  return ProductivityRecord(
+    id: id,
+    createdAt: DateTime(2026, 8, 12),
+    trade: '内装工事',
+    taskName: 'クロス張',
+    siteName: '松本邸',
+    workDate: DateTime(2026, 8, 11),
+    quantity: 100,
+    unit: 'm²',
+    workers: 2,
+    workDays: workDays,
+    actualLabor: 2 * workDays,
+    actualLaborRate: rate,
+    productivityPerLabor: 1 / rate,
+  );
+}

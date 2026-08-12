@@ -147,7 +147,7 @@ class _SummaryCard extends StatelessWidget {
             _productivity(l10n, summary.averageProductivity, summary.unit),
           ),
           _row(
-            l10n.text('平均実績歩掛（内部値）'),
+            l10n.text('平均実績歩掛'),
             _laborRate(l10n, summary.averageActualLaborRate, summary.unit),
           ),
           if (summary.averageHourlyProductivity != null)
@@ -159,8 +159,14 @@ class _SummaryCard extends StatelessWidget {
                 summary.unit,
               ),
             ),
-          _row(l10n.text('最小歩掛'), summary.minimumLaborRate.toStringAsFixed(3)),
-          _row(l10n.text('最大歩掛'), summary.maximumLaborRate.toStringAsFixed(3)),
+          _row(
+            l10n.text('最小歩掛'),
+            _laborRate(l10n, summary.minimumLaborRate, summary.unit),
+          ),
+          _row(
+            l10n.text('最大歩掛'),
+            _laborRate(l10n, summary.maximumLaborRate, summary.unit),
+          ),
           const Divider(height: 24),
           ...summary.records.map(
             (record) => ListTile(
@@ -243,13 +249,13 @@ class _SummaryCard extends StatelessWidget {
     final unit = l10n.productivityUnit(record.unit);
     final work = l10n.choose(
       japanese:
-          '${record.workers}人 × ${record.workDays}日 = ${record.actualLabor.toStringAsFixed(2)}人工',
+          '${_compactNumber(record.workers)}人 × ${_compactNumber(record.workDays)}日 = ${record.actualLabor.toStringAsFixed(2)}人工',
       english:
-          '${record.workers} workers × ${record.workDays} days = ${record.actualLabor.toStringAsFixed(2)} labor-days',
+          '${_compactNumber(record.workers)} workers × ${_compactNumber(record.workDays)} days = ${record.actualLabor.toStringAsFixed(2)} labor-days',
       simplifiedChinese:
-          '${record.workers}人 × ${record.workDays}天 = ${record.actualLabor.toStringAsFixed(2)}人工',
+          '${_compactNumber(record.workers)}人 × ${_compactNumber(record.workDays)}天 = ${record.actualLabor.toStringAsFixed(2)}人工',
       traditionalChinese:
-          '${record.workers}人 × ${record.workDays}天 = ${record.actualLabor.toStringAsFixed(2)}人工',
+          '${_compactNumber(record.workers)}人 × ${_compactNumber(record.workDays)}天 = ${record.actualLabor.toStringAsFixed(2)}人工',
     );
     final details = <String>[
       '${_date(record.workDate)}　${record.quantity} $unit',
@@ -261,5 +267,9 @@ class _SummaryCard extends StatelessWidget {
       if (record.conditions.isNotEmpty) record.conditions,
     ];
     return details.join('\n');
+  }
+
+  static String _compactNumber(double value) {
+    return value.toStringAsFixed(6).replaceFirst(RegExp(r'\.?0+$'), '');
   }
 }

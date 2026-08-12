@@ -101,15 +101,17 @@ class _ProductivityCalculationScreenState
         workers = _number(_workers),
         days = _number(_days),
         hours = _number(_hours),
-        baselineProductivity = _number(_productivity);
+        baselineInput = _number(_productivity);
+    final baselineProductivity = baselineInput != null && baselineInput > 0
+        ? baselineInput
+        : null;
     if (quantity == null ||
         quantity <= 0 ||
         workers == null ||
         workers <= 0 ||
         days == null ||
         days <= 0 ||
-        (hours != null && hours < 0) ||
-        (baselineProductivity != null && baselineProductivity <= 0)) {
+        (hours != null && hours < 0)) {
       return null;
     }
     return ProductivityCalculator.actual(
@@ -299,7 +301,7 @@ class _ProductivityCalculationScreenState
                   '${_f(result.totalPersonHours!, 2)} ${_personHourUnit(strings)}',
                 ),
               if (result.requiredDays != null &&
-                  _number(_hours) != null &&
+                  (_number(_hours) ?? 0) > 0 &&
                   result.requiredDays! % 1 != 0)
                 Text(
                   _dayBreakdown(
@@ -332,7 +334,7 @@ class _ProductivityCalculationScreenState
             _formatProductivity(strings, result.actualProductivity),
           ),
           _resultRow(
-            strings.text('実績歩掛（内部値）'),
+            strings.text('実績歩掛'),
             _laborRate(strings, result.actualLaborRate),
           ),
           if (result.totalPersonHours != null) ...[
