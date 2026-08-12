@@ -101,6 +101,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
       japanese: '外周',
       english: 'Outer sides',
       simplifiedChinese: '外周边',
+      traditionalChinese: '外周邊',
     );
     final specification =
         '$outerLabel ${outerSides.map((value) => '${_format(value)}m').join('・')} / '
@@ -110,6 +111,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
       japanese: '三角形',
       english: 'Triangle',
       simplifiedChinese: '三角形',
+      traditionalChinese: '三角形',
     );
     final triangleText = result.triangleAreas.indexed
         .map((entry) => '$triangle${entry.$1 + 1} ${_format(entry.$2)}m²')
@@ -162,6 +164,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     japanese: '${_outerControllers.length}辺',
                     english: '${_outerControllers.length} sides',
                     simplifiedChinese: '${_outerControllers.length}条边',
+                    traditionalChinese: '${_outerControllers.length}條邊',
                   ),
                   key: const Key('polygonSideCount'),
                   style: theme.textTheme.titleMedium,
@@ -204,6 +207,8 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                             'Side ${_vertexName(index)}${_vertexName(index + 1)}',
                         simplifiedChinese:
                             '边 ${_vertexName(index)}${_vertexName(index + 1)}',
+                        traditionalChinese:
+                            '邊 ${_vertexName(index)}${_vertexName(index + 1)}',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -226,6 +231,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                         japanese: '対角線 A${_vertexName(index + 2)}',
                         english: 'Diagonal A${_vertexName(index + 2)}',
                         simplifiedChinese: '对角线 A${_vertexName(index + 2)}',
+                        traditionalChinese: '對角線 A${_vertexName(index + 2)}',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -289,6 +295,8 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                           japanese: '三角形${index + 1}　${_format(area)} m²',
                           english: 'Triangle ${index + 1}  ${_format(area)} m²',
                           simplifiedChinese:
+                              '三角形${index + 1}　${_format(area)} m²',
+                          traditionalChinese:
                               '三角形${index + 1}　${_format(area)} m²',
                         ),
                         textAlign: TextAlign.right,

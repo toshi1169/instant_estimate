@@ -26,26 +26,31 @@ class AccessPlanScreen extends StatelessWidget {
               japanese: 'すべての広告を非表示',
               english: 'Remove all ads',
               simplifiedChinese: '移除全部广告',
+              traditionalChinese: '移除所有廣告',
             ),
             l10n.choose(
               japanese: '見積の保存件数を無制限に拡張',
               english: 'Unlimited saved estimates',
               simplifiedChinese: '无限保存估算',
+              traditionalChinese: '無限制儲存估算',
             ),
             l10n.choose(
               japanese: '単価マスタの保存件数を無制限に拡張',
               english: 'Unlimited unit price master records',
               simplifiedChinese: '无限保存单价资料',
+              traditionalChinese: '無限制儲存單價資料',
             ),
             l10n.choose(
               japanese: '歩掛・生産性実績を100件まで保存',
               english: 'Save up to 100 productivity records',
               simplifiedChinese: '最多保存100条步挂与生产率记录',
+              traditionalChinese: '最多儲存100筆步掛（BUGAKARI）與生產率紀錄',
             ),
             l10n.choose(
               japanese: '将来追加される完全版対象機能',
               english: 'Access future full-plan features',
               simplifiedChinese: '使用今后新增的完整版功能',
+              traditionalChinese: '使用日後新增的完整版功能',
             ),
           ]
         : [
@@ -53,43 +58,51 @@ class AccessPlanScreen extends StatelessWidget {
               japanese: 'バナー広告と動画広告をすべて非表示',
               english: 'Remove banner and video ads',
               simplifiedChinese: '移除横幅广告和视频广告',
+              traditionalChinese: '移除橫幅廣告和影片廣告',
             ),
             l10n.choose(
               japanese: '一度の購入で継続利用',
               english: 'One-time purchase',
               simplifiedChinese: '一次购买，持续使用',
+              traditionalChinese: '一次購買，持續使用',
             ),
             l10n.choose(
               japanese: '見積は5件まで保存',
               english: 'Save up to 5 estimates',
               simplifiedChinese: '最多保存5份估算',
+              traditionalChinese: '最多儲存5份估算',
             ),
             l10n.choose(
               japanese: '単価マスタは10件まで保存',
               english: 'Save up to 10 unit price records',
               simplifiedChinese: '最多保存10条单价资料',
+              traditionalChinese: '最多儲存10筆單價資料',
             ),
           ]);
     final planName = l10n.choose(
       japanese: isFull ? '完全版' : '広告なし版',
       english: isFull ? 'Full plan' : 'Ad-free plan',
       simplifiedChinese: isFull ? '完整版' : '无广告版',
+      traditionalChinese: isFull ? '完整版' : '無廣告版',
     );
     final fallbackPriceLabel = switch (plan) {
       AppAccessPlan.free => l10n.choose(
         japanese: '無料',
         english: 'Free',
         simplifiedChinese: '免费',
+        traditionalChinese: '免費',
       ),
       AppAccessPlan.adFree => l10n.choose(
         japanese: '¥300（買い切り）',
         english: '¥300 (one-time purchase)',
         simplifiedChinese: '¥300（一次性购买）',
+        traditionalChinese: '¥300（一次性購買）',
       ),
       AppAccessPlan.full => l10n.choose(
         japanese: '¥500／月',
         english: '¥500 / month',
         simplifiedChinese: '¥500／月',
+        traditionalChinese: '¥500／月',
       ),
     };
 
@@ -171,6 +184,7 @@ class AccessPlanScreen extends StatelessWidget {
                           japanese: '初回のみ7日間無料体験',
                           english: '7-day free trial for first-time users',
                           simplifiedChinese: '首次使用可免费试用7天',
+                          traditionalChinese: '首次使用可免費試用7天',
                         ),
                       ),
                     ],
@@ -205,17 +219,20 @@ class AccessPlanScreen extends StatelessWidget {
                           japanese: '現在のプラン',
                           english: 'Current plan',
                           simplifiedChinese: '当前方案',
+                          traditionalChinese: '目前方案',
                         )
                       : product == null
                       ? l10n.choose(
                           japanese: 'ストアへ接続',
                           english: 'Connect to store',
                           simplifiedChinese: '连接商店',
+                          traditionalChinese: '連接商店',
                         )
                       : l10n.choose(
                           japanese: '購入する',
                           english: 'Purchase',
                           simplifiedChinese: '购买',
+                          traditionalChinese: '購買',
                         ),
                 ),
               ),
@@ -230,6 +247,7 @@ class AccessPlanScreen extends StatelessWidget {
                     japanese: '購入履歴を復元',
                     english: 'Restore purchases',
                     simplifiedChinese: '恢复购买记录',
+                    traditionalChinese: '恢復購買紀錄',
                   ),
                 ),
               ),
@@ -246,6 +264,7 @@ class AccessPlanScreen extends StatelessWidget {
                   english:
                       'Purchases will be enabled when the store release is prepared.',
                   simplifiedChinese: '完成应用商店发布准备后将启用购买功能。',
+                  traditionalChinese: '完成App Store上架準備後將啟用購買功能。',
                 ),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
@@ -262,36 +281,43 @@ class AccessPlanScreen extends StatelessWidget {
         japanese: 'ストアへ接続しています…',
         english: 'Connecting to the store…',
         simplifiedChinese: '正在连接商店…',
+        traditionalChinese: '正在連接商店…',
       ),
       PurchaseOperation.purchasing => l10n.choose(
         japanese: '購入手続き中です…',
         english: 'Processing purchase…',
         simplifiedChinese: '正在处理购买…',
+        traditionalChinese: '正在處理購買…',
       ),
       PurchaseOperation.restoring => l10n.choose(
         japanese: '購入履歴を復元しています…',
         english: 'Restoring purchases…',
         simplifiedChinese: '正在恢复购买记录…',
+        traditionalChinese: '正在恢復購買紀錄…',
       ),
       PurchaseOperation.completed => l10n.choose(
         japanese: '購入内容を反映しました',
         english: 'Purchase restored.',
         simplifiedChinese: '购买内容已恢复。',
+        traditionalChinese: '已套用購買內容。',
       ),
       PurchaseOperation.unavailable => l10n.choose(
         japanese: '現在のストアでは商品を取得できません',
         english: 'This product is not available in the current store.',
         simplifiedChinese: '当前商店无法获取此商品。',
+        traditionalChinese: '目前商店無法取得此商品。',
       ),
       PurchaseOperation.error => l10n.choose(
         japanese: 'ストア処理を完了できませんでした。再度お試しください',
         english: 'Could not complete the store operation. Please try again.',
         simplifiedChinese: '无法完成商店操作，请重试。',
+        traditionalChinese: '無法完成商店操作，請再試一次。',
       ),
       _ => l10n.choose(
         japanese: '価格・無料体験期間はストアに表示される内容が適用されます',
         english: 'The price and trial terms shown by the store apply.',
         simplifiedChinese: '价格和免费试用期限以商店显示内容为准。',
+        traditionalChinese: '價格和免費試用期限以商店顯示內容為準。',
       ),
     };
   }

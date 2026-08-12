@@ -1790,11 +1790,21 @@ class _KeyButton extends StatelessWidget {
                   : AppColors.lightKeyBorder,
             ),
     );
+    final semanticLabel = switch (keyData.kind) {
+      _KeyKind.menu => AppLocalizations.of(context).choose(
+        japanese: 'メニュー',
+        english: 'Menu',
+        simplifiedChinese: '菜单',
+        traditionalChinese: '選單',
+      ),
+      _KeyKind.settings => AppLocalizations.of(context).settings,
+      _ => keyData.semanticLabel,
+    };
 
     if (keyData.kind == _KeyKind.menu) {
       return Semantics(
         button: true,
-        label: keyData.semanticLabel,
+        label: semanticLabel,
         excludeSemantics: true,
         child: Material(
           color: backgroundColor,
@@ -1813,7 +1823,7 @@ class _KeyButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: keyData.semanticLabel,
+      label: semanticLabel,
       child: FilledButton(
         key: Key('calculatorKey${keyData.label}'),
         onPressed: onPressed,

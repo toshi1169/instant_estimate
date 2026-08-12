@@ -86,6 +86,7 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
       japanese: '三角形',
       english: 'Triangle',
       simplifiedChinese: '三角形',
+      traditionalChinese: '三角形',
     );
     final calculationBasis =
         '$specification\n'
@@ -224,6 +225,9 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                             'Triangle 1 ${_format(result.firstTriangleArea)} m²'
                             '  +  Triangle 2 ${_format(result.secondTriangleArea)} m²',
                         simplifiedChinese:
+                            '三角形① ${_format(result.firstTriangleArea)} m²'
+                            '  ＋  三角形② ${_format(result.secondTriangleArea)} m²',
+                        traditionalChinese:
                             '三角形① ${_format(result.firstTriangleArea)} m²'
                             '  ＋  三角形② ${_format(result.secondTriangleArea)} m²',
                       ),
