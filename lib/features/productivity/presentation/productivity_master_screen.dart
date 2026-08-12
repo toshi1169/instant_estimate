@@ -88,6 +88,8 @@ class ProductivityMasterScreen extends StatelessWidget {
             traditionalChinese: '要刪除${record.siteName}的實績紀錄嗎？',
             vietnamese: 'Xóa bản ghi thực tế của ${record.siteName}?',
             indonesian: 'Hapus catatan aktual untuk ${record.siteName}?',
+            filipino:
+                'Tanggalin ang aktuwal na tala para sa ${record.siteName}?',
           ),
         ),
         actions: [
@@ -134,6 +136,8 @@ class _SummaryCard extends StatelessWidget {
                 '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} bản ghi',
             indonesian:
                 '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} catatan',
+            filipino:
+                '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} tala',
           ),
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -216,6 +220,7 @@ class _SummaryCard extends StatelessWidget {
       traditionalChinese: '人工/$unit',
       vietnamese: 'ngày công/$unit',
       indonesian: 'hari-orang/$unit',
+      filipino: 'tao-araw/$unit',
     );
     return '${value.toStringAsFixed(3)} $suffix';
   }
@@ -233,6 +238,7 @@ class _SummaryCard extends StatelessWidget {
       traditionalChinese: '$unit/人日',
       vietnamese: '$unit/người-ngày',
       indonesian: '$unit/orang-hari',
+      filipino: '$unit/tao-araw',
     );
     return '${value.toStringAsFixed(2)} $suffix';
   }
@@ -250,6 +256,7 @@ class _SummaryCard extends StatelessWidget {
       traditionalChinese: '$unit/人工時',
       vietnamese: '$unit/giờ công',
       indonesian: '$unit/jam-orang',
+      filipino: '$unit/tao-oras',
     );
     return '${value.toStringAsFixed(2)} $suffix';
   }
@@ -272,6 +279,8 @@ class _SummaryCard extends StatelessWidget {
           '${_compactNumber(record.workers)} người × ${_compactNumber(record.workDays)} ngày = ${record.actualLabor.toStringAsFixed(2)} ngày công',
       indonesian:
           '${_compactNumber(record.workers)} orang × ${_compactNumber(record.workDays)} hari = ${record.actualLabor.toStringAsFixed(2)} hari-orang',
+      filipino:
+          '${_compactNumber(record.workers)} tao × ${_compactNumber(record.workDays)} araw = ${record.actualLabor.toStringAsFixed(2)} tao-araw',
     );
     final details = <String>[
       '${_date(record.workDate)}　${record.quantity} $unit',

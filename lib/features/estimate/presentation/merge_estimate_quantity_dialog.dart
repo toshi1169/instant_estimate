@@ -46,6 +46,10 @@ Future<MergeEstimateQuantityAction> showMergeEstimateQuantityDialog(
                   'Tambahkan volume ke "$name"?\n\n'
                   'Saat ini: $currentQuantity $unit\n'
                   'Tambahan: $incomingQuantity $unit',
+              filipino:
+                  'Idagdag ang dami sa "$name"?\n\n'
+                  'Kasalukuyan: $currentQuantity $unit\n'
+                  'Idadagdag: $incomingQuantity $unit',
             ),
           ),
           actions: [

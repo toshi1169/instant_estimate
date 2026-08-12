@@ -253,6 +253,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                               traditionalChinese: '${material.name}（已儲存）',
                               vietnamese: '${material.name} (đã lưu)',
                               indonesian: '${material.name} (tersimpan)',
+                              filipino: '${material.name} (naka-save)',
                             ),
                           ),
                         ),

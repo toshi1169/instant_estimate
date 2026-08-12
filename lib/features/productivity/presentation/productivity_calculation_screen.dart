@@ -485,6 +485,7 @@ class _ProductivityCalculationScreenState
       traditionalChinese: '人工/$unit',
       vietnamese: 'ngày công/$unit',
       indonesian: 'hari-orang/$unit',
+      filipino: 'tao-araw/$unit',
     );
     return '$sign${_f(value, 3)} $suffix';
   }
@@ -498,6 +499,7 @@ class _ProductivityCalculationScreenState
       traditionalChinese: '$unit/人日',
       vietnamese: '$unit/người-ngày',
       indonesian: '$unit/orang-hari',
+      filipino: '$unit/tao-araw',
     );
     return '${_f(value, 2)} $suffix';
   }
@@ -511,6 +513,7 @@ class _ProductivityCalculationScreenState
       traditionalChinese: '$unit/人工時',
       vietnamese: '$unit/giờ công',
       indonesian: '$unit/jam-orang',
+      filipino: '$unit/tao-oras',
     );
     return '${_f(value, 2)} $suffix';
   }
@@ -522,6 +525,7 @@ class _ProductivityCalculationScreenState
     traditionalChinese: '人工',
     vietnamese: 'ngày công',
     indonesian: 'hari-orang',
+    filipino: 'tao-araw',
   );
 
   String _dayUnit(AppLocalizations strings) => strings.choose(
@@ -531,6 +535,7 @@ class _ProductivityCalculationScreenState
     traditionalChinese: '天',
     vietnamese: 'ngày',
     indonesian: 'hari',
+    filipino: 'araw',
   );
 
   String _personHourUnit(AppLocalizations strings) => strings.choose(
@@ -540,6 +545,7 @@ class _ProductivityCalculationScreenState
     traditionalChinese: '人工時',
     vietnamese: 'giờ công',
     indonesian: 'jam-orang',
+    filipino: 'tao-oras',
   );
 
   String _dayBreakdown(
@@ -553,6 +559,8 @@ class _ProductivityCalculationScreenState
     traditionalChinese: '約 $wholeDays 天＋${_f(remainingHours, 1)} 小時',
     vietnamese: 'Khoảng $wholeDays ngày + ${_f(remainingHours, 1)} giờ',
     indonesian: 'Sekitar $wholeDays hari + ${_f(remainingHours, 1)} jam',
+    filipino:
+        'Humigit-kumulang $wholeDays araw + ${_f(remainingHours, 1)} oras',
   );
 }
 

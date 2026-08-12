@@ -45,51 +45,59 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 24),
-              RadioGroup<AppLanguage>(
-                groupValue: _selected,
-                onChanged: _isSaving
-                    ? (_) {}
-                    : (value) {
-                        if (value != null) {
-                          setState(() => _selected = value);
-                        }
-                      },
-                child: Column(
-                  children: [
-                    RadioListTile<AppLanguage>(
-                      key: const Key('languageJapanese'),
-                      value: AppLanguage.japanese,
-                      title: const Text('日本語'),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: RadioGroup<AppLanguage>(
+                    groupValue: _selected,
+                    onChanged: _isSaving
+                        ? (_) {}
+                        : (value) {
+                            if (value != null) {
+                              setState(() => _selected = value);
+                            }
+                          },
+                    child: Column(
+                      children: [
+                        RadioListTile<AppLanguage>(
+                          key: const Key('languageJapanese'),
+                          value: AppLanguage.japanese,
+                          title: const Text('日本語'),
+                        ),
+                        RadioListTile<AppLanguage>(
+                          key: const Key('languageEnglish'),
+                          value: AppLanguage.english,
+                          title: const Text('English'),
+                        ),
+                        RadioListTile<AppLanguage>(
+                          key: const Key('languageSimplifiedChinese'),
+                          value: AppLanguage.simplifiedChinese,
+                          title: const Text('简体中文'),
+                        ),
+                        RadioListTile<AppLanguage>(
+                          key: const Key('languageTraditionalChinese'),
+                          value: AppLanguage.traditionalChinese,
+                          title: const Text('繁體中文'),
+                        ),
+                        RadioListTile<AppLanguage>(
+                          key: const Key('languageVietnamese'),
+                          value: AppLanguage.vietnamese,
+                          title: const Text('Tiếng Việt'),
+                        ),
+                        RadioListTile<AppLanguage>(
+                          key: const Key('languageIndonesian'),
+                          value: AppLanguage.indonesian,
+                          title: const Text('Bahasa Indonesia'),
+                        ),
+                        RadioListTile<AppLanguage>(
+                          key: const Key('languageFilipino'),
+                          value: AppLanguage.filipino,
+                          title: const Text('Filipino'),
+                        ),
+                      ],
                     ),
-                    RadioListTile<AppLanguage>(
-                      key: const Key('languageEnglish'),
-                      value: AppLanguage.english,
-                      title: const Text('English'),
-                    ),
-                    RadioListTile<AppLanguage>(
-                      key: const Key('languageSimplifiedChinese'),
-                      value: AppLanguage.simplifiedChinese,
-                      title: const Text('简体中文'),
-                    ),
-                    RadioListTile<AppLanguage>(
-                      key: const Key('languageTraditionalChinese'),
-                      value: AppLanguage.traditionalChinese,
-                      title: const Text('繁體中文'),
-                    ),
-                    RadioListTile<AppLanguage>(
-                      key: const Key('languageVietnamese'),
-                      value: AppLanguage.vietnamese,
-                      title: const Text('Tiếng Việt'),
-                    ),
-                    RadioListTile<AppLanguage>(
-                      key: const Key('languageIndonesian'),
-                      value: AppLanguage.indonesian,
-                      title: const Text('Bahasa Indonesia'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              const Spacer(),
               FilledButton(
                 key: const Key('completeLanguageSelection'),
                 onPressed: _isSaving ? null : _continue,

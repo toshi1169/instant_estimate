@@ -150,6 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         (AppLanguage.traditionalChinese, strings.traditionalChinese),
         (AppLanguage.vietnamese, strings.vietnamese),
         (AppLanguage.indonesian, strings.indonesian),
+        (AppLanguage.filipino, strings.filipino),
       ],
     );
     if (value != null) _update(_settings.copyWith(language: value));
@@ -224,6 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     AppLanguage.traditionalChinese => '繁體中文',
                     AppLanguage.vietnamese => 'Tiếng Việt',
                     AppLanguage.indonesian => 'Bahasa Indonesia',
+                    AppLanguage.filipino => 'Filipino',
                   }),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectLanguage(context),

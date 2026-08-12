@@ -53,6 +53,15 @@ void main() {
     expect(restored.language.locale.languageCode, 'id');
   });
 
+  test('フィリピノ語の設定を保存・復元できる', () {
+    const settings = AppSettings(language: AppLanguage.filipino);
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.language, AppLanguage.filipino);
+    expect(restored.language.locale.languageCode, 'fil');
+  });
+
   test('ユーザー登録車両を設定データに保存・復元できる', () {
     const vehicle = TransportVehicle(
       id: 'custom_test',

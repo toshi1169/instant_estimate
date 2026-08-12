@@ -167,6 +167,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     traditionalChinese: '${_outerControllers.length}條邊',
                     vietnamese: '${_outerControllers.length} cạnh',
                     indonesian: '${_outerControllers.length} sisi',
+                    filipino: '${_outerControllers.length} gilid',
                   ),
                   key: const Key('polygonSideCount'),
                   style: theme.textTheme.titleMedium,
@@ -215,6 +216,8 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                             'Cạnh ${_vertexName(index)}${_vertexName(index + 1)}',
                         indonesian:
                             'Sisi ${_vertexName(index)}${_vertexName(index + 1)}',
+                        filipino:
+                            'Gilid ${_vertexName(index)}${_vertexName(index + 1)}',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -240,6 +243,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                         traditionalChinese: '對角線 A${_vertexName(index + 2)}',
                         vietnamese: 'Đường chéo A${_vertexName(index + 2)}',
                         indonesian: 'Diagonal A${_vertexName(index + 2)}',
+                        filipino: 'Diagonal A${_vertexName(index + 2)}',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -310,6 +314,8 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                               'Tam giác ${index + 1}  ${_format(area)} m²',
                           indonesian:
                               'Segitiga ${index + 1}  ${_format(area)} m²',
+                          filipino:
+                              'Tatsulok ${index + 1}  ${_format(area)} m²',
                         ),
                         textAlign: TextAlign.right,
                       ),

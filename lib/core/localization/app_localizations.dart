@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'app_language.dart';
+import 'filipino_translations.dart';
 import 'indonesian_translations.dart';
 import 'vietnamese_translations.dart';
 
@@ -16,6 +17,7 @@ class AppLocalizations {
       appLanguage == AppLanguage.traditionalChinese;
   bool get isVietnamese => appLanguage == AppLanguage.vietnamese;
   bool get isIndonesian => appLanguage == AppLanguage.indonesian;
+  bool get isFilipino => appLanguage == AppLanguage.filipino;
 
   // English is also the safe fallback while a newly added language is being
   // translated screen by screen. This prevents Japanese text leaking into a
@@ -29,6 +31,7 @@ class AppLocalizations {
     String? traditionalChinese,
     String? vietnamese,
     String? indonesian,
+    String? filipino,
   }) => switch (appLanguage) {
     AppLanguage.japanese => japanese,
     AppLanguage.english => english,
@@ -38,6 +41,8 @@ class AppLocalizations {
       vietnamese ?? vietnameseTranslations[japanese] ?? english,
     AppLanguage.indonesian =>
       indonesian ?? indonesianTranslations[japanese] ?? english,
+    AppLanguage.filipino =>
+      filipino ?? filipinoTranslations[japanese] ?? english,
   };
 
   String choose({
@@ -47,6 +52,7 @@ class AppLocalizations {
     String? traditionalChinese,
     String? vietnamese,
     String? indonesian,
+    String? filipino,
   }) => _pick(
     japanese: japanese,
     english: english,
@@ -54,6 +60,7 @@ class AppLocalizations {
     traditionalChinese: traditionalChinese,
     vietnamese: vietnamese,
     indonesian: indonesian,
+    filipino: filipino,
   );
 
   static AppLocalizations of(BuildContext context) {
@@ -103,6 +110,7 @@ class AppLocalizations {
   String get traditionalChinese => '繁體中文';
   String get vietnamese => 'Tiếng Việt';
   String get indonesian => 'Bahasa Indonesia';
+  String get filipino => 'Filipino';
   String get occupationTitle => _pick(
     japanese: '業種を選択',
     english: 'Choose occupation',
@@ -137,6 +145,7 @@ class AppLocalizations {
       traditionalChinese: '建築監督',
       vietnamese: 'Giám sát xây dựng',
       indonesian: 'Pengawas bangunan',
+      filipino: 'Tagapangasiwa ng gusali',
     ),
     '土木監督' => _pick(
       japanese: value,
@@ -145,6 +154,7 @@ class AppLocalizations {
       traditionalChinese: '土木監督',
       vietnamese: 'Giám sát công trình dân dụng',
       indonesian: 'Pengawas sipil',
+      filipino: 'Tagapangasiwa ng civil works',
     ),
     '建築基礎' => _pick(
       japanese: value,
@@ -153,6 +163,7 @@ class AppLocalizations {
       traditionalChinese: '建築基礎',
       vietnamese: 'Công tác móng',
       indonesian: 'Pekerjaan fondasi',
+      filipino: 'Gawaing pundasyon',
     ),
     '外構' => _pick(
       japanese: value,
@@ -161,6 +172,7 @@ class AppLocalizations {
       traditionalChinese: '外構工程',
       vietnamese: 'Công trình ngoại thất',
       indonesian: 'Pekerjaan eksterior',
+      filipino: 'Gawaing panlabas',
     ),
     '内装' => _pick(
       japanese: value,
@@ -169,6 +181,7 @@ class AppLocalizations {
       traditionalChinese: '室內裝修',
       vietnamese: 'Công tác nội thất',
       indonesian: 'Pekerjaan interior',
+      filipino: 'Gawaing panloob',
     ),
     '多能工' => _pick(
       japanese: value,
@@ -177,6 +190,7 @@ class AppLocalizations {
       traditionalChinese: '多技能工',
       vietnamese: 'Thợ đa năng',
       indonesian: 'Pekerja multikeahlian',
+      filipino: 'Manggagawang maraming kasanayan',
     ),
     _ => _pick(
       japanese: value,
@@ -185,6 +199,7 @@ class AppLocalizations {
       traditionalChinese: '其他',
       vietnamese: 'Khác',
       indonesian: 'Lainnya',
+      filipino: 'Iba pa',
     ),
   };
 
@@ -268,6 +283,7 @@ class AppLocalizations {
     if (isJapanese) return japanese;
     if (isVietnamese) return vietnameseTranslations[japanese] ?? japanese;
     if (isIndonesian) return indonesianTranslations[japanese] ?? japanese;
+    if (isFilipino) return filipinoTranslations[japanese] ?? japanese;
     if (isTraditionalChinese) {
       final translated = const <String, String>{
         '便利計算一覧': '實用計算',
@@ -1613,6 +1629,7 @@ class AppLocalizations {
     traditionalChinese: '$count項',
     vietnamese: '$count mục',
     indonesian: '$count item',
+    filipino: '$count item',
   );
   String productivityUnit(String value) {
     return switch (appLanguage) {
@@ -1662,6 +1679,15 @@ class AppLocalizations {
         '式' => 'lumpsum',
         _ => text(value),
       },
+      AppLanguage.filipino => switch (value) {
+        '本' => 'piraso',
+        '枚' => 'piraso',
+        '個' => 'piraso',
+        '箇所' => 'lokasyon',
+        '組' => 'set',
+        '式' => 'lump sum',
+        _ => text(value),
+      },
     };
   }
 
@@ -1672,6 +1698,7 @@ class AppLocalizations {
     traditionalChinese: '$count / $limit項',
     vietnamese: '$count / $limit mục',
     indonesian: '$count / $limit item',
+    filipino: '$count / $limit item',
   );
   String currentSaveLimit(int limit) => _pick(
     japanese: '現在の保存上限：$limit件',
@@ -1680,6 +1707,7 @@ class AppLocalizations {
     traditionalChinese: '目前儲存上限：$limit項',
     vietnamese: 'Giới hạn lưu hiện tại: $limit mục',
     indonesian: 'Batas penyimpanan saat ini: $limit item',
+    filipino: 'Kasalukuyang limitasyon sa pag-save: $limit item',
   );
   String productivityLimitMessage(int limit) => _pick(
     japanese: '現在のプランでは最大$limit件まで保存できます。完全版では100件まで保存できます。',
@@ -1691,6 +1719,8 @@ class AppLocalizations {
         'Gói hiện tại có thể lưu tối đa $limit bản ghi. Bản đầy đủ có thể lưu tối đa 100 bản ghi.',
     indonesian:
         'Paket saat ini dapat menyimpan hingga $limit catatan. Versi lengkap dapat menyimpan hingga 100 catatan.',
+    filipino:
+        'Makakapag-save ng hanggang $limit tala ang kasalukuyang plano. Makakapag-save ng hanggang 100 tala ang kumpletong bersyon.',
   );
   String get freeEstimateLimit => _pick(
     japanese: '無料版では見積を5件まで保存できます',
@@ -1740,6 +1770,27 @@ class AppLocalizations {
   );
 
   String specializedUnitExplanation(String id) {
+    if (isFilipino) {
+      return switch (id) {
+        'shaku' =>
+          'Ang SHAKU ay tradisyonal na yunit ng haba sa Japan. Ginagamit ng app ang 1 shaku = 10/33 m (humigit-kumulang 0.30303 m).',
+        'sun' =>
+          'Ang SUN ay tradisyonal na yunit ng haba sa Japan. 1 sun = 1/10 shaku = 1/33 m (humigit-kumulang 0.030303 m).',
+        'ken' =>
+          'Ang KEN ay tradisyonal na yunit ng haba sa Japan. 1 ken = 6 shaku = 20/11 m (humigit-kumulang 1.81818 m).',
+        'tsubo' =>
+          'Ang TSUBO ay tradisyonal na yunit ng lawak sa Japan. 1 tsubo = 400/121 m² (humigit-kumulang 3.30579 m²).',
+        'hyo' =>
+          'Ang HYO ay tradisyonal na yunit ng bigat sa Japan na nag-iiba ayon sa produkto. Ginagamit ng app ang 1 hyo ng bigas = 60 kg bilang sanggunian.',
+        'natural' =>
+          'Ang JIYAMA ay dami ng lupa sa natural nitong kondisyon bago hukayin at ginagamit na batayang dami sa pag-convert ng gawaing lupa.',
+        'loose' =>
+          'Ang HOGUSHI ay dami ng maluwag na lupa pagkatapos hukayin. Dami ng maluwag na lupa = dami ng natural na lupa × expansion factor.',
+        'compacted' =>
+          'Ang SHIMEKATAME ay dami ng lupa pagkatapos siksikin. Dami ng siksik na lupa = dami ng natural na lupa × compaction factor.',
+        _ => '',
+      };
+    }
     if (isIndonesian) {
       return switch (id) {
         'shaku' =>
@@ -1870,6 +1921,7 @@ class AppLocalizations {
     traditionalChinese: '已複製估算明細（$count項）',
     vietnamese: 'Đã sao chép $count chi tiết dự toán',
     indonesian: '$count rincian estimasi telah disalin',
+    filipino: 'Nakopya ang $count detalye ng estimasyon',
   );
 
   String mergedEstimateQuantity(String quantity) => _pick(
@@ -1882,6 +1934,8 @@ class AppLocalizations {
         'Đã cộng khối lượng vào chi tiết hiện có. Khối lượng mới: $quantity',
     indonesian:
         'Volume ditambahkan ke rincian yang ada. Volume baru: $quantity',
+    filipino:
+        'Idinagdag ang dami sa kasalukuyang detalye. Bagong dami: $quantity',
   );
 
   String deleteEstimateItemQuestion(String name) => _pick(
@@ -1891,6 +1945,7 @@ class AppLocalizations {
     traditionalChinese: '要刪除「$name」嗎？',
     vietnamese: 'Xóa "$name"?',
     indonesian: 'Hapus "$name"?',
+    filipino: 'Tanggalin ang "$name"?',
   );
 
   String estimateItemAddedWithCount(String message, int count) => _pick(
@@ -1900,6 +1955,7 @@ class AppLocalizations {
     traditionalChinese: '${text(message)}（$count項）',
     vietnamese: '${text(message)} ($count chi tiết)',
     indonesian: '${text(message)} ($count rincian)',
+    filipino: '${text(message)} ($count detalye)',
   );
 
   String deleteUnitPriceQuestion(String name) => _pick(
@@ -1909,6 +1965,7 @@ class AppLocalizations {
     traditionalChinese: '要從單價資料庫刪除「$name」嗎？',
     vietnamese: 'Xóa "$name" khỏi danh mục đơn giá?',
     indonesian: 'Hapus "$name" dari daftar harga satuan?',
+    filipino: 'Tanggalin ang "$name" sa listahan ng presyo kada yunit?',
   );
 
   String selectUnitPriceMasterCount(int count) => _pick(
@@ -1918,6 +1975,7 @@ class AppLocalizations {
     traditionalChinese: '從單價資料庫選擇（$count項）',
     vietnamese: 'Chọn từ danh mục đơn giá ($count)',
     indonesian: 'Pilih dari daftar harga satuan ($count)',
+    filipino: 'Pumili sa listahan ng presyo kada yunit ($count)',
   );
 
   String selectPastEstimateCount(int count) => _pick(
@@ -1927,6 +1985,7 @@ class AppLocalizations {
     traditionalChinese: '從過去的估算選擇（$count項）',
     vietnamese: 'Chọn từ dự toán trước đây ($count)',
     indonesian: 'Pilih dari estimasi sebelumnya ($count)',
+    filipino: 'Pumili sa mga nakaraang estimasyon ($count)',
   );
 
   String get listSeparator => isJapanese ? ' ／ ' : ' / ';
@@ -1938,6 +1997,7 @@ class AppLocalizations {
     traditionalChinese: '$count項明細',
     vietnamese: '$count chi tiết',
     indonesian: '$count rincian',
+    filipino: '$count detalye',
   );
 
   String deleteEstimateQuestion(String name) => _pick(
@@ -1950,6 +2010,8 @@ class AppLocalizations {
         'Xóa "$name"?\nTất cả chi tiết trong dự toán này cũng sẽ bị xóa.',
     indonesian:
         'Hapus "$name"?\nSemua rincian dalam estimasi ini juga akan dihapus.',
+    filipino:
+        'Tanggalin ang "$name"?\nTatanggalin din ang lahat ng detalye sa estimasyong ito.',
   );
 
   String get displayAndCalculation => _pick(
@@ -2001,6 +2063,7 @@ class AppLocalizations {
     traditionalChinese: '$count位',
     vietnamese: '$count chữ số',
     indonesian: '$count digit',
+    filipino: '$count digit',
   );
   String get roundingMethod => _pick(
     japanese: '丸め方法',
@@ -2111,7 +2174,7 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 
   @override
   bool isSupported(Locale locale) =>
-      const {'ja', 'en', 'zh', 'vi', 'id'}.contains(locale.languageCode);
+      const {'ja', 'en', 'zh', 'vi', 'id', 'fil'}.contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) {
@@ -2121,6 +2184,8 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
         ? AppLanguage.vietnamese
         : locale.languageCode == 'id'
         ? AppLanguage.indonesian
+        : locale.languageCode == 'fil'
+        ? AppLanguage.filipino
         : locale.languageCode == 'zh'
         ? const {'TW', 'HK', 'MO'}.contains(locale.countryCode)
               ? AppLanguage.traditionalChinese
