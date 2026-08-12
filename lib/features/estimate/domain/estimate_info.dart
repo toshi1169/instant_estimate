@@ -7,6 +7,10 @@ class EstimateInfo {
     required this.createdDate,
     required this.estimateNumber,
     required this.notes,
+    this.proviso = '',
+    this.validityPeriod = '',
+    this.constructionPeriod = '',
+    this.paymentTerms = '',
   });
 
   factory EstimateInfo.initial(DateTime now) => EstimateInfo(
@@ -17,6 +21,10 @@ class EstimateInfo {
     createdDate: DateTime(now.year, now.month, now.day),
     estimateNumber: '',
     notes: '',
+    proviso: '',
+    validityPeriod: '',
+    constructionPeriod: '',
+    paymentTerms: '',
   );
 
   factory EstimateInfo.fromJson(Map<String, Object?> json) {
@@ -31,6 +39,10 @@ class EstimateInfo {
           DateTime(now.year, now.month, now.day),
       estimateNumber: json['estimateNumber'] as String? ?? '',
       notes: json['notes'] as String? ?? '',
+      proviso: json['proviso'] as String? ?? '',
+      validityPeriod: json['validityPeriod'] as String? ?? '',
+      constructionPeriod: json['constructionPeriod'] as String? ?? '',
+      paymentTerms: json['paymentTerms'] as String? ?? '',
     );
   }
 
@@ -41,6 +53,10 @@ class EstimateInfo {
   final DateTime createdDate;
   final String estimateNumber;
   final String notes;
+  final String proviso;
+  final String validityPeriod;
+  final String constructionPeriod;
+  final String paymentTerms;
 
   String get displayName =>
       estimateName.trim().isEmpty ? '名称未設定の見積' : estimateName.trim();
@@ -52,6 +68,10 @@ class EstimateInfo {
     DateTime? createdDate,
     String? estimateNumber,
     String? notes,
+    String? proviso,
+    String? validityPeriod,
+    String? constructionPeriod,
+    String? paymentTerms,
   }) => EstimateInfo(
     id: id,
     estimateName: estimateName ?? this.estimateName,
@@ -60,6 +80,10 @@ class EstimateInfo {
     createdDate: createdDate ?? this.createdDate,
     estimateNumber: estimateNumber ?? this.estimateNumber,
     notes: notes ?? this.notes,
+    proviso: proviso ?? this.proviso,
+    validityPeriod: validityPeriod ?? this.validityPeriod,
+    constructionPeriod: constructionPeriod ?? this.constructionPeriod,
+    paymentTerms: paymentTerms ?? this.paymentTerms,
   );
 
   Map<String, Object?> toJson() => {
@@ -70,5 +94,9 @@ class EstimateInfo {
     'createdDate': createdDate.toIso8601String(),
     'estimateNumber': estimateNumber,
     'notes': notes,
+    'proviso': proviso,
+    'validityPeriod': validityPeriod,
+    'constructionPeriod': constructionPeriod,
+    'paymentTerms': paymentTerms,
   };
 }

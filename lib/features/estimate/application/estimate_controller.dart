@@ -118,6 +118,8 @@ class EstimateController extends ChangeNotifier {
       if (calculationBasis.isEmpty &&
           _normalizedText(item.calculationBasis).isEmpty &&
           _normalizedText(item.trade) == _normalizedText(draft.trade) &&
+          _normalizedText(item.constructionLocation) ==
+              _normalizedText(draft.constructionLocation) &&
           _normalizedText(item.name) == _normalizedText(draft.name) &&
           _normalizedText(item.specification) ==
               _normalizedText(draft.specification) &&
@@ -135,6 +137,7 @@ class EstimateController extends ChangeNotifier {
   EstimateItem? findQuantityMergeCandidate(EstimateItemDraft draft) {
     final name = _normalizedText(draft.name);
     final unit = _normalizedText(draft.unit);
+    final constructionLocation = _normalizedText(draft.constructionLocation);
     if (name.isEmpty ||
         unit.isEmpty ||
         draft.quantity == null ||
@@ -144,6 +147,7 @@ class EstimateController extends ChangeNotifier {
     for (final item in _items.reversed) {
       if (item.quantity != null &&
           item.unitPrice == draft.unitPrice &&
+          _normalizedText(item.constructionLocation) == constructionLocation &&
           _normalizedText(item.name) == name &&
           _normalizedText(item.unit) == unit) {
         return item;
@@ -179,6 +183,7 @@ class EstimateController extends ChangeNotifier {
       id,
       EstimateItemDraft(
         trade: current.trade,
+        constructionLocation: current.constructionLocation,
         name: current.name,
         specification: current.specification,
         quantity: currentQuantity + incomingQuantity,
@@ -270,6 +275,10 @@ class EstimateController extends ChangeNotifier {
       createdDate: DateTime(now.year, now.month, now.day),
       estimateNumber: '',
       notes: source.info.notes,
+      proviso: source.info.proviso,
+      validityPeriod: source.info.validityPeriod,
+      constructionPeriod: source.info.constructionPeriod,
+      paymentTerms: source.info.paymentTerms,
     );
     final copiedItems = [
       for (var index = 0; index < source.items.length; index++)

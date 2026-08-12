@@ -5,6 +5,7 @@ class EstimateItem {
     required this.id,
     required this.createdAt,
     required this.trade,
+    this.constructionLocation = '',
     required this.name,
     required this.specification,
     required this.quantity,
@@ -24,6 +25,7 @@ class EstimateItem {
       id: id,
       createdAt: createdAt,
       trade: draft.trade,
+      constructionLocation: draft.constructionLocation,
       name: draft.name,
       specification: draft.specification,
       quantity: draft.quantity,
@@ -40,6 +42,7 @@ class EstimateItem {
       id: json['id'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       trade: json['trade'] as String? ?? '',
+      constructionLocation: json['constructionLocation'] as String? ?? '',
       name: json['name'] as String? ?? '',
       specification: json['specification'] as String? ?? '',
       quantity: (json['quantity'] as num?)?.toDouble(),
@@ -54,6 +57,7 @@ class EstimateItem {
   final String id;
   final DateTime createdAt;
   final String trade;
+  final String constructionLocation;
   final String name;
   final String specification;
   final double? quantity;
@@ -72,6 +76,7 @@ class EstimateItem {
 
   EstimateItemDraft toDraft() => EstimateItemDraft(
     trade: trade,
+    constructionLocation: constructionLocation,
     name: name,
     specification: specification,
     quantity: quantity,
@@ -86,6 +91,7 @@ class EstimateItem {
     'id': id,
     'createdAt': createdAt.toIso8601String(),
     'trade': trade,
+    'constructionLocation': constructionLocation,
     'name': name,
     'specification': specification,
     'quantity': quantity,

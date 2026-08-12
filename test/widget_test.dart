@@ -2429,7 +2429,16 @@ void main() {
       find.byKey(const Key('estimateInfoNumberField')),
       '2026-001',
     );
-    await tester.ensureVisible(find.byKey(const Key('saveEstimateInfo')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('saveEstimateInfo')),
+      250,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateInfoEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.tap(find.byKey(const Key('saveEstimateInfo')));
     await tester.pumpAndSettle();
 

@@ -51,6 +51,9 @@ class EstimateItemEditorScreen extends StatefulWidget {
 class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   final _formKey = GlobalKey<FormState>();
   late final _trade = TextEditingController(text: widget.initialDraft.trade);
+  late final _constructionLocation = TextEditingController(
+    text: widget.initialDraft.constructionLocation,
+  );
   late final _name = TextEditingController(text: widget.initialDraft.name);
   late final _specification = TextEditingController(
     text: widget.initialDraft.specification,
@@ -79,6 +82,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   @override
   void dispose() {
     _trade.dispose();
+    _constructionLocation.dispose();
     _name.dispose();
     _specification.dispose();
     _quantity.dispose();
@@ -128,6 +132,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
             _unitPriceValue != null,
         draft: widget.initialDraft.copyWith(
           trade: _trade.text.trim(),
+          constructionLocation: _constructionLocation.text.trim(),
           name: _name.text.trim(),
           specification: _specification.text.trim(),
           quantity: _quantityValue,
@@ -386,6 +391,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     final item = selected.item;
     setState(() {
       _trade.text = item.trade;
+      _constructionLocation.text = item.constructionLocation;
       _name.text = item.name;
       _specification.text = item.specification;
       _unit.text = item.unit;
@@ -432,15 +438,31 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 key: const Key('estimateTradeField'),
               ),
               _field(
+                _constructionLocation,
+                l10n.choose(
+                  japanese: '施工場所',
+                  english: 'Work location',
+                  simplifiedChinese: '施工地点',
+                  traditionalChinese: '施工地點',
+                  vietnamese: 'Vị trí thi công',
+                  indonesian: 'Lokasi pekerjaan',
+                  filipino: 'Lokasyon ng trabaho',
+                  myanmar: 'ဆောက်လုပ်ရေးနေရာ',
+                ),
+                key: const Key('estimateConstructionLocationField'),
+                maxLines: null,
+              ),
+              _field(
                 _name,
                 l10n.text('名称'),
                 key: const Key('estimateNameField'),
+                maxLines: null,
               ),
               _field(
                 _specification,
                 l10n.text('仕様'),
                 key: const Key('estimateSpecificationField'),
-                maxLines: 2,
+                maxLines: null,
               ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,7 +563,6 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 _description,
                 l10n.text('摘要'),
                 key: const Key('estimateDescriptionField'),
-                maxLines: 3,
               ),
               if (widget.initialDraft.calculationBasis.isNotEmpty)
                 ExpansionTile(
@@ -596,7 +617,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     TextEditingController controller,
     String label, {
     required Key key,
-    int maxLines = 1,
+    int? maxLines = 1,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),

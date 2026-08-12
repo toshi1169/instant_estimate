@@ -29,6 +29,16 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
     text: widget.initialInfo.estimateNumber,
   );
   late final _notes = TextEditingController(text: widget.initialInfo.notes);
+  late final _proviso = TextEditingController(text: widget.initialInfo.proviso);
+  late final _validityPeriod = TextEditingController(
+    text: widget.initialInfo.validityPeriod,
+  );
+  late final _constructionPeriod = TextEditingController(
+    text: widget.initialInfo.constructionPeriod,
+  );
+  late final _paymentTerms = TextEditingController(
+    text: widget.initialInfo.paymentTerms,
+  );
   late DateTime _createdDate = widget.initialInfo.createdDate;
 
   @override
@@ -38,6 +48,10 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
     _clientName.dispose();
     _estimateNumber.dispose();
     _notes.dispose();
+    _proviso.dispose();
+    _validityPeriod.dispose();
+    _constructionPeriod.dispose();
+    _paymentTerms.dispose();
     super.dispose();
   }
 
@@ -62,6 +76,10 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
         createdDate: _createdDate,
         estimateNumber: _estimateNumber.text.trim(),
         notes: _notes.text.trim(),
+        proviso: _proviso.text.trim(),
+        validityPeriod: _validityPeriod.text.trim(),
+        constructionPeriod: _constructionPeriod.text.trim(),
+        paymentTerms: _paymentTerms.text.trim(),
       ),
     );
   }
@@ -107,6 +125,63 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
               onTap: _selectDate,
             ),
             const SizedBox(height: 12),
+            _field(
+              _proviso,
+              strings.choose(
+                japanese: '但し書き',
+                english: 'Proviso',
+                simplifiedChinese: '附加说明',
+                traditionalChinese: '附加說明',
+                vietnamese: 'Điều khoản ghi chú',
+                indonesian: 'Catatan ketentuan',
+                filipino: 'Tanging kondisyon',
+                myanmar: 'ခြွင်းချက်မှတ်ချက်',
+              ),
+              key: const Key('estimateInfoProvisoField'),
+              maxLines: 3,
+            ),
+            _field(
+              _validityPeriod,
+              strings.choose(
+                japanese: '見積有効期限',
+                english: 'Estimate validity',
+                simplifiedChinese: '报价有效期',
+                traditionalChinese: '報價有效期限',
+                vietnamese: 'Thời hạn hiệu lực báo giá',
+                indonesian: 'Masa berlaku penawaran',
+                filipino: 'Bisa ng pagtataya',
+                myanmar: 'ခန့်မှန်းချက်သက်တမ်း',
+              ),
+              key: const Key('estimateInfoValidityPeriodField'),
+            ),
+            _field(
+              _constructionPeriod,
+              strings.choose(
+                japanese: '工期',
+                english: 'Construction period',
+                simplifiedChinese: '工期',
+                traditionalChinese: '工期',
+                vietnamese: 'Thời gian thi công',
+                indonesian: 'Masa pelaksanaan',
+                filipino: 'Panahon ng paggawa',
+                myanmar: 'ဆောက်လုပ်ရေးကာလ',
+              ),
+              key: const Key('estimateInfoConstructionPeriodField'),
+            ),
+            _field(
+              _paymentTerms,
+              strings.choose(
+                japanese: '支払条件',
+                english: 'Payment terms',
+                simplifiedChinese: '付款条件',
+                traditionalChinese: '付款條件',
+                vietnamese: 'Điều khoản thanh toán',
+                indonesian: 'Ketentuan pembayaran',
+                filipino: 'Mga tuntunin sa pagbabayad',
+                myanmar: 'ငွေပေးချေမှုစည်းကမ်းချက်များ',
+              ),
+              key: const Key('estimateInfoPaymentTermsField'),
+            ),
             _field(
               _notes,
               strings.text('備考'),
