@@ -7,18 +7,34 @@ import '../../../core/domain/app_access_plan.dart';
 import '../domain/purchase_store.dart';
 
 class InAppPurchaseStore implements PurchaseStore {
-  InAppPurchaseStore({InAppPurchase? inAppPurchase})
-    : _inAppPurchase = inAppPurchase ?? InAppPurchase.instance;
+  InAppPurchaseStore({
+    InAppPurchase? inAppPurchase,
+    Stream<List<PurchaseDetails>>? purchaseStream,
+    Future<void> Function()? restorePurchases,
+  }) : _inAppPurchase =
+           inAppPurchase ??
+           (purchaseStream == null || restorePurchases == null
+               ? InAppPurchase.instance
+               : null) {
+    _purchaseStream = purchaseStream ?? _inAppPurchase!.purchaseStream;
+    _restorePurchases = restorePurchases ?? _inAppPurchase!.restorePurchases;
+  }
 
-  final InAppPurchase _inAppPurchase;
+  final InAppPurchase? _inAppPurchase;
+  late final Stream<List<PurchaseDetails>> _purchaseStream;
+  late final Future<void> Function() _restorePurchases;
   final ValueNotifier<PurchaseStoreState> _state = ValueNotifier(
     const PurchaseStoreState(),
   );
   final StreamController<AppAccessPlan> _entitlementChanges =
       StreamController<AppAccessPlan>.broadcast();
+  final StreamController<PurchaseEntitlementSnapshot> _entitlementSnapshots =
+      StreamController<PurchaseEntitlementSnapshot>.broadcast();
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
   Map<String, ProductDetails> _productDetails = const {};
   bool _initialized = false;
+  Set<AppAccessPlan>? _refreshingPlans;
+  Future<PurchaseEntitlementSnapshot>? _refreshingEntitlements;
 
   @override
   ValueListenable<PurchaseStoreState> get state => _state;
@@ -27,15 +43,14 @@ class InAppPurchaseStore implements PurchaseStore {
   Stream<AppAccessPlan> get entitlementChanges => _entitlementChanges.stream;
 
   @override
+  Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots =>
+      _entitlementSnapshots.stream;
+
+  @override
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
-    _purchaseSubscription = _inAppPurchase.purchaseStream.listen(
-      _handlePurchaseUpdates,
-      onError: (Object error) {
-        _setState(PurchaseOperation.error, message: error.toString());
-      },
-    );
+    _ensurePurchaseListener();
     _setState(PurchaseOperation.loading);
 
     try {
@@ -43,6 +58,15 @@ class InAppPurchaseStore implements PurchaseStore {
     } catch (error) {
       _setState(PurchaseOperation.error, message: error.toString());
     }
+  }
+
+  void _ensurePurchaseListener() {
+    _purchaseSubscription ??= _purchaseStream.listen(
+      _handlePurchaseUpdates,
+      onError: (Object error) {
+        _setState(PurchaseOperation.error, message: error.toString());
+      },
+    );
   }
 
   @override
@@ -63,7 +87,7 @@ class InAppPurchaseStore implements PurchaseStore {
         return;
       }
       _setState(PurchaseOperation.purchasing);
-      final started = await _inAppPurchase.buyNonConsumable(
+      final started = await _inAppPurchase!.buyNonConsumable(
         purchaseParam: PurchaseParam(productDetails: product),
       );
       if (!started) {
@@ -75,7 +99,7 @@ class InAppPurchaseStore implements PurchaseStore {
   }
 
   Future<void> _loadProducts() async {
-    if (!await _inAppPurchase.isAvailable()) {
+    if (!await _inAppPurchase!.isAvailable()) {
       _setState(PurchaseOperation.unavailable);
       return;
     }
@@ -113,14 +137,39 @@ class InAppPurchaseStore implements PurchaseStore {
   @override
   Future<void> restorePurchases() async {
     _setState(PurchaseOperation.restoring);
+    await refreshEntitlements();
+  }
+
+  @override
+  Future<PurchaseEntitlementSnapshot> refreshEntitlements() {
+    final pending = _refreshingEntitlements;
+    if (pending != null) return pending;
+    final refresh = _refreshCurrentEntitlements();
+    _refreshingEntitlements = refresh;
+    return refresh.whenComplete(() => _refreshingEntitlements = null);
+  }
+
+  Future<PurchaseEntitlementSnapshot> _refreshCurrentEntitlements() async {
+    _ensurePurchaseListener();
+    _refreshingPlans = <AppAccessPlan>{};
+    PurchaseEntitlementSnapshot snapshot;
     try {
-      await _inAppPurchase.restorePurchases();
+      await _restorePurchases();
+      // StoreKit sends restored transactions before completing the restore
+      // method call. Yield once so the purchase stream can deliver them.
+      await Future<void>.delayed(Duration.zero);
+      snapshot = PurchaseEntitlementSnapshot.verified(_refreshingPlans!);
       if (_state.value.operation == PurchaseOperation.restoring) {
         _setState(PurchaseOperation.ready);
       }
     } catch (error) {
+      snapshot = PurchaseEntitlementSnapshot.failed(error.toString());
       _setState(PurchaseOperation.error, message: error.toString());
+    } finally {
+      _refreshingPlans = null;
     }
+    _entitlementSnapshots.add(snapshot);
+    return snapshot;
   }
 
   Future<void> _handlePurchaseUpdates(List<PurchaseDetails> purchases) async {
@@ -135,7 +184,12 @@ class InAppPurchaseStore implements PurchaseStore {
             purchase.verificationData.localVerificationData.isNotEmpty;
         final plan = PurchaseProductIds.planFor(purchase.productID);
         if (hasVerificationData && plan != null) {
-          _entitlementChanges.add(plan);
+          final refreshingPlans = _refreshingPlans;
+          if (refreshingPlans != null) {
+            refreshingPlans.add(plan);
+          } else {
+            _entitlementChanges.add(plan);
+          }
           granted = true;
         }
       } else if (purchase.status == PurchaseStatus.error) {
@@ -145,7 +199,7 @@ class InAppPurchaseStore implements PurchaseStore {
       }
 
       if (purchase.pendingCompletePurchase) {
-        await _inAppPurchase.completePurchase(purchase);
+        await _inAppPurchase!.completePurchase(purchase);
       }
     }
     if (granted) _setState(PurchaseOperation.completed);
@@ -163,6 +217,7 @@ class InAppPurchaseStore implements PurchaseStore {
   void dispose() {
     unawaited(_purchaseSubscription?.cancel());
     unawaited(_entitlementChanges.close());
+    unawaited(_entitlementSnapshots.close());
     _state.dispose();
   }
 }

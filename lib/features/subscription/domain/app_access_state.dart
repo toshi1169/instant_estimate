@@ -38,16 +38,32 @@ class AppAccessState {
         (now ?? DateTime.now()).isBefore(trialEndsAt!);
   }
 
+  /// Replaces the cached plan with a successfully refreshed Store snapshot.
+  ///
+  /// Unlike a purchase event, this deliberately permits downgrades when an
+  /// entitlement has expired or has been revoked.
+  AppAccessState reconcileVerifiedPlan(
+    AppAccessPlan verifiedPlan, {
+    required DateTime verifiedAt,
+  }) {
+    return copyWith(
+      plan: verifiedPlan,
+      lastVerifiedAt: verifiedAt,
+      clearTrialEndsAt: true,
+    );
+  }
+
   AppAccessState copyWith({
     AppAccessPlan? plan,
     DateTime? trialEndsAt,
+    bool clearTrialEndsAt = false,
     DateTime? lastVerifiedAt,
     String? rewardedAccessDay,
     List<String>? rewardedAccessGroups,
   }) {
     return AppAccessState(
       plan: plan ?? this.plan,
-      trialEndsAt: trialEndsAt ?? this.trialEndsAt,
+      trialEndsAt: clearTrialEndsAt ? null : trialEndsAt ?? this.trialEndsAt,
       lastVerifiedAt: lastVerifiedAt ?? this.lastVerifiedAt,
       rewardedAccessDay: rewardedAccessDay ?? this.rewardedAccessDay,
       rewardedAccessGroups: rewardedAccessGroups ?? this.rewardedAccessGroups,

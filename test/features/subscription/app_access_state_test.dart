@@ -51,6 +51,44 @@ void main() {
     expect(state.effectivePlan(), AppAccessPlan.free);
   });
 
+  test('再検証によりfullからfreeへダウングレードできる', () {
+    const state = AppAccessState(plan: AppAccessPlan.full);
+    final verifiedAt = DateTime.utc(2026, 8, 12);
+
+    final reconciled = state.reconcileVerifiedPlan(
+      AppAccessPlan.free,
+      verifiedAt: verifiedAt,
+    );
+
+    expect(reconciled.plan, AppAccessPlan.free);
+    expect(reconciled.lastVerifiedAt, verifiedAt);
+  });
+
+  test('再検証によりfullから所有済みadFreeへダウングレードできる', () {
+    const state = AppAccessState(plan: AppAccessPlan.full);
+
+    final reconciled = state.reconcileVerifiedPlan(
+      AppAccessPlan.adFree,
+      verifiedAt: DateTime.utc(2026, 8, 12),
+    );
+
+    expect(reconciled.plan, AppAccessPlan.adFree);
+  });
+
+  test('再検証時は期限切れ体験期間を消去する', () {
+    final state = AppAccessState(
+      plan: AppAccessPlan.full,
+      trialEndsAt: DateTime.utc(2026, 8, 1),
+    );
+
+    final reconciled = state.reconcileVerifiedPlan(
+      AppAccessPlan.free,
+      verifiedAt: DateTime.utc(2026, 8, 12),
+    );
+
+    expect(reconciled.trialEndsAt, isNull);
+  });
+
   test('壊れた広告保存値は空の状態へ安全に戻す', () {
     final state = AppAccessState.fromJson(const {
       'plan': 'free',

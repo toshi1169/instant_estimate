@@ -72,6 +72,8 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       widget.advertisingConsentManager?.state.value ??
       const AdvertisingConsentState(canRequestAds: true);
   StreamSubscription<AppAccessPlan>? _purchaseEntitlementSubscription;
+  StreamSubscription<PurchaseEntitlementSnapshot>?
+  _purchaseEntitlementSnapshotSubscription;
 
   @override
   void initState() {
@@ -92,6 +94,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       _handleAdvertisingConsentChanged,
     );
     unawaited(_purchaseEntitlementSubscription?.cancel());
+    unawaited(_purchaseEntitlementSnapshotSubscription?.cancel());
     widget.purchaseStore?.dispose();
     super.dispose();
   }
@@ -103,7 +106,11 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
     _purchaseEntitlementSubscription = purchaseStore.entitlementChanges.listen(
       (plan) => unawaited(_applyPurchasedPlan(plan)),
     );
+    _purchaseEntitlementSnapshotSubscription = purchaseStore
+        .entitlementSnapshots
+        .listen((snapshot) => unawaited(_applyEntitlementSnapshot(snapshot)));
     await purchaseStore.initialize();
+    await purchaseStore.refreshEntitlements();
   }
 
   Future<void> _applyPurchasedPlan(AppAccessPlan purchasedPlan) async {
@@ -115,7 +122,23 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
     final updatedState = _accessState.copyWith(
       plan: effectivePlan,
       lastVerifiedAt: DateTime.now(),
+      clearTrialEndsAt: true,
     );
+    await _saveAndApplyAccessState(updatedState);
+  }
+
+  Future<void> _applyEntitlementSnapshot(
+    PurchaseEntitlementSnapshot snapshot,
+  ) async {
+    if (!snapshot.isVerified) return;
+    final updatedState = _accessState.reconcileVerifiedPlan(
+      snapshot.effectivePlan,
+      verifiedAt: DateTime.now(),
+    );
+    await _saveAndApplyAccessState(updatedState);
+  }
+
+  Future<void> _saveAndApplyAccessState(AppAccessState updatedState) async {
     final store = widget.accessStateStore;
     if (store != null) {
       try {

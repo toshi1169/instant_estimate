@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:instant_estimate/core/domain/app_access_plan.dart';
 import 'package:instant_estimate/core/localization/app_localizations.dart';
+import 'package:instant_estimate/features/subscription/data/in_app_purchase_store.dart';
 import 'package:instant_estimate/features/subscription/domain/purchase_store.dart';
 import 'package:instant_estimate/features/subscription/presentation/access_plan_screen.dart';
 
@@ -25,6 +27,88 @@ void main() {
       AppAccessPlan.adFree,
     );
     expect(PurchaseProductIds.planFor('unknown'), isNull);
+  });
+
+  group('現在有効な権利の再確認', () {
+    test('有効なfullを完全版として返す', () async {
+      final result = await _refreshWithProducts([
+        PurchaseProductIds.fullMonthly,
+      ]);
+
+      expect(result.isVerified, isTrue);
+      expect(result.effectivePlan, AppAccessPlan.full);
+    });
+
+    test('fullとadFreeの両方を所有する場合はfullを優先する', () async {
+      final result = await _refreshWithProducts([
+        PurchaseProductIds.adFree,
+        PurchaseProductIds.fullMonthly,
+      ]);
+
+      expect(result.effectivePlan, AppAccessPlan.full);
+    });
+
+    test('期限切れfullが現在権利に含まれなければfreeへ戻す', () async {
+      final result = await _refreshWithProducts(const []);
+
+      expect(result.isVerified, isTrue);
+      expect(result.effectivePlan, AppAccessPlan.free);
+    });
+
+    test('期限切れfullでもadFreeを所有していればadFreeへ戻す', () async {
+      final result = await _refreshWithProducts([PurchaseProductIds.adFree]);
+
+      expect(result.effectivePlan, AppAccessPlan.adFree);
+    });
+
+    test('取消済みfullが除外されadFreeもなければfreeへ戻す', () async {
+      final result = await _refreshWithProducts(const []);
+
+      expect(result.effectivePlan, AppAccessPlan.free);
+    });
+
+    test('復元結果が空でも確認成功としてfreeを返す', () async {
+      final result = await _refreshWithProducts(const []);
+
+      expect(result.status, PurchaseEntitlementRefreshStatus.verified);
+      expect(result.activePlans, isEmpty);
+    });
+
+    test('Store問い合わせ失敗を有効権利なしと区別する', () async {
+      final store = InAppPurchaseStore(
+        purchaseStream: const Stream<List<PurchaseDetails>>.empty(),
+        restorePurchases: () => Future<void>.error(Exception('offline')),
+      );
+      addTearDown(store.dispose);
+
+      final result = await store.refreshEntitlements();
+
+      expect(result.status, PurchaseEntitlementRefreshStatus.failed);
+      expect(result.isVerified, isFalse);
+    });
+
+    test('購入直後のfullを購入イベントとして付与する', () async {
+      final updates = StreamController<List<PurchaseDetails>>.broadcast();
+      final store = InAppPurchaseStore(
+        purchaseStream: updates.stream,
+        restorePurchases: () async {},
+      );
+      addTearDown(() async {
+        store.dispose();
+        await updates.close();
+      });
+
+      await store.refreshEntitlements();
+      final purchasedPlan = store.entitlementChanges.first;
+      updates.add([
+        _purchaseDetails(
+          PurchaseProductIds.fullMonthly,
+          PurchaseStatus.purchased,
+        ),
+      ]);
+
+      expect(await purchasedPlan, AppAccessPlan.full);
+    });
   });
 
   testWidgets('ストア価格で購入し、購入履歴を復元できる', (tester) async {
@@ -206,6 +290,8 @@ class _FakePurchaseStore implements PurchaseStore {
   final ValueNotifier<PurchaseStoreState> _state;
   final StreamController<AppAccessPlan> _entitlements =
       StreamController<AppAccessPlan>.broadcast();
+  final StreamController<PurchaseEntitlementSnapshot> _snapshots =
+      StreamController<PurchaseEntitlementSnapshot>.broadcast();
 
   AppAccessPlan? purchasedPlan;
   int restoreCount = 0;
@@ -217,11 +303,20 @@ class _FakePurchaseStore implements PurchaseStore {
   Stream<AppAccessPlan> get entitlementChanges => _entitlements.stream;
 
   @override
+  Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots =>
+      _snapshots.stream;
+
+  @override
   Future<void> initialize() async {}
 
   @override
   Future<void> purchase(AppAccessPlan plan) async {
     purchasedPlan = plan;
+  }
+
+  @override
+  Future<PurchaseEntitlementSnapshot> refreshEntitlements() async {
+    return PurchaseEntitlementSnapshot.verified(const []);
   }
 
   @override
@@ -233,5 +328,42 @@ class _FakePurchaseStore implements PurchaseStore {
   void dispose() {
     _state.dispose();
     _entitlements.close();
+    _snapshots.close();
   }
+}
+
+Future<PurchaseEntitlementSnapshot> _refreshWithProducts(
+  List<String> productIds,
+) async {
+  final updates = StreamController<List<PurchaseDetails>>.broadcast();
+  final store = InAppPurchaseStore(
+    purchaseStream: updates.stream,
+    restorePurchases: () async {
+      if (productIds.isNotEmpty) {
+        updates.add([
+          for (final productId in productIds)
+            _purchaseDetails(productId, PurchaseStatus.restored),
+        ]);
+      }
+    },
+  );
+  try {
+    return await store.refreshEntitlements();
+  } finally {
+    store.dispose();
+    await updates.close();
+  }
+}
+
+PurchaseDetails _purchaseDetails(String productId, PurchaseStatus status) {
+  return PurchaseDetails(
+    productID: productId,
+    verificationData: PurchaseVerificationData(
+      localVerificationData: 'verified',
+      serverVerificationData: 'verified',
+      source: 'test',
+    ),
+    transactionDate: '0',
+    status: status,
+  );
 }

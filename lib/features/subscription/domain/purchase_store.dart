@@ -72,12 +72,51 @@ class PurchaseStoreState {
   }
 }
 
+enum PurchaseEntitlementRefreshStatus { verified, failed }
+
+@immutable
+class PurchaseEntitlementSnapshot {
+  const PurchaseEntitlementSnapshot._({
+    required this.status,
+    this.activePlans = const <AppAccessPlan>{},
+    this.message,
+  });
+
+  factory PurchaseEntitlementSnapshot.verified(
+    Iterable<AppAccessPlan> activePlans,
+  ) {
+    return PurchaseEntitlementSnapshot._(
+      status: PurchaseEntitlementRefreshStatus.verified,
+      activePlans: Set.unmodifiable(activePlans),
+    );
+  }
+
+  const PurchaseEntitlementSnapshot.failed([String? message])
+    : this._(status: PurchaseEntitlementRefreshStatus.failed, message: message);
+
+  final PurchaseEntitlementRefreshStatus status;
+  final Set<AppAccessPlan> activePlans;
+  final String? message;
+
+  bool get isVerified => status == PurchaseEntitlementRefreshStatus.verified;
+
+  AppAccessPlan get effectivePlan {
+    if (activePlans.contains(AppAccessPlan.full)) return AppAccessPlan.full;
+    if (activePlans.contains(AppAccessPlan.adFree)) {
+      return AppAccessPlan.adFree;
+    }
+    return AppAccessPlan.free;
+  }
+}
+
 abstract interface class PurchaseStore {
   ValueListenable<PurchaseStoreState> get state;
   Stream<AppAccessPlan> get entitlementChanges;
+  Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots;
 
   Future<void> initialize();
   Future<void> purchase(AppAccessPlan plan);
+  Future<PurchaseEntitlementSnapshot> refreshEntitlements();
   Future<void> restorePurchases();
   void dispose();
 }
