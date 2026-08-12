@@ -25,6 +25,7 @@ Future<DuplicateEstimateItemAction> showDuplicateEstimateItemDialog(
               simplifiedChinese: '“$name”已添加到当前估算中。',
               traditionalChinese: '「$name」已加入目前的估算。',
               vietnamese: '"$name" đã có trong dự toán hiện tại.',
+              indonesian: '"$name" sudah ada dalam estimasi saat ini.',
             ),
           ),
           actions: [

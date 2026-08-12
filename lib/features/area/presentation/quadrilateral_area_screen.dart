@@ -88,6 +88,7 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
       simplifiedChinese: '三角形',
       traditionalChinese: '三角形',
       vietnamese: 'Tam giác',
+      indonesian: 'Segitiga',
     );
     final calculationBasis =
         '$specification\n'
@@ -234,6 +235,9 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
                         vietnamese:
                             'Tam giác 1 ${_format(result.firstTriangleArea)} m²'
                             '  +  Tam giác 2 ${_format(result.secondTriangleArea)} m²',
+                        indonesian:
+                            'Segitiga 1 ${_format(result.firstTriangleArea)} m²'
+                            '  +  Segitiga 2 ${_format(result.secondTriangleArea)} m²',
                       ),
                       textAlign: TextAlign.right,
                       style: theme.textTheme.bodyMedium,

@@ -44,6 +44,15 @@ void main() {
     expect(restored.language.locale.languageCode, 'vi');
   });
 
+  test('インドネシア語の設定を保存・復元できる', () {
+    const settings = AppSettings(language: AppLanguage.indonesian);
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.language, AppLanguage.indonesian);
+    expect(restored.language.locale.languageCode, 'id');
+  });
+
   test('ユーザー登録車両を設定データに保存・復元できる', () {
     const vehicle = TransportVehicle(
       id: 'custom_test',
