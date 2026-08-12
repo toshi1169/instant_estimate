@@ -530,6 +530,43 @@ void main() {
     expect(opened, isTrue);
   });
 
+  testWidgets('設定の言語一覧は項目数が増えてもスクロールして選択できる', (tester) async {
+    var settings = const AppSettings();
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ja'),
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        home: SettingsScreen(
+          settings: settings,
+          onSettingsChanged: (value) => settings = value,
+          onClearHistory: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('languageSetting')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    await tester.scrollUntilVisible(
+      find.text('မြန်မာ'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(find.text('မြန်မာ'));
+    await tester.pumpAndSettle();
+
+    expect(settings.language, AppLanguage.myanmar);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('初回起動では業種選択を表示する', (tester) async {
     final preferences = FakeOnboardingPreferences(hasSelected: false);
     await tester.pumpWidget(

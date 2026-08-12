@@ -49,27 +49,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return showModalBottomSheet<T>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-              child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-            ),
-            for (final choice in choices)
-              ListTile(
-                title: Text(choice.$2),
-                trailing: choice.$1 == selected
-                    ? Icon(
-                        Icons.check,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : null,
-                onTap: () => Navigator.of(context).pop(choice.$1),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
-            const SizedBox(height: 8),
-          ],
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: choices.length,
+                  itemBuilder: (context, index) {
+                    final choice = choices[index];
+                    return ListTile(
+                      title: Text(choice.$2),
+                      trailing: choice.$1 == selected
+                          ? Icon(
+                              Icons.check,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
+                          : null,
+                      onTap: () => Navigator.of(context).pop(choice.$1),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
