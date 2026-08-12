@@ -35,6 +35,15 @@ void main() {
     expect(restored.language.locale.countryCode, 'TW');
   });
 
+  test('ベトナム語の設定を保存・復元できる', () {
+    const settings = AppSettings(language: AppLanguage.vietnamese);
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.language, AppLanguage.vietnamese);
+    expect(restored.language.locale.languageCode, 'vi');
+  });
+
   test('ユーザー登録車両を設定データに保存・復元できる', () {
     const vehicle = TransportVehicle(
       id: 'custom_test',

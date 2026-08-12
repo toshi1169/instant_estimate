@@ -38,6 +38,10 @@ Future<MergeEstimateQuantityAction> showMergeEstimateQuantityDialog(
                   '要將數量加到「$name」嗎？\n\n'
                   '現有：$currentQuantity $unit\n'
                   '本次：$incomingQuantity $unit',
+              vietnamese:
+                  'Cộng khối lượng vào "$name"?\n\n'
+                  'Hiện có: $currentQuantity $unit\n'
+                  'Lần này: $incomingQuantity $unit',
             ),
           ),
           actions: [

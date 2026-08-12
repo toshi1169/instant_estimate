@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'app_language.dart';
+import 'vietnamese_translations.dart';
 
 class AppLocalizations {
   const AppLocalizations(this.appLanguage);
@@ -12,6 +13,7 @@ class AppLocalizations {
   bool get isSimplifiedChinese => appLanguage == AppLanguage.simplifiedChinese;
   bool get isTraditionalChinese =>
       appLanguage == AppLanguage.traditionalChinese;
+  bool get isVietnamese => appLanguage == AppLanguage.vietnamese;
 
   // English is also the safe fallback while a newly added language is being
   // translated screen by screen. This prevents Japanese text leaking into a
@@ -23,11 +25,14 @@ class AppLocalizations {
     required String english,
     required String simplifiedChinese,
     String? traditionalChinese,
+    String? vietnamese,
   }) => switch (appLanguage) {
     AppLanguage.japanese => japanese,
     AppLanguage.english => english,
     AppLanguage.simplifiedChinese => simplifiedChinese,
     AppLanguage.traditionalChinese => traditionalChinese ?? english,
+    AppLanguage.vietnamese =>
+      vietnamese ?? vietnameseTranslations[japanese] ?? english,
   };
 
   String choose({
@@ -35,11 +40,13 @@ class AppLocalizations {
     required String english,
     required String simplifiedChinese,
     String? traditionalChinese,
+    String? vietnamese,
   }) => _pick(
     japanese: japanese,
     english: english,
     simplifiedChinese: simplifiedChinese,
     traditionalChinese: traditionalChinese,
+    vietnamese: vietnamese,
   );
 
   static AppLocalizations of(BuildContext context) {
@@ -87,6 +94,7 @@ class AppLocalizations {
   String get english => 'English';
   String get simplifiedChinese => '简体中文';
   String get traditionalChinese => '繁體中文';
+  String get vietnamese => 'Tiếng Việt';
   String get occupationTitle => _pick(
     japanese: '業種を選択',
     english: 'Choose occupation',
@@ -119,42 +127,49 @@ class AppLocalizations {
       english: 'Building supervisor',
       simplifiedChinese: '建筑监理',
       traditionalChinese: '建築監督',
+      vietnamese: 'Giám sát xây dựng',
     ),
     '土木監督' => _pick(
       japanese: value,
       english: 'Civil supervisor',
       simplifiedChinese: '土木监理',
       traditionalChinese: '土木監督',
+      vietnamese: 'Giám sát công trình dân dụng',
     ),
     '建築基礎' => _pick(
       japanese: value,
       english: 'Building foundations',
       simplifiedChinese: '建筑基础',
       traditionalChinese: '建築基礎',
+      vietnamese: 'Công tác móng',
     ),
     '外構' => _pick(
       japanese: value,
       english: 'Exterior works',
       simplifiedChinese: '室外工程',
       traditionalChinese: '外構工程',
+      vietnamese: 'Công trình ngoại thất',
     ),
     '内装' => _pick(
       japanese: value,
       english: 'Interior works',
       simplifiedChinese: '室内装修',
       traditionalChinese: '室內裝修',
+      vietnamese: 'Công tác nội thất',
     ),
     '多能工' => _pick(
       japanese: value,
       english: 'Multi-skilled worker',
       simplifiedChinese: '多技能工',
       traditionalChinese: '多技能工',
+      vietnamese: 'Thợ đa năng',
     ),
     _ => _pick(
       japanese: value,
       english: 'Other',
       simplifiedChinese: '其他',
       traditionalChinese: '其他',
+      vietnamese: 'Khác',
     ),
   };
 
@@ -236,6 +251,7 @@ class AppLocalizations {
 
   String text(String japanese) {
     if (isJapanese) return japanese;
+    if (isVietnamese) return vietnameseTranslations[japanese] ?? japanese;
     if (isTraditionalChinese) {
       final translated = const <String, String>{
         '便利計算一覧': '實用計算',
@@ -1579,6 +1595,7 @@ class AppLocalizations {
     english: '$count items',
     simplifiedChinese: '$count项',
     traditionalChinese: '$count項',
+    vietnamese: '$count mục',
   );
   String productivityUnit(String value) {
     return switch (appLanguage) {
@@ -1610,6 +1627,15 @@ class AppLocalizations {
         '式' => '項',
         _ => text(value),
       },
+      AppLanguage.vietnamese => switch (value) {
+        '本' => 'cái',
+        '枚' => 'tấm',
+        '個' => 'cái',
+        '箇所' => 'vị trí',
+        '組' => 'bộ',
+        '式' => 'trọn gói',
+        _ => text(value),
+      },
     };
   }
 
@@ -1618,12 +1644,14 @@ class AppLocalizations {
     english: '$count / $limit items',
     simplifiedChinese: '$count / $limit项',
     traditionalChinese: '$count / $limit項',
+    vietnamese: '$count / $limit mục',
   );
   String currentSaveLimit(int limit) => _pick(
     japanese: '現在の保存上限：$limit件',
     english: 'Current storage limit: $limit items',
     simplifiedChinese: '当前保存上限：$limit项',
     traditionalChinese: '目前儲存上限：$limit項',
+    vietnamese: 'Giới hạn lưu hiện tại: $limit mục',
   );
   String productivityLimitMessage(int limit) => _pick(
     japanese: '現在のプランでは最大$limit件まで保存できます。完全版では100件まで保存できます。',
@@ -1631,6 +1659,8 @@ class AppLocalizations {
         'The current plan can save up to $limit records. The full plan can save up to 100 records.',
     simplifiedChinese: '当前方案最多可保存$limit条记录。完整版最多可保存100条记录。',
     traditionalChinese: '目前方案最多可儲存$limit筆紀錄。完整版最多可儲存100筆紀錄。',
+    vietnamese:
+        'Gói hiện tại có thể lưu tối đa $limit bản ghi. Bản đầy đủ có thể lưu tối đa 100 bản ghi.',
   );
   String get freeEstimateLimit => _pick(
     japanese: '無料版では見積を5件まで保存できます',
@@ -1680,6 +1710,27 @@ class AppLocalizations {
   );
 
   String specializedUnitExplanation(String id) {
+    if (isVietnamese) {
+      return switch (id) {
+        'shaku' =>
+          'SHAKU là đơn vị chiều dài truyền thống của Nhật Bản. Ứng dụng quy đổi 1 shaku = 10/33 m (khoảng 0,30303 m).',
+        'sun' =>
+          'SUN là đơn vị chiều dài truyền thống của Nhật Bản. 1 sun = 1/10 shaku = 1/33 m (khoảng 0,030303 m).',
+        'ken' =>
+          'KEN là đơn vị chiều dài truyền thống của Nhật Bản. 1 ken = 6 shaku = 20/11 m (khoảng 1,81818 m).',
+        'tsubo' =>
+          'TSUBO là đơn vị diện tích truyền thống của Nhật Bản. 1 tsubo = 400/121 m² (khoảng 3,30579 m²).',
+        'hyo' =>
+          'HYO là đơn vị khối lượng truyền thống của Nhật Bản, thay đổi theo loại hàng. Ứng dụng dùng 1 hyo gạo = 60 kg làm giá trị tham khảo.',
+        'natural' =>
+          'JIYAMA là thể tích đất ở trạng thái tự nhiên trước khi đào, dùng làm thể tích chuẩn khi quy đổi công tác đất.',
+        'loose' =>
+          'HOGUSHI là thể tích đất tơi sau khi đào. Thể tích đất tơi = thể tích đất nguyên thổ × hệ số tơi.',
+        'compacted' =>
+          'SHIMEKATAME là thể tích đất sau khi đầm nén. Thể tích đất đầm chặt = thể tích đất nguyên thổ × hệ số đầm nén.',
+        _ => '',
+      };
+    }
     if (isTraditionalChinese) {
       return switch (id) {
         'shaku' => '尺（SHAKU）是日本傳統長度單位。本應用程式以1尺＝10/33公尺（約0.30303公尺）換算。',
@@ -1766,6 +1817,7 @@ class AppLocalizations {
     english: 'Copied $count estimate details',
     simplifiedChinese: '已复制估算明细（$count项）',
     traditionalChinese: '已複製估算明細（$count項）',
+    vietnamese: 'Đã sao chép $count chi tiết dự toán',
   );
 
   String mergedEstimateQuantity(String quantity) => _pick(
@@ -1774,6 +1826,8 @@ class AppLocalizations {
         'Added the quantity to the existing detail. New quantity: $quantity',
     simplifiedChinese: '已将数量加到现有明细。新数量：$quantity',
     traditionalChinese: '已將數量加到現有明細。新數量：$quantity',
+    vietnamese:
+        'Đã cộng khối lượng vào chi tiết hiện có. Khối lượng mới: $quantity',
   );
 
   String deleteEstimateItemQuestion(String name) => _pick(
@@ -1781,6 +1835,7 @@ class AppLocalizations {
     english: 'Delete "$name"?',
     simplifiedChinese: '要删除“$name”吗？',
     traditionalChinese: '要刪除「$name」嗎？',
+    vietnamese: 'Xóa "$name"?',
   );
 
   String estimateItemAddedWithCount(String message, int count) => _pick(
@@ -1788,6 +1843,7 @@ class AppLocalizations {
     english: '${text(message)} ($count details)',
     simplifiedChinese: '${text(message)}（$count项）',
     traditionalChinese: '${text(message)}（$count項）',
+    vietnamese: '${text(message)} ($count chi tiết)',
   );
 
   String deleteUnitPriceQuestion(String name) => _pick(
@@ -1795,6 +1851,7 @@ class AppLocalizations {
     english: 'Delete "$name" from the unit price master?',
     simplifiedChinese: '要从单价主数据中删除“$name”吗？',
     traditionalChinese: '要從單價資料庫刪除「$name」嗎？',
+    vietnamese: 'Xóa "$name" khỏi danh mục đơn giá?',
   );
 
   String selectUnitPriceMasterCount(int count) => _pick(
@@ -1802,6 +1859,7 @@ class AppLocalizations {
     english: 'Select from unit price master ($count)',
     simplifiedChinese: '从单价主数据选择（$count项）',
     traditionalChinese: '從單價資料庫選擇（$count項）',
+    vietnamese: 'Chọn từ danh mục đơn giá ($count)',
   );
 
   String selectPastEstimateCount(int count) => _pick(
@@ -1809,6 +1867,7 @@ class AppLocalizations {
     english: 'Select from past estimates ($count)',
     simplifiedChinese: '从过去的估算选择（$count项）',
     traditionalChinese: '從過去的估算選擇（$count項）',
+    vietnamese: 'Chọn từ dự toán trước đây ($count)',
   );
 
   String get listSeparator => isJapanese ? ' ／ ' : ' / ';
@@ -1818,6 +1877,7 @@ class AppLocalizations {
     english: '$count details',
     simplifiedChinese: '$count项明细',
     traditionalChinese: '$count項明細',
+    vietnamese: '$count chi tiết',
   );
 
   String deleteEstimateQuestion(String name) => _pick(
@@ -1826,6 +1886,8 @@ class AppLocalizations {
         'Delete "$name"?\nAll details in this estimate will also be deleted.',
     simplifiedChinese: '要删除“$name”吗？\n该估算中的所有明细也会被删除。',
     traditionalChinese: '要刪除「$name」嗎？\n此估算中的所有明細也會被刪除。',
+    vietnamese:
+        'Xóa "$name"?\nTất cả chi tiết trong dự toán này cũng sẽ bị xóa.',
   );
 
   String get displayAndCalculation => _pick(
@@ -1875,6 +1937,7 @@ class AppLocalizations {
     english: '$count places',
     simplifiedChinese: '$count位',
     traditionalChinese: '$count位',
+    vietnamese: '$count chữ số',
   );
   String get roundingMethod => _pick(
     japanese: '丸め方法',
@@ -1985,12 +2048,14 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 
   @override
   bool isSupported(Locale locale) =>
-      const {'ja', 'en', 'zh'}.contains(locale.languageCode);
+      const {'ja', 'en', 'zh', 'vi'}.contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) {
     final language = locale.languageCode == 'en'
         ? AppLanguage.english
+        : locale.languageCode == 'vi'
+        ? AppLanguage.vietnamese
         : locale.languageCode == 'zh'
         ? const {'TW', 'HK', 'MO'}.contains(locale.countryCode)
               ? AppLanguage.traditionalChinese

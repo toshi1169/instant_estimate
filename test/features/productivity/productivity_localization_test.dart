@@ -223,6 +223,40 @@ void main() {
     expect(find.text('6.00 人工'), findsOneWidget);
   });
 
+  testWidgets('ベトナム語で歩掛計算の主要項目と単位を表示する', (tester) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        ProductivityCalculationScreen(
+          controller: ProductivityController(
+            store: MemoryProductivityRecordStore(),
+          ),
+        ),
+        const Locale('vi'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Định mức lao động (BUGAKARI)・Năng suất'), findsOneWidget);
+    expect(find.text('Nhân công cần thiết'), findsOneWidget);
+    expect(find.text('Hạng mục công việc'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Khối lượng thi công'),
+      '120',
+    );
+    await tester.enterText(
+      find.widgetWithText(
+        TextField,
+        'Khối lượng thi công của 1 người/ngày (đơn vị/người-ngày)',
+      ),
+      '20',
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('6.00 ngày công'), findsOneWidget);
+  });
+
   testWidgets('簡体字中国語で保存実績の動的単位を表示する', (tester) async {
     final controller = ProductivityController(
       store: MemoryProductivityRecordStore(),
@@ -353,6 +387,7 @@ Widget _localizedApp(Widget home, Locale locale) => MaterialApp(
     Locale('en'),
     Locale('zh', 'CN'),
     Locale('zh', 'TW'),
+    Locale('vi'),
   ],
   localizationsDelegates: const [
     AppLocalizationsDelegate(),

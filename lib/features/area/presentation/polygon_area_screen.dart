@@ -165,6 +165,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                     english: '${_outerControllers.length} sides',
                     simplifiedChinese: '${_outerControllers.length}条边',
                     traditionalChinese: '${_outerControllers.length}條邊',
+                    vietnamese: '${_outerControllers.length} cạnh',
                   ),
                   key: const Key('polygonSideCount'),
                   style: theme.textTheme.titleMedium,
@@ -209,6 +210,8 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                             '边 ${_vertexName(index)}${_vertexName(index + 1)}',
                         traditionalChinese:
                             '邊 ${_vertexName(index)}${_vertexName(index + 1)}',
+                        vietnamese:
+                            'Cạnh ${_vertexName(index)}${_vertexName(index + 1)}',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -232,6 +235,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                         english: 'Diagonal A${_vertexName(index + 2)}',
                         simplifiedChinese: '对角线 A${_vertexName(index + 2)}',
                         traditionalChinese: '對角線 A${_vertexName(index + 2)}',
+                        vietnamese: 'Đường chéo A${_vertexName(index + 2)}',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -298,6 +302,8 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
                               '三角形${index + 1}　${_format(area)} m²',
                           traditionalChinese:
                               '三角形${index + 1}　${_format(area)} m²',
+                          vietnamese:
+                              'Tam giác ${index + 1}  ${_format(area)} m²',
                         ),
                         textAlign: TextAlign.right,
                       ),

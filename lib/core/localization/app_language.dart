@@ -4,13 +4,15 @@ enum AppLanguage {
   japanese,
   english,
   simplifiedChinese,
-  traditionalChinese;
+  traditionalChinese,
+  vietnamese;
 
   Locale get locale => switch (this) {
     AppLanguage.japanese => const Locale('ja'),
     AppLanguage.english => const Locale('en'),
     AppLanguage.simplifiedChinese => const Locale('zh', 'CN'),
     AppLanguage.traditionalChinese => const Locale('zh', 'TW'),
+    AppLanguage.vietnamese => const Locale('vi'),
   };
 }
 

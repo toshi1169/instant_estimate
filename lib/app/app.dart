@@ -246,6 +246,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
         Locale('en'),
         Locale('zh', 'CN'),
         Locale('zh', 'TW'),
+        Locale('vi'),
       ],
       localizationsDelegates: const [
         AppLocalizationsDelegate(),
