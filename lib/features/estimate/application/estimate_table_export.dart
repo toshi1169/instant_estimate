@@ -1,4 +1,5 @@
 import '../domain/estimate_item.dart';
+import '../domain/estimate_totals.dart';
 
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
 
@@ -58,7 +59,7 @@ String buildEstimateTableText(Iterable<EstimateItem> items) {
     '',
     '',
     '消費税（10%）',
-    '=ROUNDDOWN(G$subtotalRow*10%,0)',
+    '=${estimateTaxSpreadsheetFormula('G$subtotalRow')}',
     '',
   ]);
   rows.add(['', '', '', '', '', '税込総額', '=G$subtotalRow+G$taxRow', '']);
@@ -87,7 +88,7 @@ List<String> _itemCells(
     _numberCell(item.quantity),
     _textCell(item.unit),
     _numberCell(item.unitPrice),
-    '=D$excelRow*F$excelRow',
+    '=${estimateLineAmountSpreadsheetFormula('D$excelRow', 'F$excelRow')}',
     _textCell(item.description),
   ];
 }

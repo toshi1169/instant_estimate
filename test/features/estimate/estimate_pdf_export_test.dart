@@ -5,6 +5,7 @@ import 'package:instant_estimate/features/estimate/application/estimate_pdf_expo
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_totals.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -40,4 +41,40 @@ void main() {
     expect(bytes.length, greaterThan(1000));
     expect(ascii.decode(bytes.take(4).toList()), '%PDF');
   });
+
+  test('小数明細を共通金額計算で集計してPDFを生成する', () async {
+    final items = [
+      _item('1', quantity: 1.5, unitPrice: 1),
+      _item('2', quantity: 2.5, unitPrice: 1),
+      _item('3', quantity: 199.4, unitPrice: 10),
+    ];
+
+    expect(items.map(estimateLineAmount), [2, 3, 1994]);
+    expect(estimateSubtotal(items), 1999);
+    expect(estimateTax(estimateSubtotal(items)), 199);
+    expect(estimateGrandTotal(items), 2198);
+
+    final bytes = await buildEstimatePdf(
+      info: EstimateInfo.initial(DateTime(2026, 8, 12)),
+      items: items,
+    );
+    expect(bytes.length, greaterThan(1000));
+    expect(ascii.decode(bytes.take(4).toList()), '%PDF');
+  });
 }
+
+EstimateItem _item(
+  String id, {
+  required double quantity,
+  required double unitPrice,
+}) => EstimateItem.fromDraft(
+  EstimateItemDraft(
+    trade: '端数確認',
+    name: '端数明細$id',
+    quantity: quantity,
+    unit: '式',
+    unitPrice: unitPrice,
+  ),
+  id: id,
+  createdAt: DateTime(2026, 8, 12),
+);

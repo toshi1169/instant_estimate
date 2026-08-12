@@ -4,6 +4,7 @@ import 'package:excel_plus/excel_plus.dart';
 
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
+import '../domain/estimate_totals.dart';
 
 const _sheetName = '内訳';
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
@@ -160,7 +161,9 @@ void _writeItem(
     _numberValue(item.quantity),
     TextCellValue(item.unit),
     _numberValue(item.unitPrice),
-    FormulaCellValue('D${row + 1}*F${row + 1}'),
+    FormulaCellValue(
+      estimateLineAmountSpreadsheetFormula('D${row + 1}', 'F${row + 1}'),
+    ),
     TextCellValue(item.description),
   ];
   for (var column = 0; column < values.length; column++) {
@@ -213,7 +216,7 @@ int _writeSummary(Sheet sheet, int row, List<int> subtotalRows) {
     sheet,
     row + 1,
     6,
-    FormulaCellValue('ROUNDDOWN(G${row + 1}*10%,0)'),
+    FormulaCellValue(estimateTaxSpreadsheetFormula('G${row + 1}')),
     _summaryStyle(numberFormat: _moneyFormat),
   );
 
