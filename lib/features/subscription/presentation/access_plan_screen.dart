@@ -87,6 +87,7 @@ class AccessPlanScreen extends StatelessWidget {
       vietnamese: isFull ? 'Bản đầy đủ' : 'Bản không quảng cáo',
       indonesian: isFull ? 'Versi lengkap' : 'Versi bebas iklan',
       filipino: isFull ? 'Kumpletong bersyon' : 'Bersyong walang ad',
+      myanmar: isFull ? 'အပြည့်အစုံဗားရှင်း' : 'ကြော်ငြာမပါဗားရှင်း',
     );
     final fallbackPriceLabel = switch (plan) {
       AppAccessPlan.free => l10n.choose(

@@ -331,6 +331,43 @@ void main() {
     expect(find.text('6.00 tao-araw'), findsOneWidget);
   });
 
+  testWidgets('ミャンマー語で歩掛計算の主要項目と単位を表示する', (tester) async {
+    await tester.pumpWidget(
+      _localizedApp(
+        ProductivityCalculationScreen(
+          controller: ProductivityController(
+            store: MemoryProductivityRecordStore(),
+          ),
+        ),
+        const Locale('my'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('လုပ်သားစံနှုန်း (BUGAKARI)・ကုန်ထုတ်စွမ်းအား'),
+      findsOneWidget,
+    );
+    expect(find.text('လိုအပ်သောလုပ်သားအင်အား'), findsOneWidget);
+    expect(find.text('အလုပ်အမျိုးအစား'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'ဆောက်လုပ်ရေးပမာဏ'),
+      '120',
+    );
+    await tester.enterText(
+      find.widgetWithText(
+        TextField,
+        'လူတစ်ဦးလျှင် ဆောက်လုပ်ရေးပမာဏ (ယူနစ်/လူနေ့)၊',
+      ),
+      '20',
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('6.00 လူ-ရက်'), findsOneWidget);
+  });
+
   testWidgets('簡体字中国語で保存実績の動的単位を表示する', (tester) async {
     final controller = ProductivityController(
       store: MemoryProductivityRecordStore(),
@@ -464,6 +501,7 @@ Widget _localizedApp(Widget home, Locale locale) => MaterialApp(
     Locale('vi'),
     Locale('id'),
     Locale('fil'),
+    Locale('my'),
   ],
   localizationsDelegates: const [
     AppLocalizationsDelegate(),

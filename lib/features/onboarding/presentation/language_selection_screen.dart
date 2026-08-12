@@ -93,6 +93,11 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                           value: AppLanguage.filipino,
                           title: const Text('Filipino'),
                         ),
+                        RadioListTile<AppLanguage>(
+                          key: const Key('languageMyanmar'),
+                          value: AppLanguage.myanmar,
+                          title: const Text('မြန်မာ'),
+                        ),
                       ],
                     ),
                   ),

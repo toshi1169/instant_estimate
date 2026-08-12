@@ -694,6 +694,31 @@ void main() {
     expect(find.text('Tagapangasiwa ng civil works'), findsOneWidget);
   });
 
+  testWidgets('新規利用者はミャンマー語を選択して保存できる', (tester) async {
+    final preferences = FakeLanguageOnboardingPreferences(
+      hasSelected: false,
+      hasSelectedLanguageValue: false,
+    );
+    final settingsStore = FakeAppSettingsStore();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: preferences,
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const Key('languageMyanmar')));
+    await tester.tap(find.byKey(const Key('languageMyanmar')));
+    await tester.tap(find.byKey(const Key('completeLanguageSelection')));
+    await tester.pumpAndSettle();
+
+    expect(preferences.savedLanguage, AppLanguage.myanmar.name);
+    expect(settingsStore.settings.language, AppLanguage.myanmar);
+    expect(find.text('လုပ်ငန်းအမျိုးအစားရွေးရန်'), findsOneWidget);
+    expect(find.text('မြို့ပြလုပ်ငန်း ကြီးကြပ်သူ'), findsOneWidget);
+  });
+
   testWidgets('設定から英語へ変更し日本語とローマ字の技術用語解説を表示できる', (tester) async {
     final settingsStore = FakeAppSettingsStore();
     await tester.pumpWidget(

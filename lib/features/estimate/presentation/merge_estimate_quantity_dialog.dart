@@ -50,6 +50,10 @@ Future<MergeEstimateQuantityAction> showMergeEstimateQuantityDialog(
                   'Idagdag ang dami sa "$name"?\n\n'
                   'Kasalukuyan: $currentQuantity $unit\n'
                   'Idadagdag: $incomingQuantity $unit',
+              myanmar:
+                  '"$name" သို့ ပမာဏထည့်မည်လား။\n\n'
+                  'လက်ရှိ: $currentQuantity $unit\n'
+                  'ထည့်မည့်ပမာဏ: $incomingQuantity $unit',
             ),
           ),
           actions: [

@@ -249,6 +249,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
         Locale('vi'),
         Locale('id'),
         Locale('fil'),
+        Locale('my'),
       ],
       localizationsDelegates: const [
         AppLocalizationsDelegate(),

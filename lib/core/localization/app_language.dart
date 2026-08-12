@@ -7,7 +7,8 @@ enum AppLanguage {
   traditionalChinese,
   vietnamese,
   indonesian,
-  filipino;
+  filipino,
+  myanmar;
 
   Locale get locale => switch (this) {
     AppLanguage.japanese => const Locale('ja'),
@@ -17,6 +18,7 @@ enum AppLanguage {
     AppLanguage.vietnamese => const Locale('vi'),
     AppLanguage.indonesian => const Locale('id'),
     AppLanguage.filipino => const Locale('fil'),
+    AppLanguage.myanmar => const Locale('my'),
   };
 }
 

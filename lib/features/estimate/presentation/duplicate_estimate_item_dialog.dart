@@ -27,6 +27,7 @@ Future<DuplicateEstimateItemAction> showDuplicateEstimateItemDialog(
               vietnamese: '"$name" đã có trong dự toán hiện tại.',
               indonesian: '"$name" sudah ada dalam estimasi saat ini.',
               filipino: 'Nasa kasalukuyang estimasyon na ang "$name".',
+              myanmar: '"$name" ကို လက်ရှိခန့်မှန်းချက်တွင် ထည့်ပြီးဖြစ်သည်။',
             ),
           ),
           actions: [

@@ -90,6 +90,7 @@ class ProductivityMasterScreen extends StatelessWidget {
             indonesian: 'Hapus catatan aktual untuk ${record.siteName}?',
             filipino:
                 'Tanggalin ang aktuwal na tala para sa ${record.siteName}?',
+            myanmar: '${record.siteName} ၏ အမှန်တကယ်မှတ်တမ်းကို ဖျက်မည်လား။',
           ),
         ),
         actions: [
@@ -138,6 +139,8 @@ class _SummaryCard extends StatelessWidget {
                 '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} catatan',
             filipino:
                 '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} tala',
+            myanmar:
+                '${l10n.text(summary.trade)} · ${l10n.productivityUnit(summary.unit)} · ${summary.recordCount} မှတ်တမ်း',
           ),
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
@@ -221,6 +224,7 @@ class _SummaryCard extends StatelessWidget {
       vietnamese: 'ngày công/$unit',
       indonesian: 'hari-orang/$unit',
       filipino: 'tao-araw/$unit',
+      myanmar: 'လူ-ရက်/$unit',
     );
     return '${value.toStringAsFixed(3)} $suffix';
   }
@@ -239,6 +243,7 @@ class _SummaryCard extends StatelessWidget {
       vietnamese: '$unit/người-ngày',
       indonesian: '$unit/orang-hari',
       filipino: '$unit/tao-araw',
+      myanmar: '$unit/လူ-ရက်',
     );
     return '${value.toStringAsFixed(2)} $suffix';
   }
@@ -257,6 +262,7 @@ class _SummaryCard extends StatelessWidget {
       vietnamese: '$unit/giờ công',
       indonesian: '$unit/jam-orang',
       filipino: '$unit/tao-oras',
+      myanmar: '$unit/လူ-နာရီ',
     );
     return '${value.toStringAsFixed(2)} $suffix';
   }
@@ -281,6 +287,8 @@ class _SummaryCard extends StatelessWidget {
           '${_compactNumber(record.workers)} orang × ${_compactNumber(record.workDays)} hari = ${record.actualLabor.toStringAsFixed(2)} hari-orang',
       filipino:
           '${_compactNumber(record.workers)} tao × ${_compactNumber(record.workDays)} araw = ${record.actualLabor.toStringAsFixed(2)} tao-araw',
+      myanmar:
+          '${_compactNumber(record.workers)} ယောက် × ${_compactNumber(record.workDays)} ရက် = ${record.actualLabor.toStringAsFixed(2)} လူ-ရက်',
     );
     final details = <String>[
       '${_date(record.workDate)}　${record.quantity} $unit',
