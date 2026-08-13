@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../settings/domain/app_settings.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
@@ -26,6 +27,7 @@ class EstimateItemEditorResult {
 class EstimateItemEditorScreen extends StatefulWidget {
   const EstimateItemEditorScreen({
     required this.initialDraft,
+    this.settings = const AppSettings(),
     this.isEditing = false,
     this.showOpenEstimateAction = true,
     this.estimateTitle = '名称未設定の見積',
@@ -36,6 +38,7 @@ class EstimateItemEditorScreen extends StatefulWidget {
   });
 
   final EstimateItemDraft initialDraft;
+  final AppSettings settings;
   final bool isEditing;
   final bool showOpenEstimateAction;
   final String estimateTitle;
@@ -122,6 +125,18 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
 
   void _complete(EstimateItemEditorAction action) {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final rawQuantity = _quantityValue;
+    final formalQuantity = rawQuantity == null
+        ? null
+        : widget.settings.roundEstimateQuantity(rawQuantity);
+    final quantityWasChanged = rawQuantity != widget.initialDraft.quantity;
+    final shouldKeepOriginalQuantity =
+        widget.initialDraft.originalQuantity != null && !quantityWasChanged;
+    final originalQuantity = shouldKeepOriginalQuantity
+        ? widget.initialDraft.originalQuantity
+        : rawQuantity != formalQuantity
+        ? rawQuantity
+        : null;
     Navigator.of(context).pop(
       EstimateItemEditorResult(
         action: action,
@@ -135,12 +150,14 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
           constructionLocation: _constructionLocation.text.trim(),
           name: _name.text.trim(),
           specification: _specification.text.trim(),
-          quantity: _quantityValue,
+          quantity: formalQuantity,
           clearQuantity: _quantity.text.trim().isEmpty,
           unit: _unit.text.trim(),
           unitPrice: _unitPriceValue,
           clearUnitPrice: _unitPrice.text.trim().isEmpty,
           description: _description.text.trim(),
+          originalQuantity: originalQuantity,
+          clearOriginalQuantity: originalQuantity == null,
         ),
       ),
     );

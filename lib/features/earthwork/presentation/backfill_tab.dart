@@ -92,7 +92,7 @@ class _BackfillTabState extends State<BackfillTab> {
       EstimateItemDraft(
         trade: l10n.text('土工'),
         name: l10n.text(name),
-        quantity: widget.settings.roundEstimateQuantity(quantity),
+        quantity: quantity,
         originalQuantity: quantity,
         unit: 'm³',
         specification: specification,

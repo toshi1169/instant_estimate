@@ -78,7 +78,7 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
   }
 
   String _format(double value) {
-    final rounded = widget.settings.roundEstimateQuantity(value);
+    final rounded = widget.settings.roundCalculationValue(value);
     return rounded.toStringAsFixed(widget.settings.decimalPlaces);
   }
 

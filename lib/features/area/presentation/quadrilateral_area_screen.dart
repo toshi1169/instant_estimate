@@ -101,7 +101,7 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
       EstimateItemDraft(
         name: strings.text('面積'),
         specification: specification,
-        quantity: widget.settings.roundEstimateQuantity(result.totalArea),
+        quantity: result.totalArea,
         unit: 'm²',
         calculationBasis: calculationBasis,
         originalQuantity: result.totalArea,

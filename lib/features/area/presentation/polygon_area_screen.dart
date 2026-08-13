@@ -120,7 +120,7 @@ class _PolygonAreaScreenState extends State<PolygonAreaScreen> {
       EstimateItemDraft(
         name: strings.text('面積'),
         specification: specification,
-        quantity: widget.settings.roundEstimateQuantity(result.totalArea),
+        quantity: result.totalArea,
         unit: 'm²',
         calculationBasis:
             '$specification\n$triangleText ＝ ${_format(result.totalArea)}m²',

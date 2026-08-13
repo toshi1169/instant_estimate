@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
+import '../../settings/domain/app_settings.dart';
 import '../application/estimate_controller.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
@@ -14,11 +15,13 @@ enum _EstimateDocumentAction { duplicate, delete }
 class EstimateDocumentsScreen extends StatelessWidget {
   const EstimateDocumentsScreen({
     required this.controller,
+    this.settings = const AppSettings(),
     this.onRequestRewardedAdAccess,
     super.key,
   });
 
   final EstimateController controller;
+  final AppSettings settings;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
 
   @override
@@ -141,6 +144,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
           MaterialPageRoute<void>(
             builder: (_) => EstimateItemsScreen(
               controller: controller,
+              settings: settings,
               onRequestRewardedAdAccess: onRequestRewardedAdAccess,
             ),
           ),
@@ -233,6 +237,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
       MaterialPageRoute<void>(
         builder: (_) => EstimateItemsScreen(
           controller: controller,
+          settings: settings,
           onRequestRewardedAdAccess: onRequestRewardedAdAccess,
         ),
       ),
@@ -260,6 +265,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
       MaterialPageRoute<void>(
         builder: (_) => EstimateItemsScreen(
           controller: controller,
+          settings: settings,
           onRequestRewardedAdAccess: onRequestRewardedAdAccess,
         ),
       ),

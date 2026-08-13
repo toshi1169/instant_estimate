@@ -115,7 +115,7 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
   }
 
   String _format(double value) {
-    final rounded = widget.settings.roundEstimateQuantity(value);
+    final rounded = widget.settings.roundCalculationValue(value);
     if (rounded != 0 && rounded.abs() >= 1e16) {
       return rounded.toStringAsExponential(widget.settings.decimalPlaces);
     }

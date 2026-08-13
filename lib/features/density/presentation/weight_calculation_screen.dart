@@ -177,7 +177,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
       EstimateItemDraft(
         name: materialName,
         specification: specification,
-        quantity: widget.settings.roundEstimateQuantity(result.weightTonnes),
+        quantity: result.weightTonnes,
         unit: 't',
         calculationBasis: '$volume × $density ＝ ${weight}t',
         originalQuantity: result.weightTonnes,
@@ -412,7 +412,7 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
   }
 
   String _formatResultNumber(double value) {
-    return _formatNumber(widget.settings.roundEstimateQuantity(value));
+    return _formatNumber(widget.settings.roundCalculationValue(value));
   }
 }
 

@@ -1,4 +1,5 @@
 import '../domain/estimate_item.dart';
+import '../domain/estimate_quantity.dart';
 import '../domain/estimate_totals.dart';
 
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
@@ -101,11 +102,7 @@ String _textCell(String value) {
 }
 
 String _numberCell(double? value) {
-  if (value == null) return '';
-  if (value.isFinite && value == value.truncateToDouble()) {
-    return value.toInt().toString();
-  }
-  return value.toString();
+  return formatEstimateQuantity(value);
 }
 
 String _groupMarker(int number) {

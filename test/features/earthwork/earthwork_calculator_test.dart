@@ -6,6 +6,7 @@ import 'package:instant_estimate/features/earthwork/domain/earthwork_calculator.
 import 'package:instant_estimate/features/earthwork/presentation/earthwork_calculation_screen.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_quantity.dart';
 
 void main() {
   test('掘削・埋戻し・搬出土・運搬回数を計算する', () {
@@ -107,16 +108,16 @@ void main() {
 
   test('見積数量は設定した小数桁と丸め方法を反映する', () {
     const halfUp = AppSettings(
-      decimalPlaces: 2,
-      roundingMode: CalculatorRoundingMode.halfUp,
+      estimateDecimalPlaces: 2,
+      estimateRoundingMode: EstimateQuantityRoundingMode.halfUp,
     );
     const ceiling = AppSettings(
-      decimalPlaces: 2,
-      roundingMode: CalculatorRoundingMode.ceiling,
+      estimateDecimalPlaces: 2,
+      estimateRoundingMode: EstimateQuantityRoundingMode.ceiling,
     );
     const floor = AppSettings(
-      decimalPlaces: 2,
-      roundingMode: CalculatorRoundingMode.floor,
+      estimateDecimalPlaces: 2,
+      estimateRoundingMode: EstimateQuantityRoundingMode.floor,
     );
 
     expect(halfUp.roundEstimateQuantity(151.115), 151.12);
@@ -180,7 +181,7 @@ void main() {
     expect(sentDraft?.specification, contains('L=10m'));
   });
 
-  testWidgets('土量結果を見積へ送る際に設定どおり数量を丸める', (tester) async {
+  testWidgets('土量結果は丸め前候補として見積編集へ送る', (tester) async {
     EstimateItemDraft? sentDraft;
     await tester.pumpWidget(
       MaterialApp(
@@ -215,7 +216,7 @@ void main() {
     await tester.tap(find.descendant(of: haulCard, matching: find.text('見積へ')));
     await tester.pump();
 
-    expect(sentDraft?.quantity, 1.12);
+    expect(sentDraft?.quantity, 1.111);
     expect(sentDraft?.originalQuantity, 1.111);
   });
 

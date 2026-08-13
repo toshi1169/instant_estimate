@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/core/domain/transport_vehicle.dart';
 import 'package:instant_estimate/core/localization/app_language.dart';
 import 'package:instant_estimate/features/density/domain/weight_calculator.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_quantity.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 void main() {
@@ -106,5 +107,41 @@ void main() {
     expect(restored.customDensityMaterials, hasLength(1));
     expect(restored.customDensityMaterials.single.name, '再生砕石');
     expect(restored.customDensityMaterials.single.density, 1.65);
+  });
+
+  test('見積専用の数量設定を保存・復元できる', () {
+    const settings = AppSettings(
+      estimateDecimalPlaces: 4,
+      estimateRoundingMode: EstimateQuantityRoundingMode.floor,
+    );
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.estimateDecimalPlaces, 4);
+    expect(restored.estimateRoundingMode, EstimateQuantityRoundingMode.floor);
+  });
+
+  test('旧JSONでは見積専用設定だけ既定値を補完する', () {
+    final restored = AppSettings.fromJson(const {
+      'decimalPlaces': 5,
+      'roundingMode': 'ceiling',
+    });
+
+    expect(restored.decimalPlaces, 5);
+    expect(restored.roundingMode, CalculatorRoundingMode.ceiling);
+    expect(restored.estimateDecimalPlaces, 2);
+    expect(restored.estimateRoundingMode, EstimateQuantityRoundingMode.halfUp);
+  });
+
+  test('関数電卓設定と見積数量設定は独立して丸める', () {
+    const settings = AppSettings(
+      decimalPlaces: 1,
+      roundingMode: CalculatorRoundingMode.floor,
+      estimateDecimalPlaces: 3,
+      estimateRoundingMode: EstimateQuantityRoundingMode.halfUp,
+    );
+
+    expect(settings.roundCalculationValue(12.34567), 12.3);
+    expect(settings.roundEstimateQuantity(12.34567), 12.346);
   });
 }

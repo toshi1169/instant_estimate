@@ -190,9 +190,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
                   EstimateItemDraft(
                     trade: l10n.text('土工'),
                     name: l10n.text('掘削'),
-                    quantity: widget.settings.roundEstimateQuantity(
-                      result.bankVolume,
-                    ),
+                    quantity: result.bankVolume,
                     originalQuantity: result.bankVolume,
                     unit: 'm³',
                     specification: _dimensions,
@@ -214,9 +212,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
                   EstimateItemDraft(
                     trade: l10n.text('土工'),
                     name: l10n.text('搬出土'),
-                    quantity: widget.settings.roundEstimateQuantity(
-                      result.looseVolume,
-                    ),
+                    quantity: result.looseVolume,
                     originalQuantity: result.looseVolume,
                     unit: 'm³',
                     specification:
@@ -240,9 +236,7 @@ class _ExcavationHaulTabState extends State<ExcavationHaulTab> {
                   EstimateItemDraft(
                     trade: l10n.text('土工'),
                     name: l10n.text('土砂運搬'),
-                    quantity: widget.settings.roundEstimateQuantity(
-                      result.transportTrips.toDouble(),
-                    ),
+                    quantity: result.transportTrips.toDouble(),
                     originalQuantity: result.transportTrips.toDouble(),
                     unit: l10n.text('回'),
                     specification:

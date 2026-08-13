@@ -5,6 +5,7 @@ import 'package:instant_estimate/features/estimate/application/estimate_pdf_expo
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_quantity.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_totals.dart';
 
 void main() {
@@ -60,6 +61,12 @@ void main() {
     );
     expect(bytes.length, greaterThan(1000));
     expect(ascii.decode(bytes.take(4).toList()), '%PDF');
+  });
+
+  test('PDF数量は正式数量を3桁へ再丸めせずそのまま表示する', () {
+    expect(formatEstimateQuantity(12.346), '12.346');
+    expect(formatEstimateQuantity(12.34567), '12.34567');
+    expect(formatEstimateQuantity(12.300), '12.3');
   });
 }
 

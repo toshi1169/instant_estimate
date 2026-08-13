@@ -384,6 +384,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       MaterialPageRoute<void>(
         builder: (_) => EstimateDocumentsScreen(
           controller: _estimateController,
+          settings: widget.settings,
           onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
         ),
       ),
@@ -396,6 +397,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       MaterialPageRoute<void>(
         builder: (_) => EstimateItemsScreen(
           controller: _estimateController,
+          settings: widget.settings,
           onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
         ),
       ),
@@ -461,9 +463,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       _EstimateContent.result => result,
       _EstimateContent.expressionAndResult => '$expression = $result',
     };
-    final estimateQuantity = quantity == null
-        ? null
-        : widget.settings.roundEstimateQuantity(quantity);
     final draft = EstimateItemDraft(
       name: request.destination == _EstimateDestination.name
           ? transferText
@@ -472,7 +471,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           ? transferText
           : '',
       quantity: request.destination == _EstimateDestination.quantity
-          ? estimateQuantity
+          ? quantity
           : null,
       description: request.destination == _EstimateDestination.description
           ? transferText
@@ -496,6 +495,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           MaterialPageRoute(
             builder: (_) => EstimateItemEditorScreen(
               initialDraft: draft,
+              settings: widget.settings,
               estimateTitle: _estimateController.info.displayName,
               estimates: _estimateController.estimates,
               initialEstimateId: _estimateController.info.id,

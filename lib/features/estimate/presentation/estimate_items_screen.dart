@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
+import '../../settings/domain/app_settings.dart';
 import '../application/estimate_controller.dart';
 import '../application/estimate_excel_export.dart';
 import '../application/estimate_pdf_export.dart';
@@ -24,11 +25,13 @@ enum _EstimateItemAction { duplicate, edit, delete }
 class EstimateItemsScreen extends StatelessWidget {
   const EstimateItemsScreen({
     required this.controller,
+    this.settings = const AppSettings(),
     this.onRequestRewardedAdAccess,
     super.key,
   });
 
   final EstimateController controller;
+  final AppSettings settings;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
 
   @override
@@ -255,6 +258,7 @@ class EstimateItemsScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (_) => EstimateItemEditorScreen(
           initialDraft: const EstimateItemDraft(),
+          settings: settings,
           estimateTitle: controller.info.displayName,
           estimates: controller.estimates,
           initialEstimateId: controller.info.id,
@@ -404,6 +408,7 @@ class EstimateItemsScreen extends StatelessWidget {
               MaterialPageRoute(
                 builder: (_) => EstimateItemEditorScreen(
                   initialDraft: item.toDraft(),
+                  settings: settings,
                   estimateTitle: controller.info.displayName,
                   estimates: controller.estimates,
                   initialEstimateId: controller.info.id,
@@ -445,6 +450,7 @@ class EstimateItemsScreen extends StatelessWidget {
               MaterialPageRoute(
                 builder: (_) => EstimateItemEditorScreen(
                   initialDraft: item.toDraft(),
+                  settings: settings,
                   isEditing: true,
                   estimateTitle: controller.info.displayName,
                   estimates: controller.estimates,
@@ -881,7 +887,7 @@ String _number(double? value) {
   return value.toString();
 }
 
-String _money(double value) {
+String _money(num value) {
   final rounded = value.round();
   final digits = rounded.abs().toString();
   final grouped = digits.replaceAllMapped(

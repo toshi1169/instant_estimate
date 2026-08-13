@@ -395,6 +395,30 @@ void main() {
     expect(controller.totalAmount, 41500);
   });
 
+  test('工種カード小計は各行金額を四捨五入してから合計する', () async {
+    final controller = EstimateController(store: _MemoryEstimateItemStore());
+    await controller.load();
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '端数工事',
+        name: '明細1',
+        quantity: 1.5,
+        unitPrice: 1,
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(
+        trade: '端数工事',
+        name: '明細2',
+        quantity: 1.5,
+        unitPrice: 1,
+      ),
+    );
+
+    expect(controller.groups.single.subtotal, 4);
+    expect(controller.subtotalAmount, 4);
+  });
+
   test('単価マスタを登録・編集・削除して再起動後も復元できる', () async {
     final store = _MemoryEstimateItemStore();
     final controller = EstimateController(store: store);

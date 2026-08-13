@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
+import '../domain/estimate_quantity.dart';
 import '../domain/estimate_totals.dart';
 
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
@@ -167,7 +168,10 @@ List<pw.Widget> _detailTables(Map<String, List<EstimateItem>> grouped) {
                 ),
                 _cell(groupItems[index].name),
                 _cell(groupItems[index].specification),
-                _cell(_number(groupItems[index].quantity), right: true),
+                _cell(
+                  formatEstimateQuantity(groupItems[index].quantity),
+                  right: true,
+                ),
                 _cell(groupItems[index].unit, center: true),
                 _cell(_moneyValue(groupItems[index].unitPrice), right: true),
                 _cell(
@@ -256,12 +260,6 @@ pw.Widget _cell(
     ),
   ),
 );
-
-String _number(double? value) {
-  if (value == null) return '';
-  if (value == value.truncateToDouble()) return value.toInt().toString();
-  return value.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), '');
-}
 
 String _moneyValue(double? value) => value == null ? '' : _money(value.round());
 

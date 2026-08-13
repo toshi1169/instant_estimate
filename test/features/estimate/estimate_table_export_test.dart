@@ -123,6 +123,14 @@ void main() {
     expect(text, contains('消費税（10%）\t=INT(G7*10%)'));
     expect(text, contains('税込総額\t=G7+G8'));
   });
+
+  test('Excelコピーは正式数量を再丸めせず行金額数式から参照する', () {
+    final item = _item('formal', quantity: 12.346, unitPrice: 100);
+    final text = buildEstimateTableText([item]);
+
+    expect(text, contains('\t12.346\t式\t100\t=ROUND(D2*F2,0)'));
+    expect(estimateSubtotal([item]), 1235);
+  });
 }
 
 EstimateItem _item(

@@ -164,6 +164,31 @@ void main() {
     expect(_formula(sheet, 'G12'), 'INT(G11*10%)');
     expect(_formula(sheet, 'G13'), 'G11+G12');
   });
+
+  test('正式数量をセル内部値へ保持し行金額数式で参照する', () {
+    final item = _item(
+      id: 'formal-quantity',
+      trade: '数量確認',
+      name: '正式数量',
+      quantity: 12.346,
+      unit: 'm²',
+      unitPrice: 100,
+    );
+    final excel = Excel.decodeBytes(
+      buildEstimateWorkbook(
+        info: EstimateInfo.initial(DateTime(2026, 8, 12)),
+        items: [item],
+      ),
+    );
+    final sheet = excel['内訳'];
+
+    expect(
+      sheet.cell(CellIndex.indexByString('D6')).value,
+      DoubleCellValue(12.346),
+    );
+    expect(_formula(sheet, 'G6'), 'ROUND(D6*F6,0)');
+    expect(estimateSubtotal([item]), 1235);
+  });
 }
 
 String _formula(Sheet sheet, String cell) =>

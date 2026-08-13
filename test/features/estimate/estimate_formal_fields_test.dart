@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_quantity.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_info_editor_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_item_editor_screen.dart';
+import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 void main() {
   group('正式見積用データの後方互換性', () {
@@ -174,5 +176,89 @@ void main() {
     expect(result?.validityPeriod, '発行日より30日間');
     expect(result?.constructionPeriod, '契約後30日以内');
     expect(result?.paymentTerms, '完了月末締め翌月末払い');
+  });
+
+  testWidgets('手入力数量は明細確定時だけ見積専用設定で丸めて保存する', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    EstimateItemEditorResult? result;
+    const initialDraft = EstimateItemDraft(quantity: 12.34567);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () async {
+              result = await Navigator.of(context)
+                  .push<EstimateItemEditorResult>(
+                    MaterialPageRoute(
+                      builder: (_) => const EstimateItemEditorScreen(
+                        initialDraft: initialDraft,
+                        isEditing: true,
+                        settings: AppSettings(
+                          estimateDecimalPlaces: 3,
+                          estimateRoundingMode:
+                              EstimateQuantityRoundingMode.halfUp,
+                        ),
+                      ),
+                    ),
+                  );
+            },
+            child: const Text('open quantity'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open quantity'));
+    await tester.pumpAndSettle();
+    final quantityField = tester.widget<TextFormField>(
+      find.byKey(const Key('estimateQuantityField')),
+    );
+    expect(quantityField.controller?.text, '12.34567');
+    expect(initialDraft.quantity, 12.34567);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('saveEstimateChanges')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.byKey(const Key('saveEstimateChanges')));
+    await tester.pumpAndSettle();
+
+    expect(result?.draft.quantity, 12.346);
+    expect(result?.draft.originalQuantity, 12.34567);
+  });
+
+  testWidgets('既存明細は開いただけでは数量を再丸めしない', (tester) async {
+    const initialDraft = EstimateItemDraft(quantity: 12.34567);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: EstimateItemEditorScreen(
+          initialDraft: initialDraft,
+          isEditing: true,
+          settings: AppSettings(
+            estimateDecimalPlaces: 1,
+            estimateRoundingMode: EstimateQuantityRoundingMode.floor,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextFormField>(find.byKey(const Key('estimateQuantityField')))
+          .controller
+          ?.text,
+      '12.34567',
+    );
+    expect(initialDraft.quantity, 12.34567);
   });
 }

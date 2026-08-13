@@ -5,6 +5,7 @@ import '../../../core/domain/angle_unit.dart';
 import '../../../core/localization/app_language.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../domain/app_settings.dart';
+import '../../estimate/domain/estimate_quantity.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -137,6 +138,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (value != null) {
       _update(_settings.copyWith(roundingMode: value));
+    }
+  }
+
+  Future<void> _selectEstimateDecimalPlaces(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
+    final value = await _selectValue<int>(
+      context,
+      title: strings.estimateQuantityDecimalPlaces,
+      selected: _settings.estimateDecimalPlaces,
+      choices: [
+        for (var count = 1; count <= 5; count++) (count, strings.digits(count)),
+      ],
+    );
+    if (value != null) {
+      _update(_settings.copyWith(estimateDecimalPlaces: value));
+    }
+  }
+
+  Future<void> _selectEstimateRoundingMode(BuildContext context) async {
+    final strings = AppLocalizations.of(context);
+    final value = await _selectValue<EstimateQuantityRoundingMode>(
+      context,
+      title: strings.estimateQuantityRoundingMethod,
+      selected: _settings.estimateRoundingMode,
+      choices: [
+        (EstimateQuantityRoundingMode.halfUp, strings.roundHalfUp),
+        (EstimateQuantityRoundingMode.ceiling, strings.roundUp),
+        (EstimateQuantityRoundingMode.floor, strings.roundDown),
+      ],
+    );
+    if (value != null) {
+      _update(_settings.copyWith(estimateRoundingMode: value));
     }
   }
 
@@ -290,6 +323,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectAngleUnit(context),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            strings.instantEstimateSettings,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                ListTile(
+                  key: const Key('estimateDecimalPlacesSetting'),
+                  leading: const Icon(Icons.pin_outlined),
+                  title: Text(strings.estimateQuantityDecimalPlaces),
+                  subtitle: Text(
+                    strings.digits(_settings.estimateDecimalPlaces),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _selectEstimateDecimalPlaces(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('estimateRoundingModeSetting'),
+                  leading: const Icon(Icons.request_quote_outlined),
+                  title: Text(strings.estimateQuantityRoundingMethod),
+                  subtitle: Text(switch (_settings.estimateRoundingMode) {
+                    EstimateQuantityRoundingMode.halfUp => strings.roundHalfUp,
+                    EstimateQuantityRoundingMode.ceiling => strings.roundUp,
+                    EstimateQuantityRoundingMode.floor => strings.roundDown,
+                  }),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _selectEstimateRoundingMode(context),
                 ),
               ],
             ),

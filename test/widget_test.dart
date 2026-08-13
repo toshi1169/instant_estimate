@@ -21,6 +21,7 @@ import 'package:instant_estimate/features/estimate/domain/estimate_document.dart
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_quantity.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_workspace.dart';
 import 'package:instant_estimate/features/estimate/domain/unit_price_master.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
@@ -565,6 +566,44 @@ void main() {
 
     expect(settings.language, AppLanguage.myanmar);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('設定画面で関数電卓と独立した見積数量設定を変更できる', (tester) async {
+    var settings = const AppSettings(
+      decimalPlaces: 5,
+      roundingMode: CalculatorRoundingMode.floor,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SettingsScreen(
+          settings: settings,
+          onSettingsChanged: (value) => settings = value,
+          onClearHistory: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final placesSetting = find.byKey(const Key('estimateDecimalPlacesSetting'));
+    await tester.scrollUntilVisible(placesSetting, 250);
+    await tester.tap(placesSetting);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('3桁').last);
+    await tester.pumpAndSettle();
+
+    final roundingSetting = find.byKey(
+      const Key('estimateRoundingModeSetting'),
+    );
+    await tester.scrollUntilVisible(roundingSetting, 250);
+    await tester.tap(roundingSetting);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('切上げ').last);
+    await tester.pumpAndSettle();
+
+    expect(settings.estimateDecimalPlaces, 3);
+    expect(settings.estimateRoundingMode, EstimateQuantityRoundingMode.ceiling);
+    expect(settings.decimalPlaces, 5);
+    expect(settings.roundingMode, CalculatorRoundingMode.floor);
   });
 
   testWidgets('初回起動では業種選択を表示する', (tester) async {
@@ -1817,7 +1856,7 @@ void main() {
     expect(find.text('¥ 2,400'), findsOneWidget);
   });
 
-  testWidgets('電卓の見積数量へ小数桁と丸め設定を反映する', (tester) async {
+  testWidgets('電卓の丸め前候補を見積明細の確定時に専用設定で丸める', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1831,8 +1870,10 @@ void main() {
         home: CalculatorScreen(
           controller: controller,
           settings: const AppSettings(
-            decimalPlaces: 2,
-            roundingMode: CalculatorRoundingMode.floor,
+            decimalPlaces: 5,
+            roundingMode: CalculatorRoundingMode.halfUp,
+            estimateDecimalPlaces: 2,
+            estimateRoundingMode: EstimateQuantityRoundingMode.floor,
           ),
         ),
       ),
@@ -1852,7 +1893,7 @@ void main() {
     final quantity = tester.widget<TextFormField>(
       find.byKey(const Key('estimateQuantityField')),
     );
-    expect(quantity.controller?.text, '0.33');
+    expect(quantity.controller?.text, '0.333333333333');
   });
 
   testWidgets('見積明細を保存して一覧と合計を表示できる', (tester) async {

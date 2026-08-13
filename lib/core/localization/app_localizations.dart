@@ -2132,6 +2132,36 @@ class AppLocalizations {
     simplifiedChinese: '舍入方式',
     traditionalChinese: '捨入方式',
   );
+  String get instantEstimateSettings => _pick(
+    japanese: 'インスタント見積もり用設定',
+    english: 'Instant Estimate settings',
+    simplifiedChinese: '即时估算设置',
+    traditionalChinese: '即時估算設定',
+    vietnamese: 'Cài đặt dự toán nhanh',
+    indonesian: 'Pengaturan Estimasi Instan',
+    filipino: 'Mga setting ng Instant Estimate',
+    myanmar: 'အမြန်ခန့်မှန်းတွက်ချက်မှု ဆက်တင်များ',
+  );
+  String get estimateQuantityDecimalPlaces => _pick(
+    japanese: '数量の小数点桁数',
+    english: 'Quantity decimal places',
+    simplifiedChinese: '数量小数位数',
+    traditionalChinese: '數量小數位數',
+    vietnamese: 'Số chữ số thập phân của khối lượng',
+    indonesian: 'Jumlah angka desimal kuantitas',
+    filipino: 'Mga decimal place ng dami',
+    myanmar: 'အရေအတွက်၏ ဒဿမနေရာများ',
+  );
+  String get estimateQuantityRoundingMethod => _pick(
+    japanese: '数量の丸め方式',
+    english: 'Quantity rounding method',
+    simplifiedChinese: '数量舍入方式',
+    traditionalChinese: '數量捨入方式',
+    vietnamese: 'Phương pháp làm tròn khối lượng',
+    indonesian: 'Metode pembulatan kuantitas',
+    filipino: 'Paraan ng pag-round ng dami',
+    myanmar: 'အရေအတွက် ပတ်လည်ပြုနည်း',
+  );
   String get roundHalfUp => _pick(
     japanese: '四捨五入',
     english: 'Round half up',

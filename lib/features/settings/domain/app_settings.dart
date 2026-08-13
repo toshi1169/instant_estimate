@@ -6,6 +6,7 @@ import '../../../core/domain/angle_unit.dart';
 import '../../../core/domain/transport_vehicle.dart';
 import '../../../core/localization/app_language.dart';
 import '../../density/domain/weight_calculator.dart';
+import '../../estimate/domain/estimate_quantity.dart';
 
 enum AppThemeSelection { system, light, gray, dark }
 
@@ -19,6 +20,8 @@ class AppSettings {
     this.theme = AppThemeSelection.light,
     this.decimalPlaces = 2,
     this.roundingMode = CalculatorRoundingMode.halfUp,
+    this.estimateDecimalPlaces = 2,
+    this.estimateRoundingMode = EstimateQuantityRoundingMode.halfUp,
     this.angleUnit = AngleUnit.degrees,
     this.historySortOrder = HistorySortOrder.ascending,
     this.confirmHistoryDeletion = true,
@@ -30,6 +33,8 @@ class AppSettings {
   final AppThemeSelection theme;
   final int decimalPlaces;
   final CalculatorRoundingMode roundingMode;
+  final int estimateDecimalPlaces;
+  final EstimateQuantityRoundingMode estimateRoundingMode;
   final AngleUnit angleUnit;
   final HistorySortOrder historySortOrder;
   final bool confirmHistoryDeletion;
@@ -42,8 +47,7 @@ class AppSettings {
     AppThemeSelection.light || AppThemeSelection.gray => ThemeMode.light,
   };
 
-  /// 計算元の値は変えず、見積数量へ渡す値だけ表示設定に合わせて丸める。
-  double roundEstimateQuantity(double value) {
+  double roundCalculationValue(double value) {
     final places = decimalPlaces.clamp(1, 5);
     final factor = math.pow(10, places).toDouble();
     final scaled = value * factor;
@@ -55,11 +59,22 @@ class AppSettings {
     return rounded / factor;
   }
 
+  /// 丸め前候補を、保存・表示・金額計算に共通で使う正式な見積数量へ確定する。
+  double roundEstimateQuantity(double value) {
+    return finalizeEstimateQuantity(
+      value,
+      decimalPlaces: estimateDecimalPlaces,
+      roundingMode: estimateRoundingMode,
+    );
+  }
+
   AppSettings copyWith({
     AppLanguage? language,
     AppThemeSelection? theme,
     int? decimalPlaces,
     CalculatorRoundingMode? roundingMode,
+    int? estimateDecimalPlaces,
+    EstimateQuantityRoundingMode? estimateRoundingMode,
     AngleUnit? angleUnit,
     HistorySortOrder? historySortOrder,
     bool? confirmHistoryDeletion,
@@ -71,6 +86,9 @@ class AppSettings {
       theme: theme ?? this.theme,
       decimalPlaces: decimalPlaces ?? this.decimalPlaces,
       roundingMode: roundingMode ?? this.roundingMode,
+      estimateDecimalPlaces:
+          estimateDecimalPlaces ?? this.estimateDecimalPlaces,
+      estimateRoundingMode: estimateRoundingMode ?? this.estimateRoundingMode,
       angleUnit: angleUnit ?? this.angleUnit,
       historySortOrder: historySortOrder ?? this.historySortOrder,
       confirmHistoryDeletion:
@@ -87,6 +105,8 @@ class AppSettings {
     'theme': theme.name,
     'decimalPlaces': decimalPlaces,
     'roundingMode': roundingMode.name,
+    'estimateDecimalPlaces': estimateDecimalPlaces,
+    'estimateRoundingMode': estimateRoundingMode.name,
     'angleUnit': angleUnit.name,
     'historySortOrder': historySortOrder.name,
     'confirmHistoryDeletion': confirmHistoryDeletion,
@@ -104,6 +124,7 @@ class AppSettings {
     }
 
     final places = json['decimalPlaces'];
+    final estimatePlaces = json['estimateDecimalPlaces'];
     return AppSettings(
       language: appLanguageFromStorageName(json['language']),
       theme: enumValue(
@@ -116,6 +137,14 @@ class AppSettings {
         CalculatorRoundingMode.values,
         json['roundingMode'],
         CalculatorRoundingMode.halfUp,
+      ),
+      estimateDecimalPlaces: estimatePlaces is int
+          ? estimatePlaces.clamp(1, 5)
+          : 2,
+      estimateRoundingMode: enumValue(
+        EstimateQuantityRoundingMode.values,
+        json['estimateRoundingMode'],
+        EstimateQuantityRoundingMode.halfUp,
       ),
       angleUnit: enumValue(
         AngleUnit.values,

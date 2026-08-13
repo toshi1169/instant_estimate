@@ -294,7 +294,7 @@ class _SlopeCalculationScreenState extends State<SlopeCalculationScreen> {
   double get _faceArea => (_result?.slopeLengthMeters ?? 0) * _extensionMeters;
 
   String _format(double value) {
-    final rounded = widget.settings.roundEstimateQuantity(value);
+    final rounded = widget.settings.roundCalculationValue(value);
     return rounded.toStringAsFixed(widget.settings.decimalPlaces);
   }
 

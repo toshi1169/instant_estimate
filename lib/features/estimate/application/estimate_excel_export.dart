@@ -8,7 +8,7 @@ import '../domain/estimate_totals.dart';
 
 const _sheetName = '内訳';
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
-const _numberFormat = '#,##0.###';
+const _numberFormat = '#,##0.###############';
 const _moneyFormat = '#,##0';
 
 List<int> buildEstimateWorkbook({

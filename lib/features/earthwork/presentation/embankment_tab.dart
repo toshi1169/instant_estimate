@@ -127,7 +127,7 @@ class _EmbankmentTabState extends State<EmbankmentTab> {
       EstimateItemDraft(
         trade: l10n.text('土工'),
         name: l10n.text(name),
-        quantity: widget.settings.roundEstimateQuantity(quantity),
+        quantity: quantity,
         originalQuantity: quantity,
         unit: unit,
         specification: specification,
