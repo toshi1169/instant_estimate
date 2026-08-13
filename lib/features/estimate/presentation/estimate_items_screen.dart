@@ -179,6 +179,7 @@ class EstimateItemsScreen extends StatelessWidget {
       final file = await createEstimateWorkbookFile(
         info: controller.info,
         items: controller.items,
+        companyProfile: settings.companyProfile,
       );
       if (!context.mounted) return;
       final box = context.findRenderObject() as RenderBox?;
