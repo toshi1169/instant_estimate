@@ -2162,6 +2162,101 @@ class AppLocalizations {
     filipino: 'Paraan ng pag-round ng dami',
     myanmar: 'အရေအတွက် ပတ်လည်ပြုနည်း',
   );
+  String get companyProfile => _pick(
+    japanese: '自社情報',
+    english: 'Company information',
+    simplifiedChinese: '公司信息',
+    traditionalChinese: '公司資訊',
+    vietnamese: 'Thông tin doanh nghiệp',
+    indonesian: 'Informasi perusahaan',
+    filipino: 'Impormasyon ng kumpanya',
+    myanmar: 'ကုမ္ပဏီအချက်အလက်',
+  );
+  String get companyProfileGuidance => _pick(
+    japanese: '正式な見積書に使用する会社・事業者情報を入力してください。未入力の項目は空欄で保存できます。',
+    english:
+        'Enter the company or business information used on formal estimates. Blank fields can be saved.',
+    simplifiedChinese: '请输入正式估价单中使用的公司或经营者信息。未填写的项目可以留空保存。',
+    traditionalChinese: '請輸入正式估價單中使用的公司或業者資訊。未填寫的項目可以留空儲存。',
+    vietnamese:
+        'Nhập thông tin công ty hoặc đơn vị kinh doanh dùng trên báo giá chính thức. Có thể lưu các mục để trống.',
+    indonesian:
+        'Masukkan informasi perusahaan atau usaha untuk penawaran resmi. Kolom kosong dapat disimpan.',
+    filipino:
+        'Ilagay ang impormasyon ng kumpanya o negosyo para sa pormal na estima. Maaaring i-save ang mga blangkong field.',
+    myanmar:
+        'တရားဝင်ခန့်မှန်းစာတွင် အသုံးပြုမည့် ကုမ္ပဏီ သို့မဟုတ် လုပ်ငန်းအချက်အလက်ကို ထည့်ပါ။ အလွတ်အကွက်များကိုလည်း သိမ်းနိုင်သည်။',
+  );
+  String get companyNameOrTradeName => _pick(
+    japanese: '会社名／屋号',
+    english: 'Company / trade name',
+    simplifiedChinese: '公司名称／商号',
+    traditionalChinese: '公司名稱／商號',
+    vietnamese: 'Tên công ty / tên thương mại',
+    indonesian: 'Nama perusahaan / nama usaha',
+    filipino: 'Pangalan ng kumpanya / negosyo',
+    myanmar: 'ကုမ္ပဏီ / လုပ်ငန်းအမည်',
+  );
+  String get representativeName => _pick(
+    japanese: '代表者名',
+    english: 'Representative name',
+    simplifiedChinese: '负责人姓名',
+    traditionalChinese: '負責人姓名',
+    vietnamese: 'Tên người đại diện',
+    indonesian: 'Nama perwakilan',
+    filipino: 'Pangalan ng kinatawan',
+    myanmar: 'ကိုယ်စားလှယ်အမည်',
+  );
+  String get postalCode => _pick(
+    japanese: '郵便番号',
+    english: 'Postal code',
+    simplifiedChinese: '邮政编码',
+    traditionalChinese: '郵遞區號',
+    vietnamese: 'Mã bưu chính',
+    indonesian: 'Kode pos',
+    filipino: 'Postal code',
+    myanmar: 'စာပို့သင်္ကေတ',
+  );
+  String get addressLine1 => _pick(
+    japanese: '住所1',
+    english: 'Address 1',
+    simplifiedChinese: '地址1',
+    traditionalChinese: '地址1',
+    vietnamese: 'Địa chỉ 1',
+    indonesian: 'Alamat 1',
+    filipino: 'Address 1',
+    myanmar: 'လိပ်စာ 1',
+  );
+  String get addressLine2 => _pick(
+    japanese: '住所2',
+    english: 'Address 2',
+    simplifiedChinese: '地址2',
+    traditionalChinese: '地址2',
+    vietnamese: 'Địa chỉ 2',
+    indonesian: 'Alamat 2',
+    filipino: 'Address 2',
+    myanmar: 'လိပ်စာ 2',
+  );
+  String get phoneNumber => _pick(
+    japanese: '電話番号',
+    english: 'Phone number',
+    simplifiedChinese: '电话号码',
+    traditionalChinese: '電話號碼',
+    vietnamese: 'Số điện thoại',
+    indonesian: 'Nomor telepon',
+    filipino: 'Numero ng telepono',
+    myanmar: 'ဖုန်းနံပါတ်',
+  );
+  String get notRegistered => _pick(
+    japanese: '未登録',
+    english: 'Not registered',
+    simplifiedChinese: '未登记',
+    traditionalChinese: '未登錄',
+    vietnamese: 'Chưa đăng ký',
+    indonesian: 'Belum terdaftar',
+    filipino: 'Hindi pa nakarehistro',
+    myanmar: 'မမှတ်ပုံတင်ရသေးပါ',
+  );
   String get roundHalfUp => _pick(
     japanese: '四捨五入',
     english: 'Round half up',

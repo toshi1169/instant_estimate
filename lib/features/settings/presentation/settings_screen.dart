@@ -5,7 +5,9 @@ import '../../../core/domain/angle_unit.dart';
 import '../../../core/localization/app_language.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../domain/app_settings.dart';
+import '../domain/company_profile.dart';
 import '../../estimate/domain/estimate_quantity.dart';
+import 'company_profile_editor_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -207,6 +209,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (value != null) _update(_settings.copyWith(language: value));
   }
 
+  Future<void> _editCompanyProfile(BuildContext context) async {
+    final profile = await Navigator.of(context).push(
+      MaterialPageRoute<CompanyProfile>(
+        builder: (_) => CompanyProfileEditorScreen(
+          initialProfile: _settings.companyProfile,
+        ),
+      ),
+    );
+    if (profile != null && context.mounted) {
+      _update(_settings.copyWith(companyProfile: profile));
+    }
+  }
+
   Future<void> _confirmClearHistory(BuildContext context) async {
     final strings = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -325,6 +340,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () => _selectAngleUnit(context),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            strings.companyProfile,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              key: const Key('companyProfileSetting'),
+              leading: const Icon(Icons.business_outlined),
+              title: Text(strings.companyProfile),
+              subtitle: Text(
+                _settings.companyProfile.companyName.isEmpty
+                    ? strings.notRegistered
+                    : _settings.companyProfile.companyName,
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _editCompanyProfile(context),
             ),
           ),
           const SizedBox(height: 24),

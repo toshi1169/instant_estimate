@@ -4,6 +4,7 @@ import 'package:instant_estimate/core/localization/app_language.dart';
 import 'package:instant_estimate/features/density/domain/weight_calculator.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_quantity.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
+import 'package:instant_estimate/features/settings/domain/company_profile.dart';
 
 void main() {
   test('言語設定を保存・復元し、旧データは日本語として扱う', () {
@@ -143,5 +144,42 @@ void main() {
 
     expect(settings.roundCalculationValue(12.34567), 12.3);
     expect(settings.roundEstimateQuantity(12.34567), 12.346);
+  });
+
+  test('自社情報を既存設定とともに保存・復元できる', () {
+    const settings = AppSettings(
+      language: AppLanguage.english,
+      decimalPlaces: 4,
+      companyProfile: CompanyProfile(
+        companyName: '山田建設',
+        representativeName: '山田太郎',
+        postalCode: '100-0001',
+        addressLine1: '東京都千代田区千代田1-1',
+        addressLine2: '山田ビル2階',
+        phoneNumber: '03-1234-5678',
+      ),
+    );
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.companyProfile.companyName, '山田建設');
+    expect(restored.companyProfile.representativeName, '山田太郎');
+    expect(restored.companyProfile.postalCode, '100-0001');
+    expect(restored.companyProfile.addressLine1, '東京都千代田区千代田1-1');
+    expect(restored.companyProfile.addressLine2, '山田ビル2階');
+    expect(restored.companyProfile.phoneNumber, '03-1234-5678');
+    expect(restored.language, AppLanguage.english);
+    expect(restored.decimalPlaces, 4);
+  });
+
+  test('旧設定JSONと空欄の自社情報を互換読み込みできる', () {
+    final legacy = AppSettings.fromJson(const {'theme': 'dark'});
+    const blank = AppSettings(companyProfile: CompanyProfile());
+    final restoredBlank = AppSettings.fromJson(blank.toJson());
+
+    expect(legacy.companyProfile.isEmpty, isTrue);
+    expect(legacy.theme, AppThemeSelection.dark);
+    expect(restoredBlank.companyProfile.isEmpty, isTrue);
+    expect(restoredBlank.companyProfile.toJson().values, everyElement(isEmpty));
   });
 }

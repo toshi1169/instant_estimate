@@ -7,6 +7,7 @@ import '../../../core/domain/transport_vehicle.dart';
 import '../../../core/localization/app_language.dart';
 import '../../density/domain/weight_calculator.dart';
 import '../../estimate/domain/estimate_quantity.dart';
+import 'company_profile.dart';
 
 enum AppThemeSelection { system, light, gray, dark }
 
@@ -27,6 +28,7 @@ class AppSettings {
     this.confirmHistoryDeletion = true,
     this.customTransportVehicles = const [],
     this.customDensityMaterials = const [],
+    this.companyProfile = const CompanyProfile(),
   });
 
   final AppLanguage language;
@@ -40,6 +42,7 @@ class AppSettings {
   final bool confirmHistoryDeletion;
   final List<TransportVehicle> customTransportVehicles;
   final List<DensityMaterialPreset> customDensityMaterials;
+  final CompanyProfile companyProfile;
 
   ThemeMode get themeMode => switch (theme) {
     AppThemeSelection.system => ThemeMode.system,
@@ -80,6 +83,7 @@ class AppSettings {
     bool? confirmHistoryDeletion,
     List<TransportVehicle>? customTransportVehicles,
     List<DensityMaterialPreset>? customDensityMaterials,
+    CompanyProfile? companyProfile,
   }) {
     return AppSettings(
       language: language ?? this.language,
@@ -97,6 +101,7 @@ class AppSettings {
           customTransportVehicles ?? this.customTransportVehicles,
       customDensityMaterials:
           customDensityMaterials ?? this.customDensityMaterials,
+      companyProfile: companyProfile ?? this.companyProfile,
     );
   }
 
@@ -116,6 +121,7 @@ class AppSettings {
     'customDensityMaterials': customDensityMaterials
         .map((material) => material.toJson())
         .toList(growable: false),
+    'companyProfile': companyProfile.toJson(),
   };
 
   factory AppSettings.fromJson(Map<String, Object?> json) {
@@ -182,6 +188,12 @@ class AppSettings {
               )
               .toList(growable: false),
         _ => const [],
+      },
+      companyProfile: switch (json['companyProfile']) {
+        final Map<Object?, Object?> value => CompanyProfile.fromJson(
+          value.map((key, value) => MapEntry(key.toString(), value)),
+        ),
+        _ => const CompanyProfile(),
       },
     );
   }
