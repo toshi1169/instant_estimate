@@ -28,8 +28,7 @@ class EstimateController extends ChangeNotifier {
 
   List<EstimateItem> get items => List.unmodifiable(_items);
   EstimateInfo get info => _info;
-  List<EstimateDocument> get estimates =>
-      List.unmodifiable(_workspaceWithActive().estimates);
+  List<EstimateDocument> get estimates => List.unmodifiable(_estimates);
   List<UnitPriceMaster> get unitPriceMasters =>
       List.unmodifiable(_unitPriceMasters);
   bool get isLoaded => _loaded;
@@ -46,14 +45,24 @@ class EstimateController extends ChangeNotifier {
   int get taxAmount => estimateTax(subtotalAmount);
   int get grandTotalAmount => subtotalAmount + taxAmount;
   List<EstimateItemGroup> get groups {
-    final grouped = <String, List<EstimateItem>>{};
+    final locationsBySymbol = _constructionLocationsBySymbol(_items);
+    final grouped = <(String, String), List<EstimateItem>>{};
     for (final item in _items) {
-      grouped.putIfAbsent(item.trade.trim(), () => []).add(item);
+      final symbol = item.constructionSymbol.trim();
+      grouped
+          .putIfAbsent((
+            symbol,
+            symbol.isEmpty
+                ? item.constructionLocation.trim()
+                : locationsBySymbol[symbol] ?? item.constructionLocation.trim(),
+          ), () => [])
+          .add(item);
     }
     return [
       for (final entry in grouped.entries)
         EstimateItemGroup(
-          trade: entry.key,
+          constructionSymbol: entry.key.$1,
+          constructionLocation: entry.key.$2,
           items: List.unmodifiable(entry.value),
         ),
     ];
@@ -77,6 +86,12 @@ class EstimateController extends ChangeNotifier {
       _unitPriceMasters
         ..clear()
         ..addAll(workspace.unitPriceMasters);
+      if (_estimates.isEmpty) {
+        _info = EstimateInfo.initial(DateTime.now());
+        _items.clear();
+        notifyListeners();
+        return;
+      }
       final document = _estimates.firstWhere(
         (estimate) => estimate.info.id == workspace.activeEstimateId,
         orElse: () => _estimates.first,
@@ -94,18 +109,19 @@ class EstimateController extends ChangeNotifier {
 
   Future<EstimateItem> add(EstimateItemDraft draft) async {
     final now = DateTime.now();
+    final resolvedDraft = _resolveConstructionLocation(draft);
     final item = EstimateItem.fromDraft(
-      draft,
+      resolvedDraft,
       id: now.microsecondsSinceEpoch.toString(),
       createdAt: now,
     );
-    final updated = [..._items, item];
+    final updated = _synchronizeConstructionLocation([..._items, item], item);
     await _save(updated);
     _items
       ..clear()
       ..addAll(updated);
     notifyListeners();
-    return item;
+    return updated.firstWhere((candidate) => candidate.id == item.id);
   }
 
   EstimateItem? findDuplicate(EstimateItemDraft draft) {
@@ -117,6 +133,8 @@ class EstimateController extends ChangeNotifier {
       }
       if (calculationBasis.isEmpty &&
           _normalizedText(item.calculationBasis).isEmpty &&
+          _normalizedText(item.constructionSymbol) ==
+              _normalizedText(draft.constructionSymbol) &&
           _normalizedText(item.trade) == _normalizedText(draft.trade) &&
           _normalizedText(item.constructionLocation) ==
               _normalizedText(draft.constructionLocation) &&
@@ -138,6 +156,7 @@ class EstimateController extends ChangeNotifier {
     final name = _normalizedText(draft.name);
     final unit = _normalizedText(draft.unit);
     final constructionLocation = _normalizedText(draft.constructionLocation);
+    final constructionSymbol = _normalizedText(draft.constructionSymbol);
     if (name.isEmpty ||
         unit.isEmpty ||
         draft.quantity == null ||
@@ -147,6 +166,7 @@ class EstimateController extends ChangeNotifier {
     for (final item in _items.reversed) {
       if (item.quantity != null &&
           item.unitPrice == draft.unitPrice &&
+          _normalizedText(item.constructionSymbol) == constructionSymbol &&
           _normalizedText(item.constructionLocation) == constructionLocation &&
           _normalizedText(item.name) == name &&
           _normalizedText(item.unit) == unit) {
@@ -182,6 +202,7 @@ class EstimateController extends ChangeNotifier {
     return update(
       id,
       EstimateItemDraft(
+        constructionSymbol: current.constructionSymbol,
         trade: current.trade,
         constructionLocation: current.constructionLocation,
         name: current.name,
@@ -200,18 +221,23 @@ class EstimateController extends ChangeNotifier {
     final index = _items.indexWhere((item) => item.id == id);
     if (index < 0) throw StateError('Estimate item was not found.');
     final current = _items[index];
-    final updatedItem = EstimateItem.fromDraft(
+    final resolvedDraft = _resolveConstructionLocation(
       draft,
+      excludingItemId: id,
+    );
+    final updatedItem = EstimateItem.fromDraft(
+      resolvedDraft,
       id: current.id,
       createdAt: current.createdAt,
     );
-    final updated = List<EstimateItem>.of(_items)..[index] = updatedItem;
+    final replaced = List<EstimateItem>.of(_items)..[index] = updatedItem;
+    final updated = _synchronizeConstructionLocation(replaced, updatedItem);
     await _save(updated);
     _items
       ..clear()
       ..addAll(updated);
     notifyListeners();
-    return updatedItem;
+    return updated.firstWhere((candidate) => candidate.id == id);
   }
 
   Future<void> delete(String id) async {
@@ -236,9 +262,9 @@ class EstimateController extends ChangeNotifier {
     if (!canCreateEstimate) {
       throw StateError('Free estimate limit reached.');
     }
-    final current = _currentDocument();
     final created = EstimateDocument(info: info, items: const []);
-    final existing = _estimates.isEmpty ? [current] : _estimates;
+    final current = _currentDocument();
+    final existing = _estimates;
     final estimates = [
       for (final estimate in existing)
         if (estimate.info.id == current.info.id) current else estimate,
@@ -356,9 +382,60 @@ class EstimateController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _save(List<EstimateItem> items) {
-    return store?.save(_workspaceWithActive(items: items)) ??
-        Future<void>.value();
+  Future<void> _save(List<EstimateItem> items) async {
+    final workspace = _workspaceWithActive(items: items);
+    await store?.save(workspace);
+    _replaceEstimates(workspace.estimates);
+  }
+
+  EstimateItemDraft _resolveConstructionLocation(
+    EstimateItemDraft draft, {
+    String? excludingItemId,
+  }) {
+    final symbol = draft.constructionSymbol.trim();
+    final requestedLocation = draft.constructionLocation.trim();
+    if (symbol.isEmpty || requestedLocation.isNotEmpty) {
+      return draft.copyWith(
+        constructionSymbol: symbol,
+        constructionLocation: requestedLocation,
+      );
+    }
+    final existingLocation = _items
+        .where((item) => item.id != excludingItemId)
+        .where(
+          (item) =>
+              _normalizedText(item.constructionSymbol) ==
+                  _normalizedText(symbol) &&
+              item.constructionLocation.trim().isNotEmpty,
+        )
+        .map((item) => item.constructionLocation.trim())
+        .firstOrNull;
+    return draft.copyWith(
+      constructionSymbol: symbol,
+      constructionLocation: existingLocation ?? '',
+    );
+  }
+
+  List<EstimateItem> _synchronizeConstructionLocation(
+    List<EstimateItem> items,
+    EstimateItem savedItem,
+  ) {
+    final symbol = savedItem.constructionSymbol.trim();
+    if (symbol.isEmpty) return items;
+    final location = savedItem.constructionLocation.trim();
+    return [
+      for (final item in items)
+        if (_normalizedText(item.constructionSymbol) ==
+                _normalizedText(symbol) &&
+            item.constructionLocation.trim() != location)
+          EstimateItem.fromDraft(
+            item.toDraft().copyWith(constructionLocation: location),
+            id: item.id,
+            createdAt: item.createdAt,
+          )
+        else
+          item,
+    ];
   }
 
   Future<UnitPriceMaster> addUnitPriceMaster(UnitPriceMasterDraft draft) async {
@@ -474,6 +551,20 @@ class EstimateController extends ChangeNotifier {
 
 String _normalizedText(String value) =>
     value.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+Map<String, String> _constructionLocationsBySymbol(
+  Iterable<EstimateItem> items,
+) {
+  final locations = <String, String>{};
+  for (final item in items) {
+    final symbol = item.constructionSymbol.trim();
+    final location = item.constructionLocation.trim();
+    if (symbol.isNotEmpty && location.isNotEmpty) {
+      locations.putIfAbsent(symbol, () => location);
+    }
+  }
+  return locations;
+}
 
 bool _hasSameUnitPriceMasterContent(
   UnitPriceMaster price,

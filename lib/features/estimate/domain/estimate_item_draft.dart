@@ -1,5 +1,6 @@
 class EstimateItemDraft {
   const EstimateItemDraft({
+    this.constructionSymbol = '',
     this.trade = '',
     this.constructionLocation = '',
     this.name = '',
@@ -12,6 +13,7 @@ class EstimateItemDraft {
     this.originalQuantity,
   });
 
+  final String constructionSymbol;
   final String trade;
   final String constructionLocation;
   final String name;
@@ -31,6 +33,7 @@ class EstimateItemDraft {
   }
 
   EstimateItemDraft copyWith({
+    String? constructionSymbol,
     String? trade,
     String? constructionLocation,
     String? name,
@@ -46,6 +49,7 @@ class EstimateItemDraft {
     bool clearOriginalQuantity = false,
   }) {
     return EstimateItemDraft(
+      constructionSymbol: constructionSymbol ?? this.constructionSymbol,
       trade: trade ?? this.trade,
       constructionLocation: constructionLocation ?? this.constructionLocation,
       name: name ?? this.name,

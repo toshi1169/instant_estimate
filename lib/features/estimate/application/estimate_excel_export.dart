@@ -5,13 +5,13 @@ import 'package:excel_plus/excel_plus.dart';
 import '../../settings/domain/company_profile.dart';
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
+import '../domain/estimate_item_symbol.dart';
 import '../domain/estimate_totals.dart';
 
 const _coverSheetName = '御見積書';
 const _breakdownSheetName = '内訳';
 const _grandTotalDefinedName = 'EstimateGrandTotal';
 const _breakdownHeaders = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
-const _quantityFormat = '#,##0.#####';
 const _moneyFormat = '#,##0';
 const _breakdownBlockRows = 20;
 const _breakdownDataRows = 17;
@@ -20,6 +20,7 @@ List<int> buildEstimateWorkbook({
   required EstimateInfo info,
   required Iterable<EstimateItem> items,
   CompanyProfile companyProfile = const CompanyProfile(),
+  int estimateDecimalPlaces = 2,
 }) {
   final itemList = items.toList(growable: false);
   final excel = Excel.createExcel();
@@ -30,7 +31,11 @@ List<int> buildEstimateWorkbook({
   coverSheet.showGridLines = false;
   breakdownSheet.showGridLines = false;
 
-  final grandTotalRow = _writeBreakdownSheet(breakdownSheet, itemList);
+  final grandTotalRow = _writeBreakdownSheet(
+    breakdownSheet,
+    itemList,
+    estimateDecimalPlaces: estimateDecimalPlaces,
+  );
   excel.setDefinedName(
     _grandTotalDefinedName,
     "'$_breakdownSheetName'!\$G\$$grandTotalRow",
@@ -47,6 +52,7 @@ Future<File> createEstimateWorkbookFile({
   required EstimateInfo info,
   required Iterable<EstimateItem> items,
   CompanyProfile companyProfile = const CompanyProfile(),
+  int estimateDecimalPlaces = 2,
 }) async {
   final directory = await Directory.systemTemp.createTemp('instant_estimate_');
   final file = File(
@@ -56,6 +62,7 @@ Future<File> createEstimateWorkbookFile({
     info: info,
     items: items,
     companyProfile: companyProfile,
+    estimateDecimalPlaces: estimateDecimalPlaces,
   );
   await file.writeAsBytes(bytes, flush: true);
   return file;
@@ -86,8 +93,8 @@ void _writeCoverSheet(
   ];
   const heights = [
     60.0,
-    29.25,
-    10.5,
+    22.0,
+    23.0,
     32.25,
     30.75,
     30.75,
@@ -96,12 +103,12 @@ void _writeCoverSheet(
     39.75,
     39.0,
     24.75,
-    21.75,
     24.75,
-    16.5,
+    24.75,
+    24.75,
     24.75,
     38.25,
-    35.25,
+    18.75,
   ];
   for (var column = 0; column < widths.length; column++) {
     sheet.setColumnWidth(column, widths[column]);
@@ -110,63 +117,39 @@ void _writeCoverSheet(
     sheet.setRowHeight(row, heights[row]);
   }
 
-  _mergeText(sheet, 'A1', 'P1', '御見積書', _coverTitleStyle());
-  _mergeText(
-    sheet,
-    'C3',
-    'I3',
-    info.siteName.trim().isEmpty ? '' : '現場名：${info.siteName.trim()}',
-    _coverFieldStyle(fontSize: 14),
-  );
-  _setText(sheet, 'O2', _japaneseEraDate(info.createdDate), _coverDateStyle());
-  _mergeText(
-    sheet,
-    'C4',
-    'I4',
-    _clientWithoutHonorific(info.clientName),
-    _coverClientStyle(),
-  );
-  _setText(sheet, 'J4', '様', _coverHonorificStyle());
+  _mergeText(sheet, 'I1', 'N1', '御　見　積　書', _coverTitleStyle());
+  _mergeText(sheet, 'C3', 'I3', '', _coverFieldStyle(fontSize: 14));
+  _setText(sheet, 'O2', _westernDate(info.createdDate), _coverDateStyle());
+  _mergeText(sheet, 'C4', 'J4', info.displayName, _coverEstimateNameStyle());
 
   _mergeText(sheet, 'B6', 'C6', '金 額', _coverAmountLabelStyle());
-  _setText(sheet, 'D6', '￥', _coverYenStyle());
+  _mergeText(sheet, 'F6', 'G6', '¥', _coverYenStyle());
   sheet.merge(
-    CellIndex.indexByString('F6'),
-    CellIndex.indexByString('K6'),
+    CellIndex.indexByString('H6'),
+    CellIndex.indexByString('M6'),
     customValue: FormulaCellValue(_grandTotalDefinedName),
   );
-  sheet.cell(CellIndex.indexByString('F6')).cellStyle = _coverAmountStyle();
+  sheet.cell(CellIndex.indexByString('H6')).cellStyle = _coverAmountStyle();
 
-  _setText(
-    sheet,
-    'F7',
-    '但',
-    _coverFieldStyle(horizontal: HorizontalAlign.Center),
-  );
-  _mergeText(
-    sheet,
-    'G7',
-    'N7',
-    info.proviso.trim(),
-    _coverFieldStyle(wrap: true),
-  );
+  _mergeText(sheet, 'F7', 'G7', '但', _coverProvisoLabelStyle());
+  _mergeText(sheet, 'H7', 'N7', info.proviso.trim(), _coverProvisoValueStyle());
   _mergeText(
     sheet,
     'I8',
-    'P8',
-    '内訳別紙明細書の通り',
-    _coverFieldStyle(horizontal: HorizontalAlign.Center),
+    'N9',
+    '内 訳 別 紙 明 細 書 の 通 り',
+    _coverBreakdownNoteStyle(),
   );
   _mergeText(
     sheet,
-    'B9',
-    'P9',
+    'B10',
+    'P10',
     '上記の通り御見積申し上げますので、何卒ご用命の程お願い申し上げます。',
     _coverStatementStyle(),
   );
 
-  _mergeText(sheet, 'B11', 'D11', '見積有効期限', _coverLabelStyle());
-  _mergeText(sheet, 'E11', 'G11', '（発行日より）', _coverHelperStyle());
+  _mergeText(sheet, 'B11', 'D11', '見 積 有 効 期 限', _coverLabelStyle());
+  _mergeText(sheet, 'E11', 'G11', '', _coverHelperStyle());
   _mergeText(
     sheet,
     'H11',
@@ -174,7 +157,7 @@ void _writeCoverSheet(
     info.validityPeriod.trim(),
     _coverValueStyle(),
   );
-  _mergeText(sheet, 'B13', 'D13', '工期', _coverLabelStyle());
+  _mergeText(sheet, 'B13', 'D13', '工 期', _coverLabelStyle());
   _mergeText(
     sheet,
     'H13',
@@ -182,38 +165,16 @@ void _writeCoverSheet(
     info.constructionPeriod.trim(),
     _coverValueStyle(),
   );
-  _mergeText(sheet, 'B15', 'D15', '御支払条件', _coverLabelStyle());
+  _mergeText(sheet, 'B15', 'D15', '御 支 払 条 件', _coverLabelStyle());
   _mergeText(sheet, 'H15', 'M15', info.paymentTerms.trim(), _coverValueStyle());
+  _mergeText(sheet, 'H16', 'M16', info.notes.trim(), _coverNotesStyle());
 
-  final postalAddress = [
-    if (companyProfile.postalCode.trim().isNotEmpty)
-      '〒${companyProfile.postalCode.trim()}',
-    if (companyProfile.addressLine1.trim().isNotEmpty)
-      companyProfile.addressLine1.trim(),
-  ].join(' ');
-  _mergeText(sheet, 'O13', 'P13', postalAddress, _companyStyle());
-  _mergeText(
-    sheet,
-    'O14',
-    'P14',
-    companyProfile.addressLine2.trim(),
-    _companyStyle(),
-  );
-  _mergeText(
-    sheet,
-    'O15',
-    'P15',
-    companyProfile.companyName.trim(),
-    _companyStyle(),
-  );
-  _mergeText(
-    sheet,
-    'O16',
-    'P16',
-    companyProfile.representativeName.trim(),
-    _companyStyle(),
-  );
+  _writeCompanyProfile(sheet, companyProfile);
   _applyCoverBorders(sheet);
+  final notesStart = CellIndex.indexByString('H16');
+  final notesStyle = _coverNotesStyle();
+  sheet.setMergedCellStyle(notesStart, notesStyle);
+  sheet.cell(notesStart).cellStyle = notesStyle;
   sheet.setPrintArea(
     CellIndex.indexByString('A1'),
     CellIndex.indexByString('P17'),
@@ -236,32 +197,76 @@ void _writeCoverSheet(
   );
 }
 
-int _writeBreakdownSheet(Sheet sheet, List<EstimateItem> items) {
-  const widths = [4.83, 28.0, 24.83, 10.5, 5.5, 11.5, 14.5, 23.17, 6.17, 0.91];
+void _writeCompanyProfile(Sheet sheet, CompanyProfile profile) {
+  final values = <CompanyProfileSection, String>{
+    CompanyProfileSection.companyName: profile.companyName.trim(),
+    CompanyProfileSection.representativeName: profile.representativeName.trim(),
+    CompanyProfileSection.postalCode: profile.postalCode.trim(),
+    CompanyProfileSection.addressLine1: profile.addressLine1.trim(),
+    CompanyProfileSection.addressLine2: profile.addressLine2.trim(),
+    CompanyProfileSection.phoneNumber: profile.phoneNumber.trim(),
+  };
+  final visibleSections = profile.effectiveExcelVisibleSections.toSet();
+  final lines = [
+    for (final section in profile.effectiveDisplayOrder)
+      if (visibleSections.contains(section) && values[section]!.isNotEmpty)
+        values[section]!,
+  ].take(5).toList(growable: false);
+
+  for (var row = 11; row <= 16; row++) {
+    _mergeText(
+      sheet,
+      'O$row',
+      'P$row',
+      row <= 15 && row - 11 < lines.length ? lines[row - 11] : '',
+      row <= 15
+          ? _companyInformationStyle()
+          : _companyInformationReserveStyle(),
+    );
+  }
+}
+
+int _writeBreakdownSheet(
+  Sheet sheet,
+  List<EstimateItem> items, {
+  required int estimateDecimalPlaces,
+}) {
+  const widths = [
+    4.83,
+    32.0,
+    32.0,
+    6.83,
+    4.67,
+    10.76,
+    13.67,
+    11.5,
+    3.0,
+    3.0,
+    10.17,
+  ];
   for (var column = 0; column < widths.length; column++) {
     sheet.setColumnWidth(column, widths[column]);
   }
 
-  final writer = _BreakdownWriter(sheet);
+  final writer = _BreakdownWriter(
+    sheet,
+    quantityFormat: _quantityFormat(estimateDecimalPlaces),
+  );
   final groups = _groupItemsByLocation(items);
-  var groupNumber = 1;
+  final subtotalLabel = _subtotalLabel(groups.keys.map((group) => group.$1));
   var firstGroup = true;
   for (final entry in groups.entries) {
-    final rowsNeeded = entry.value.length + 2;
     if (!firstGroup && writer.usedDataRows > 0) {
-      final needWithGap = rowsNeeded <= _breakdownDataRows ? rowsNeeded + 1 : 3;
-      if (writer.remainingDataRows < needWithGap) {
+      // 空欄・施工場所見出し・最低1明細を同じページに置けない場合だけ
+      // 次ページへ送り、収まる分の明細は20行雛形内へ順に配置する。
+      if (writer.remainingDataRows < 3) {
         writer.startNextPage();
       } else {
         writer.writeBlankRow();
       }
     }
-    if (rowsNeeded <= _breakdownDataRows &&
-        writer.remainingDataRows < rowsNeeded) {
-      writer.startNextPage();
-    }
 
-    writer.writeLocationRow(_groupMarker(groupNumber), entry.key);
+    writer.writeLocationRow(entry.key.$1, entry.key.$2);
     final detailRows = <int>[];
     for (final item in entry.value) {
       if (writer.remainingDataRows == 0) writer.startNextPage();
@@ -269,30 +274,27 @@ int _writeBreakdownSheet(Sheet sheet, List<EstimateItem> items) {
     }
     if (writer.remainingDataRows == 0) writer.startNextPage();
     writer.writeSubtotalRow(detailRows);
-    groupNumber++;
     firstGroup = false;
   }
 
+  // 最後の小計の直後へ、空欄1行＋最終集計3行を連続配置する。
+  // 4行分が収まらない場合は、空欄を含む集計ブロック全体を次ページへ送る。
   if (writer.usedDataRows > 0) {
-    if (writer.remainingDataRows < 4) {
-      writer.startNextPage();
-    } else {
-      writer.writeBlankRow();
-    }
-  } else if (writer.remainingDataRows < 3) {
-    writer.startNextPage();
+    if (writer.remainingDataRows < 4) writer.startNextPage();
+    writer.writeBlankRow();
   }
-  final grandTotalRow = writer.writeSummaryRows();
+  final grandTotalRow = writer.writeSummaryRows(subtotalLabel: subtotalLabel);
   writer.finish();
   return grandTotalRow;
 }
 
 class _BreakdownWriter {
-  _BreakdownWriter(this.sheet) {
+  _BreakdownWriter(this.sheet, {required this.quantityFormat}) {
     _writePageHeader();
   }
 
   final Sheet sheet;
+  final String quantityFormat;
   final List<int> subtotalRows = <int>[];
   var pageIndex = 0;
   var usedDataRows = 0;
@@ -306,24 +308,25 @@ class _BreakdownWriter {
     sheet.setRowHeight(start, 43.5);
     sheet.setRowHeight(start + 1, 12);
     sheet.setRowHeight(start + 2, 25.5);
+    for (var row = start + 3; row <= start + 18; row++) {
+      sheet.setRowHeight(row, 30);
+    }
     sheet.merge(
-      CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: start),
-      CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: start),
-      customValue: TextCellValue('内訳書'),
+      CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: start),
+      CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: start),
+      customValue: TextCellValue('　内　訳　書'),
     );
     sheet
-            .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: start))
+            .cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: start))
             .cellStyle =
         _breakdownTitleStyle();
-    sheet.merge(
-      CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: start),
-      CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: start),
-      customValue: TextCellValue('No. ${pageIndex + 1}'),
+    _setCell(
+      sheet,
+      start,
+      10,
+      TextCellValue('No.${pageIndex + 1}'),
+      _breakdownPageNumberStyle(),
     );
-    sheet
-            .cell(CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: start))
-            .cellStyle =
-        _breakdownPageNumberStyle();
     for (var column = 0; column < 7; column++) {
       _setCell(
         sheet,
@@ -337,13 +340,14 @@ class _BreakdownWriter {
       sheet,
       start + 2,
       7,
-      9,
+      10,
       _breakdownHeaders[7],
-      _breakdownHeaderStyle(),
+      _breakdownDescriptionHeaderStyle(),
     );
   }
 
   void startNextPage() {
+    _fillRemainingTemplateRows();
     pageIndex++;
     usedDataRows = 0;
     sheet.insertRowPageBreak(_blockStart);
@@ -364,7 +368,7 @@ class _BreakdownWriter {
     for (var column = 2; column < 7; column++) {
       _setCell(sheet, row, column, TextCellValue(''), _locationTextStyle());
     }
-    _mergeRowText(sheet, row, 7, 9, '', _locationTextStyle());
+    _mergeRowText(sheet, row, 7, 10, '', _breakdownDescriptionStyle());
     sheet.setRowHeight(row, 30);
     usedDataRows++;
   }
@@ -390,7 +394,7 @@ class _BreakdownWriter {
         _ => HorizontalAlign.Left,
       };
       final format = switch (column) {
-        3 => _quantityFormat,
+        3 => quantityFormat,
         5 || 6 => _moneyFormat,
         _ => null,
       };
@@ -399,20 +403,22 @@ class _BreakdownWriter {
         row,
         column,
         values[column],
-        _detailStyle(
-          horizontal: alignment,
-          fontSize: fontSize,
-          numberFormat: format,
-        ),
+        column == 1 || column == 2
+            ? _breakdownItemTextStyle(fontSize: fontSize)
+            : _detailStyle(
+                horizontal: alignment,
+                fontSize: fontSize,
+                numberFormat: format,
+              ),
       );
     }
     _mergeRowText(
       sheet,
       row,
       7,
-      9,
+      10,
       item.description,
-      _detailStyle(horizontal: HorizontalAlign.Left, fontSize: fontSize),
+      _breakdownDescriptionStyle(),
     );
     sheet.setRowHeight(row, 30);
     usedDataRows++;
@@ -435,9 +441,9 @@ class _BreakdownWriter {
     usedDataRows++;
   }
 
-  int writeSummaryRows() {
+  int writeSummaryRows({required String subtotalLabel}) {
     final taxExcludedRow = _nextRow;
-    _writeSummaryRow(taxExcludedRow, '税抜合計');
+    _writeSummaryRow(taxExcludedRow, subtotalLabel);
     _setCell(
       sheet,
       taxExcludedRow,
@@ -448,7 +454,7 @@ class _BreakdownWriter {
     usedDataRows++;
 
     final taxRow = _nextRow;
-    _writeSummaryRow(taxRow, '消費税（10%）');
+    _writeSummaryRow(taxRow, '消費税$estimateTaxPercentage%');
     _setCell(
       sheet,
       taxRow,
@@ -459,7 +465,7 @@ class _BreakdownWriter {
     usedDataRows++;
 
     final totalRow = _nextRow;
-    _writeSummaryRow(totalRow, '税込総額', emphasized: true);
+    _writeSummaryRow(totalRow, '合計', emphasized: true);
     _setCell(
       sheet,
       totalRow,
@@ -481,13 +487,10 @@ class _BreakdownWriter {
   void finish() {
     final completeBlocks = pageIndex + 1;
     final finalRow = completeBlocks * _breakdownBlockRows;
-    for (var row = _nextRow; row < finalRow; row++) {
-      _writeEmptyBreakdownRow(sheet, row);
-      sheet.setRowHeight(row, 30);
-    }
+    _fillRemainingTemplateRows();
     sheet.setPrintArea(
       CellIndex.indexByString('A1'),
-      CellIndex.indexByColumnRow(columnIndex: 9, rowIndex: finalRow - 1),
+      CellIndex.indexByColumnRow(columnIndex: 10, rowIndex: finalRow - 1),
     );
     sheet.pageSetup = const PageSetup(
       orientation: PageOrientation.landscape,
@@ -504,17 +507,56 @@ class _BreakdownWriter {
       ),
     );
   }
+
+  void _fillRemainingTemplateRows() {
+    final finalRow = (pageIndex + 1) * _breakdownBlockRows;
+    for (var row = _nextRow; row < finalRow; row++) {
+      _writeEmptyBreakdownRow(sheet, row);
+      sheet.setRowHeight(row, 30);
+    }
+  }
 }
 
-Map<String, List<EstimateItem>> _groupItemsByLocation(
+Map<(String, String), List<EstimateItem>> _groupItemsByLocation(
   List<EstimateItem> items,
 ) {
-  final grouped = <String, List<EstimateItem>>{};
+  final locationsBySymbol = <String, String>{};
   for (final item in items) {
+    final symbol = item.constructionSymbol.trim();
     final location = item.constructionLocation.trim();
-    grouped.putIfAbsent(location, () => <EstimateItem>[]).add(item);
+    if (symbol.isNotEmpty && location.isNotEmpty) {
+      locationsBySymbol.putIfAbsent(symbol, () => location);
+    }
+  }
+  final grouped = <(String, String), List<EstimateItem>>{};
+  for (final item in items) {
+    final symbol = item.constructionSymbol.trim();
+    final location = symbol.isEmpty
+        ? item.constructionLocation.trim()
+        : locationsBySymbol[symbol] ?? item.constructionLocation.trim();
+    grouped.putIfAbsent((symbol, location), () => <EstimateItem>[]).add(item);
   }
   return grouped;
+}
+
+String _subtotalLabel(Iterable<String> groupSymbols) {
+  final symbols = groupSymbols
+      .map((symbol) => symbol.trim())
+      .where((symbol) => symbol.isNotEmpty)
+      .toSet()
+      .toList();
+  symbols.sort((left, right) {
+    final leftIndex = estimateItemSymbols.indexOf(left);
+    final rightIndex = estimateItemSymbols.indexOf(right);
+    if (leftIndex >= 0 && rightIndex >= 0) {
+      return leftIndex.compareTo(rightIndex);
+    }
+    if (leftIndex >= 0) return -1;
+    if (rightIndex >= 0) return 1;
+    return left.compareTo(right);
+  });
+  if (symbols.isEmpty) return '計';
+  return '${symbols.join('+')} 計';
 }
 
 void _writeEmptyBreakdownRow(Sheet sheet, int row, {CellStyle? style}) {
@@ -522,7 +564,7 @@ void _writeEmptyBreakdownRow(Sheet sheet, int row, {CellStyle? style}) {
   for (var column = 0; column < 7; column++) {
     _setCell(sheet, row, column, TextCellValue(''), resolvedStyle);
   }
-  _mergeRowText(sheet, row, 7, 9, '', resolvedStyle);
+  _mergeRowText(sheet, row, 7, 10, '', _breakdownDescriptionStyle());
 }
 
 void _mergeRowText(
@@ -533,17 +575,17 @@ void _mergeRowText(
   String text,
   CellStyle style,
 ) {
+  final start = CellIndex.indexByColumnRow(
+    columnIndex: fromColumn,
+    rowIndex: row,
+  );
   sheet.merge(
-    CellIndex.indexByColumnRow(columnIndex: fromColumn, rowIndex: row),
+    start,
     CellIndex.indexByColumnRow(columnIndex: toColumn, rowIndex: row),
     customValue: TextCellValue(text),
   );
-  sheet
-          .cell(
-            CellIndex.indexByColumnRow(columnIndex: fromColumn, rowIndex: row),
-          )
-          .cellStyle =
-      style;
+  sheet.setMergedCellStyle(start, style);
+  sheet.cell(start).cellStyle = style;
 }
 
 void _mergeText(
@@ -607,7 +649,7 @@ void _applyCoverBorders(Sheet sheet) {
     }
   }
   _applyBottomBorder(sheet, 3, 2, 9, _mediumBorder());
-  _applyBottomBorder(sheet, 5, 1, 10, _thinBorder());
+  _applyBottomBorder(sheet, 5, 1, 12, _thinBorder());
   _applyBottomBorder(sheet, 6, 5, 13, _thinBorder());
   _applyBottomBorder(sheet, 10, 1, 12, _thinBorder());
   _applyBottomBorder(sheet, 12, 1, 12, _thinBorder());
@@ -639,24 +681,17 @@ CellStyle _coverTitleStyle() => CellStyle(
 
 CellStyle _coverDateStyle() => CellStyle(
   fontFamily: 'MS P明朝',
-  fontSize: 12,
+  fontSize: 16,
   horizontalAlign: HorizontalAlign.Right,
   verticalAlign: VerticalAlign.Bottom,
 );
 
-CellStyle _coverClientStyle() => CellStyle(
+CellStyle _coverEstimateNameStyle() => CellStyle(
   fontFamily: 'MS P明朝',
-  fontSize: 18,
-  horizontalAlign: HorizontalAlign.Left,
-  verticalAlign: VerticalAlign.Bottom,
-  bottomBorder: _mediumBorder(),
-);
-
-CellStyle _coverHonorificStyle() => CellStyle(
-  fontFamily: 'MS P明朝',
-  fontSize: 18,
+  fontSize: 22,
   horizontalAlign: HorizontalAlign.Center,
   verticalAlign: VerticalAlign.Bottom,
+  textWrapping: TextWrapping.Clip,
   bottomBorder: _mediumBorder(),
 );
 
@@ -671,7 +706,7 @@ CellStyle _coverAmountLabelStyle() => CellStyle(
 CellStyle _coverYenStyle() => CellStyle(
   fontFamily: 'MS P明朝',
   fontSize: 22,
-  horizontalAlign: HorizontalAlign.Right,
+  horizontalAlign: HorizontalAlign.Center,
   verticalAlign: VerticalAlign.Bottom,
   bottomBorder: _thinBorder(),
 );
@@ -680,8 +715,9 @@ CellStyle _coverAmountStyle() => CellStyle(
   fontFamily: 'MS P明朝',
   fontSize: 22,
   bold: true,
-  horizontalAlign: HorizontalAlign.Right,
+  horizontalAlign: HorizontalAlign.Left,
   verticalAlign: VerticalAlign.Bottom,
+  indent: 1,
   numberFormat: NumFormat.custom(formatCode: _moneyFormat),
   bottomBorder: _thinBorder(),
 );
@@ -701,7 +737,7 @@ CellStyle _coverFieldStyle({
 CellStyle _coverStatementStyle() => CellStyle(
   fontFamily: 'MS P明朝',
   fontSize: 12,
-  horizontalAlign: HorizontalAlign.Center,
+  horizontalAlign: HorizontalAlign.Left,
   verticalAlign: VerticalAlign.Center,
   textWrapping: TextWrapping.WrapText,
 );
@@ -712,6 +748,30 @@ CellStyle _coverLabelStyle() => CellStyle(
   horizontalAlign: HorizontalAlign.Center,
   verticalAlign: VerticalAlign.Bottom,
   bottomBorder: _thinBorder(),
+);
+
+CellStyle _coverProvisoLabelStyle() => CellStyle(
+  fontFamily: 'MS P明朝',
+  fontSize: 16,
+  horizontalAlign: HorizontalAlign.Center,
+  verticalAlign: VerticalAlign.Bottom,
+  bottomBorder: _thinBorder(),
+);
+
+CellStyle _coverProvisoValueStyle() => CellStyle(
+  fontFamily: 'MS P明朝',
+  fontSize: 16,
+  horizontalAlign: HorizontalAlign.Left,
+  verticalAlign: VerticalAlign.Bottom,
+  textWrapping: TextWrapping.WrapText,
+  bottomBorder: _thinBorder(),
+);
+
+CellStyle _coverBreakdownNoteStyle() => CellStyle(
+  fontFamily: 'MS P明朝',
+  fontSize: 14,
+  horizontalAlign: HorizontalAlign.Center,
+  verticalAlign: VerticalAlign.Center,
 );
 
 CellStyle _coverHelperStyle() => CellStyle(
@@ -727,29 +787,49 @@ CellStyle _coverValueStyle() => CellStyle(
   fontSize: 12,
   horizontalAlign: HorizontalAlign.Left,
   verticalAlign: VerticalAlign.Bottom,
+  textWrapping: TextWrapping.Clip,
   bottomBorder: _thinBorder(),
 );
 
-CellStyle _companyStyle({int fontSize = 16}) => CellStyle(
+CellStyle _coverNotesStyle() => CellStyle(
   fontFamily: 'MS P明朝',
-  fontSize: fontSize,
+  fontSize: 10,
   horizontalAlign: HorizontalAlign.Left,
   verticalAlign: VerticalAlign.Bottom,
   textWrapping: TextWrapping.WrapText,
+  bottomBorder: _breakdownThinBorder(),
+);
+
+CellStyle _companyInformationStyle() => CellStyle(
+  fontFamily: 'MS P明朝',
+  fontSize: 16,
+  bold: true,
+  horizontalAlign: HorizontalAlign.Left,
+  verticalAlign: VerticalAlign.Bottom,
+  textWrapping: TextWrapping.Clip,
+);
+
+CellStyle _companyInformationReserveStyle() => CellStyle(
+  fontFamily: 'MS P明朝',
+  fontSize: 10,
+  horizontalAlign: HorizontalAlign.Left,
+  verticalAlign: VerticalAlign.Bottom,
+  textWrapping: TextWrapping.Clip,
 );
 
 CellStyle _breakdownTitleStyle() => CellStyle(
   fontFamily: 'MS Pゴシック',
-  fontSize: 20,
+  fontSize: 26,
   horizontalAlign: HorizontalAlign.Center,
-  verticalAlign: VerticalAlign.Center,
+  verticalAlign: VerticalAlign.Bottom,
 );
 
 CellStyle _breakdownPageNumberStyle() => CellStyle(
   fontFamily: 'MS P明朝',
-  fontSize: 11,
-  horizontalAlign: HorizontalAlign.Right,
+  fontSize: 10,
+  horizontalAlign: HorizontalAlign.Center,
   verticalAlign: VerticalAlign.Bottom,
+  bottomBorder: _dottedBorder(),
 );
 
 CellStyle _breakdownHeaderStyle() => CellStyle(
@@ -758,10 +838,37 @@ CellStyle _breakdownHeaderStyle() => CellStyle(
   horizontalAlign: HorizontalAlign.Center,
   verticalAlign: VerticalAlign.Center,
   textWrapping: TextWrapping.WrapText,
-  leftBorder: _thinBorder(),
-  rightBorder: _thinBorder(),
-  topBorder: _thinBorder(),
-  bottomBorder: _thinBorder(),
+  leftBorder: _breakdownThinBorder(),
+  rightBorder: _breakdownThinBorder(),
+  topBorder: _breakdownThinBorder(),
+  bottomBorder: _breakdownThinBorder(),
+);
+
+CellStyle _breakdownDescriptionStyle() => CellStyle(
+  fontFamily: 'MS P明朝',
+  fontSize: 11,
+  horizontalAlign: HorizontalAlign.Left,
+  verticalAlign: VerticalAlign.Bottom,
+  textWrapping: TextWrapping.Clip,
+  leftBorder: _breakdownThinBorder(),
+  rightBorder: _breakdownThinBorder(),
+  topBorder: _breakdownThinBorder(),
+  bottomBorder: _breakdownThinBorder(),
+);
+
+CellStyle _breakdownDescriptionHeaderStyle() =>
+    _breakdownHeaderStyle().copyWith(verticalAlignVal: VerticalAlign.Bottom);
+
+CellStyle _breakdownItemTextStyle({required int fontSize}) => CellStyle(
+  fontFamily: 'MS P明朝',
+  fontSize: fontSize,
+  horizontalAlign: HorizontalAlign.Left,
+  verticalAlign: VerticalAlign.Center,
+  textWrapping: TextWrapping.WrapText,
+  leftBorder: _breakdownThinBorder(),
+  rightBorder: _breakdownThinBorder(),
+  topBorder: _breakdownThinBorder(),
+  bottomBorder: _breakdownThinBorder(),
 );
 
 CellStyle _locationMarkerStyle() =>
@@ -785,10 +892,10 @@ CellStyle _detailStyle({
   numberFormat: numberFormat == null
       ? NumFormat.standard_0
       : NumFormat.custom(formatCode: numberFormat),
-  leftBorder: _thinBorder(),
-  rightBorder: _thinBorder(),
-  topBorder: _thinBorder(),
-  bottomBorder: _thinBorder(),
+  leftBorder: _breakdownThinBorder(),
+  rightBorder: _breakdownThinBorder(),
+  topBorder: _breakdownThinBorder(),
+  bottomBorder: _breakdownThinBorder(),
 );
 
 CellStyle _subtotalStyle({String? numberFormat}) => CellStyle(
@@ -799,18 +906,17 @@ CellStyle _subtotalStyle({String? numberFormat}) => CellStyle(
   numberFormat: numberFormat == null
       ? NumFormat.standard_0
       : NumFormat.custom(formatCode: numberFormat),
-  leftBorder: _thinBorder(),
-  rightBorder: _thinBorder(),
-  topBorder: _thinBorder(),
-  bottomBorder: _thinBorder(),
+  leftBorder: _breakdownThinBorder(),
+  rightBorder: _breakdownThinBorder(),
+  topBorder: _breakdownThinBorder(),
+  bottomBorder: _breakdownThinBorder(),
 );
 
 CellStyle _summaryStyle({String? numberFormat}) =>
     _subtotalStyle(numberFormat: numberFormat).copyWith(boldVal: true);
 
-CellStyle _totalStyle({String? numberFormat}) => _summaryStyle(
-  numberFormat: numberFormat,
-).copyWith(topBorderVal: _mediumBorder(), bottomBorderVal: _mediumBorder());
+CellStyle _totalStyle({String? numberFormat}) =>
+    _summaryStyle(numberFormat: numberFormat);
 
 int _detailFontSize(EstimateItem item) {
   final longestLine = [item.name, item.specification, item.description]
@@ -830,58 +936,26 @@ String _sumCellReferences(String column, List<int> rows) {
   return 'SUM(${rows.map((row) => '$column$row').join(',')})';
 }
 
+String _quantityFormat(int decimalPlaces) {
+  final places = decimalPlaces.clamp(1, 5);
+  return '#,##0.${List.filled(places, '0').join()}';
+}
+
 Border _thinBorder() => Border(
   borderStyle: BorderStyle.Thin,
   borderColorHex: ExcelColor.fromHexString('#808080'),
 );
 
+Border _breakdownThinBorder() =>
+    Border(borderStyle: BorderStyle.Thin, borderColorHex: ExcelColor.black);
+
+Border _dottedBorder() =>
+    Border(borderStyle: BorderStyle.Dotted, borderColorHex: ExcelColor.black);
+
 Border _mediumBorder() =>
     Border(borderStyle: BorderStyle.Medium, borderColorHex: ExcelColor.black);
 
-String _clientWithoutHonorific(String value) {
-  final client = value.trim();
-  return client.endsWith('様')
-      ? client.substring(0, client.length - 1).trimRight()
-      : client;
-}
-
-String _japaneseEraDate(DateTime date) {
-  if (!date.isBefore(DateTime(2019, 5, 1))) {
-    final year = date.year - 2018;
-    return '令和${year == 1 ? '元' : year}年${date.month}月${date.day}日';
-  }
-  if (!date.isBefore(DateTime(1989, 1, 8))) {
-    final year = date.year - 1988;
-    return '平成${year == 1 ? '元' : year}年${date.month}月${date.day}日';
-  }
-  return '${date.year}年${date.month}月${date.day}日';
-}
-
-String _groupMarker(int number) {
-  const markers = [
-    '①',
-    '②',
-    '③',
-    '④',
-    '⑤',
-    '⑥',
-    '⑦',
-    '⑧',
-    '⑨',
-    '⑩',
-    '⑪',
-    '⑫',
-    '⑬',
-    '⑭',
-    '⑮',
-    '⑯',
-    '⑰',
-    '⑱',
-    '⑲',
-    '⑳',
-  ];
-  return number <= markers.length ? markers[number - 1] : '($number)';
-}
+String _westernDate(DateTime date) => '${date.year}年${date.month}月${date.day}日';
 
 String _safeFileName(String value) {
   final sanitized = value

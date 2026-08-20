@@ -7,14 +7,28 @@ import 'package:instant_estimate/features/settings/domain/company_profile.dart';
 import 'package:instant_estimate/features/settings/presentation/settings_screen.dart';
 
 void main() {
-  test('自社情報モデルは全項目と空欄を保存・復元できる', () {
+  test('自社情報モデルは6項目・表示順・Excel表示設定を保存復元できる', () {
     const profile = CompanyProfile(
       companyName: '山田建設',
       representativeName: '山田太郎',
-      postalCode: '100-0001',
-      addressLine1: '東京都千代田区千代田1-1',
-      addressLine2: '山田ビル2階',
-      phoneNumber: '03-1234-5678',
+      postalCode: 'SW1A 1AA',
+      addressLine1: 'London',
+      addressLine2: 'Westminster',
+      phoneNumber: '+44 20 0000 0000',
+      displayOrder: [
+        CompanyProfileSection.postalCode,
+        CompanyProfileSection.addressLine1,
+        CompanyProfileSection.companyName,
+        CompanyProfileSection.representativeName,
+        CompanyProfileSection.addressLine2,
+        CompanyProfileSection.phoneNumber,
+      ],
+      excelVisibleSections: [
+        CompanyProfileSection.postalCode,
+        CompanyProfileSection.addressLine1,
+        CompanyProfileSection.companyName,
+        CompanyProfileSection.representativeName,
+      ],
     );
 
     final restored = CompanyProfile.fromJson(profile.toJson());
@@ -26,10 +40,57 @@ void main() {
     expect(restored.addressLine1, profile.addressLine1);
     expect(restored.addressLine2, profile.addressLine2);
     expect(restored.phoneNumber, profile.phoneNumber);
+    expect(restored.effectiveDisplayOrder, profile.displayOrder);
+    expect(
+      restored.effectiveExcelVisibleSections,
+      profile.excelVisibleSections,
+    );
     expect(blank.isEmpty, isTrue);
+    expect(blank.effectiveDisplayOrder, defaultCompanyProfileDisplayOrder);
+    expect(
+      blank.effectiveExcelVisibleSections,
+      defaultCompanyProfileExcelVisibleSections,
+    );
   });
 
-  test('自社情報ラベルを8言語で明示指定している', () {
+  test('旧JSONの住所ブロックを6項目へ展開し電話番号はExcel非表示にする', () {
+    final restored = CompanyProfile.fromJson(const {
+      'companyName': '山田建設',
+      'addressLine1': '東京都千代田区',
+      'displayOrder': ['address', 'companyName', 'representativeName'],
+    });
+
+    expect(restored.effectiveDisplayOrder, [
+      CompanyProfileSection.postalCode,
+      CompanyProfileSection.addressLine1,
+      CompanyProfileSection.addressLine2,
+      CompanyProfileSection.companyName,
+      CompanyProfileSection.representativeName,
+      CompanyProfileSection.phoneNumber,
+    ]);
+    expect(
+      restored.effectiveExcelVisibleSections,
+      defaultCompanyProfileExcelVisibleSections,
+    );
+    expect(
+      restored.effectiveExcelVisibleSections,
+      isNot(contains(CompanyProfileSection.phoneNumber)),
+    );
+  });
+
+  test('Excel表示対象は不正な旧値を除外し最大5項目へ正規化する', () {
+    const profile = CompanyProfile(
+      excelVisibleSections: CompanyProfileSection.values,
+    );
+
+    expect(profile.effectiveExcelVisibleSections, hasLength(5));
+    expect(
+      profile.effectiveExcelVisibleSections,
+      isNot(contains(CompanyProfileSection.address)),
+    );
+  });
+
+  test('自社情報設定の追加文言を8言語で明示指定している', () {
     for (final language in AppLanguage.values) {
       final strings = AppLocalizations(language);
       expect(strings.companyProfile, isNotEmpty);
@@ -40,108 +101,204 @@ void main() {
       expect(strings.addressLine1, isNotEmpty);
       expect(strings.addressLine2, isNotEmpty);
       expect(strings.phoneNumber, isNotEmpty);
-      expect(strings.notRegistered, isNotEmpty);
+      expect(strings.companyProfileDisplaySettings, isNotEmpty);
+      expect(strings.companyProfileDisplaySettingsGuidance, isNotEmpty);
+      expect(strings.showInExcel, isNotEmpty);
+      expect(strings.hideFromExcel, isNotEmpty);
+      expect(strings.companyProfileExcelDisplayLimit, isNotEmpty);
     }
-
-    expect(
-      AppLocalizations(AppLanguage.english).companyProfile,
-      'Company information',
-    );
-    expect(
-      AppLocalizations(AppLanguage.traditionalChinese).companyNameOrTradeName,
-      '公司名稱／商號',
-    );
-    expect(AppLocalizations(AppLanguage.myanmar).phoneNumber, 'ဖုန်းနံပါတ်');
   });
 
-  testWidgets('設定画面から自社情報を保存し再表示できる', (tester) async {
-    tester.view.physicalSize = const Size(800, 1600);
+  testWidgets('通常画面は簡潔で設定モードだけ並べ替えとExcel切替を表示する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var settings = const AppSettings(
+      companyProfile: CompanyProfile(
+        companyName: '山田建設',
+        representativeName: '山田太郎',
+        postalCode: '100-0001',
+        addressLine1: '東京都千代田区',
+        addressLine2: '山田ビル2階',
+        phoneNumber: '03-1234-5678',
+      ),
+    );
+
+    await _pumpSettings(tester, settings, (value) => settings = value);
+    await _openCompanyProfile(tester);
+
+    expect(
+      find.byKey(const Key('companyProfileDisplayOrderTitle')),
+      findsNothing,
+    );
+    expect(find.byIcon(Icons.drag_handle), findsNothing);
+    expect(find.byIcon(Icons.visibility), findsNothing);
+    expect(find.byKey(const Key('companyProfileSettingsMode')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('companyProfileSettingsMode')));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.drag_handle), findsWidgets);
+    expect(find.byIcon(Icons.visibility), findsWidgets);
+    expect(
+      find.byKey(const Key('companyProfileSettingsGuidance')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('companyProfileSettingsMode')));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.drag_handle), findsNothing);
+    expect(find.byIcon(Icons.visibility), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('入力欄を直接並べ替えExcel表示設定とともに保存・復元する', (tester) async {
+    tester.view.physicalSize = const Size(500, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var settings = const AppSettings(
+      companyProfile: CompanyProfile(companyName: '山田建設'),
+    );
+
+    await _pumpSettings(tester, settings, (value) => settings = value);
+    await _openCompanyProfile(tester);
+    await tester.tap(find.byKey(const Key('companyProfileSettingsMode')));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('companyProfileFieldHandle-companyName')),
+      const Offset(0, 150),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('companyProfileExcelVisibility-representativeName')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('saveCompanyProfile')));
+    await tester.pumpAndSettle();
+
+    expect(
+      settings.companyProfile.effectiveDisplayOrder.first,
+      isNot(CompanyProfileSection.companyName),
+    );
+    expect(
+      settings.companyProfile.effectiveExcelVisibleSections,
+      isNot(contains(CompanyProfileSection.representativeName)),
+    );
+
+    settings = AppSettings.fromJson(settings.toJson());
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pumpSettings(tester, settings, (value) => settings = value);
+    await _openCompanyProfile(tester);
+    await tester.tap(find.byKey(const Key('companyProfileSettingsMode')));
+    await tester.pumpAndSettle();
+
+    expect(
+      _fieldTop(tester, settings.companyProfile.effectiveDisplayOrder.first),
+      lessThan(_fieldTop(tester, CompanyProfileSection.companyName)),
+    );
+    expect(
+      tester
+          .widget<Icon>(
+            find.descendant(
+              of: find.byKey(
+                const Key('companyProfileExcelVisibility-representativeName'),
+              ),
+              matching: find.byType(Icon),
+            ),
+          )
+          .icon,
+      Icons.visibility_off,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Excel表示は5項目までで郵便番号は国内外形式を自由入力できる', (tester) async {
+    tester.view.physicalSize = const Size(500, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     var settings = const AppSettings();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SettingsScreen(
-          settings: settings,
-          onSettingsChanged: (value) => settings = value,
-          onClearHistory: () async {},
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
 
-    final setting = find.byKey(const Key('companyProfileSetting'));
-    await tester.scrollUntilVisible(setting, 250);
-    await tester.tap(setting);
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.byKey(const Key('companyProfileCompanyName')),
-      '山田建設',
-    );
-    await tester.enterText(
-      find.byKey(const Key('companyProfileRepresentativeName')),
-      '山田太郎',
-    );
+    await _pumpSettings(tester, settings, (value) => settings = value);
+    await _openCompanyProfile(tester);
     await tester.enterText(
       find.byKey(const Key('companyProfilePostalCode')),
-      '100-0001',
+      '〒123-4567 SW1A 1AA',
     );
-    await tester.enterText(
-      find.byKey(const Key('companyProfileAddressLine1')),
-      '東京都千代田区千代田1-1',
+    expect(
+      _fieldText(tester, 'companyProfilePostalCode'),
+      '〒123-4567 SW1A 1AA',
     );
-    await tester.enterText(
-      find.byKey(const Key('companyProfileAddressLine2')),
-      '山田ビル2階',
+
+    await tester.tap(find.byKey(const Key('companyProfileSettingsMode')));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('companyProfileEditor')),
+      const Offset(0, -500),
     );
-    await tester.enterText(
-      find.byKey(const Key('companyProfilePhoneNumber')),
-      '03-1234-5678',
+    await tester.pumpAndSettle();
+    final phoneVisibility = find
+        .byKey(const Key('companyProfileExcelVisibility-phoneNumber'))
+        .hitTestable()
+        .first;
+    await tester.tap(phoneVisibility);
+    await tester.pump();
+    expect(find.text('Excelに表示できる自社情報は5項目までです'), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const Key('companyProfileEditor')),
+      const Offset(0, 500),
     );
+    await tester.pumpAndSettle();
+    final companyVisibility = find
+        .byKey(const Key('companyProfileExcelVisibility-companyName'))
+        .hitTestable()
+        .first;
+    await tester.tap(companyVisibility);
+    await tester.drag(
+      find.byKey(const Key('companyProfileEditor')),
+      const Offset(0, -500),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find
+          .byKey(const Key('companyProfileExcelVisibility-phoneNumber'))
+          .hitTestable()
+          .first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('saveCompanyProfile')));
     await tester.pumpAndSettle();
 
-    expect(settings.companyProfile.companyName, '山田建設');
-    expect(settings.companyProfile.representativeName, '山田太郎');
-    expect(settings.companyProfile.postalCode, '100-0001');
-    expect(settings.companyProfile.addressLine1, '東京都千代田区千代田1-1');
-    expect(settings.companyProfile.addressLine2, '山田ビル2階');
-    expect(settings.companyProfile.phoneNumber, '03-1234-5678');
-    expect(find.text('山田建設'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('companyProfileSetting')));
-    await tester.pumpAndSettle();
-    expect(_fieldText(tester, 'companyProfileCompanyName'), '山田建設');
-    expect(_fieldText(tester, 'companyProfileRepresentativeName'), '山田太郎');
-    expect(_fieldText(tester, 'companyProfilePostalCode'), '100-0001');
-    expect(_fieldText(tester, 'companyProfileAddressLine1'), '東京都千代田区千代田1-1');
-    expect(_fieldText(tester, 'companyProfileAddressLine2'), '山田ビル2階');
-    expect(_fieldText(tester, 'companyProfilePhoneNumber'), '03-1234-5678');
+    expect(settings.companyProfile.postalCode, '〒123-4567 SW1A 1AA');
+    expect(settings.companyProfile.effectiveExcelVisibleSections, hasLength(5));
+    expect(
+      settings.companyProfile.effectiveExcelVisibleSections,
+      contains(CompanyProfileSection.phoneNumber),
+    );
+    expect(
+      settings.companyProfile.effectiveExcelVisibleSections,
+      isNot(contains(CompanyProfileSection.companyName)),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('空欄保存とキャンセルを区別する', (tester) async {
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = const Size(500, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     var settings = const AppSettings(
       companyProfile: CompanyProfile(companyName: '既存会社'),
     );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SettingsScreen(
-          settings: settings,
-          onSettingsChanged: (value) => settings = value,
-          onClearHistory: () async {},
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('companyProfileSetting')));
-    await tester.pumpAndSettle();
+    await _pumpSettings(tester, settings, (value) => settings = value);
+    await _openCompanyProfile(tester);
     await tester.enterText(
       find.byKey(const Key('companyProfileCompanyName')),
       'キャンセル対象',
@@ -150,8 +307,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(settings.companyProfile.companyName, '既存会社');
 
-    await tester.tap(find.byKey(const Key('companyProfileSetting')));
-    await tester.pumpAndSettle();
+    await _openCompanyProfile(tester);
     await tester.enterText(
       find.byKey(const Key('companyProfileCompanyName')),
       '',
@@ -161,6 +317,34 @@ void main() {
     expect(settings.companyProfile.isEmpty, isTrue);
   });
 }
+
+Future<void> _pumpSettings(
+  WidgetTester tester,
+  AppSettings settings,
+  ValueChanged<AppSettings> onChanged,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: SettingsScreen(
+        settings: settings,
+        onSettingsChanged: onChanged,
+        onClearHistory: () async {},
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openCompanyProfile(WidgetTester tester) async {
+  final setting = find.byKey(const Key('companyProfileSetting'));
+  await tester.scrollUntilVisible(setting, 250);
+  await tester.tap(setting);
+  await tester.pumpAndSettle();
+}
+
+double _fieldTop(WidgetTester tester, CompanyProfileSection section) => tester
+    .getTopLeft(find.byKey(ValueKey('companyProfileField-${section.name}')))
+    .dy;
 
 String _fieldText(WidgetTester tester, String key) =>
     tester.widget<TextField>(find.byKey(Key(key))).controller!.text;

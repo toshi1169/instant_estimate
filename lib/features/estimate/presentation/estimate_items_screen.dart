@@ -148,8 +148,12 @@ class EstimateItemsScreen extends StatelessWidget {
         name: '${controller.info.displayName}.pdf',
         format: PdfPageFormat.a4.landscape,
         dynamicLayout: false,
-        onLayout: (_) =>
-            buildEstimatePdf(info: controller.info, items: controller.items),
+        onLayout: (_) => buildEstimatePdf(
+          info: controller.info,
+          items: controller.items,
+          companyProfile: settings.companyProfile,
+          estimateDecimalPlaces: settings.estimateDecimalPlaces,
+        ),
       );
     } catch (_) {
       if (context.mounted) {
@@ -180,6 +184,7 @@ class EstimateItemsScreen extends StatelessWidget {
         info: controller.info,
         items: controller.items,
         companyProfile: settings.companyProfile,
+        estimateDecimalPlaces: settings.estimateDecimalPlaces,
       );
       if (!context.mounted) return;
       final box = context.findRenderObject() as RenderBox?;
@@ -678,12 +683,7 @@ class _EstimateInfoSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final details = <String>[
-      if (info.siteName.isNotEmpty) '${l10n.text('現場')}：${info.siteName}',
-      if (info.clientName.isNotEmpty) '${l10n.text('宛名')}：${info.clientName}',
-      if (info.estimateNumber.isNotEmpty) 'No. ${info.estimateNumber}',
-      '${l10n.text('作成日')}：${_date(info.createdDate)}',
-    ];
+    final details = <String>['${l10n.text('作成日')}：${_date(info.createdDate)}'];
     return Card(
       key: const Key('estimateInfoSummary'),
       margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
@@ -704,11 +704,7 @@ class _EstimateInfoSummary extends StatelessWidget {
   }
 }
 
-bool _hasSupplementaryInfo(EstimateInfo info) =>
-    info.siteName.isNotEmpty ||
-    info.clientName.isNotEmpty ||
-    info.estimateNumber.isNotEmpty ||
-    info.notes.isNotEmpty;
+bool _hasSupplementaryInfo(EstimateInfo info) => info.notes.isNotEmpty;
 
 String _date(DateTime date) =>
     '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
@@ -797,6 +793,10 @@ class _EstimateItemCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text('${l10n.text('摘要')}：${item.description}'),
             ],
+            if (item.trade.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text('${l10n.text('工種')}：${item.trade}'),
+            ],
           ],
         ),
       ),
@@ -836,7 +836,7 @@ class _EstimateGroupSection extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      l10n.text(group.displayName),
+                      group.displayName.isEmpty ? '—' : group.displayName,
                       key: Key('estimateGroupName$groupIndex'),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: colorScheme.onPrimaryContainer,
@@ -864,7 +864,7 @@ class _EstimateGroupSection extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    l10n.text('工種小計'),
+                    l10n.text('小計'),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),

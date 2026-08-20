@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../domain/company_profile.dart';
@@ -34,6 +33,13 @@ class _CompanyProfileEditorScreenState
   late final _phoneNumber = TextEditingController(
     text: widget.initialProfile.phoneNumber,
   );
+  late final List<CompanyProfileSection> _fieldOrder = [
+    ...widget.initialProfile.effectiveDisplayOrder,
+  ];
+  late final Set<CompanyProfileSection> _excelVisibleSections = {
+    ...widget.initialProfile.effectiveExcelVisibleSections,
+  };
+  var _settingsMode = false;
 
   @override
   void dispose() {
@@ -55,8 +61,38 @@ class _CompanyProfileEditorScreenState
         addressLine1: _addressLine1.text.trim(),
         addressLine2: _addressLine2.text.trim(),
         phoneNumber: _phoneNumber.text.trim(),
+        displayOrder: List.unmodifiable(_fieldOrder),
+        excelVisibleSections: List.unmodifiable(
+          _fieldOrder.where(_excelVisibleSections.contains),
+        ),
       ),
     );
+  }
+
+  void _reorder(int oldIndex, int newIndex) {
+    setState(() {
+      final section = _fieldOrder.removeAt(oldIndex);
+      _fieldOrder.insert(newIndex, section);
+    });
+  }
+
+  void _toggleExcelVisibility(
+    CompanyProfileSection section,
+    AppLocalizations strings,
+  ) {
+    if (_excelVisibleSections.contains(section)) {
+      setState(() => _excelVisibleSections.remove(section));
+      return;
+    }
+    if (_excelVisibleSections.length >= 5) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(strings.companyProfileExcelDisplayLimit)),
+        );
+      return;
+    }
+    setState(() => _excelVisibleSections.add(section));
   }
 
   @override
@@ -72,6 +108,14 @@ class _CompanyProfileEditorScreenState
           icon: const Icon(Icons.close),
         ),
         actions: [
+          IconButton(
+            key: const Key('companyProfileSettingsMode'),
+            tooltip: strings.companyProfileDisplaySettings,
+            onPressed: () => setState(() => _settingsMode = !_settingsMode),
+            icon: Icon(
+              _settingsMode ? Icons.settings : Icons.settings_outlined,
+            ),
+          ),
           TextButton(
             key: const Key('saveCompanyProfile'),
             onPressed: _save,
@@ -80,52 +124,41 @@ class _CompanyProfileEditorScreenState
         ],
       ),
       body: SafeArea(
-        child: ListView(
-          key: const Key('companyProfileEditor'),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        child: Column(
           children: [
-            Text(strings.companyProfileGuidance),
-            const SizedBox(height: 16),
-            _field(
-              controller: _companyName,
-              label: strings.companyNameOrTradeName,
-              key: const Key('companyProfileCompanyName'),
-              textInputAction: TextInputAction.next,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(strings.companyProfileGuidance),
+                  if (_settingsMode) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      strings.companyProfileDisplaySettingsGuidance,
+                      key: const Key('companyProfileSettingsGuidance'),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
             ),
-            _field(
-              controller: _representativeName,
-              label: strings.representativeName,
-              key: const Key('companyProfileRepresentativeName'),
-              textInputAction: TextInputAction.next,
-            ),
-            _field(
-              controller: _postalCode,
-              label: strings.postalCode,
-              key: const Key('companyProfilePostalCode'),
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.next,
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9\-]')),
-              ],
-            ),
-            _field(
-              controller: _addressLine1,
-              label: strings.addressLine1,
-              key: const Key('companyProfileAddressLine1'),
-              textInputAction: TextInputAction.next,
-            ),
-            _field(
-              controller: _addressLine2,
-              label: strings.addressLine2,
-              key: const Key('companyProfileAddressLine2'),
-              textInputAction: TextInputAction.next,
-            ),
-            _field(
-              controller: _phoneNumber,
-              label: strings.phoneNumber,
-              key: const Key('companyProfilePhoneNumber'),
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.done,
+            Expanded(
+              child: ReorderableListView.builder(
+                key: const Key('companyProfileEditor'),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                buildDefaultDragHandles: false,
+                itemCount: _fieldOrder.length,
+                onReorderItem: _settingsMode ? _reorder : (_, _) {},
+                itemBuilder: (context, index) {
+                  final section = _fieldOrder[index];
+                  return _fieldRow(
+                    section: section,
+                    index: index,
+                    strings: strings,
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -133,26 +166,103 @@ class _CompanyProfileEditorScreenState
     );
   }
 
-  Widget _field({
-    required TextEditingController controller,
-    required String label,
-    required Key key,
-    TextInputType? keyboardType,
-    TextInputAction? textInputAction,
-    List<TextInputFormatter>? inputFormatters,
+  Widget _fieldRow({
+    required CompanyProfileSection section,
+    required int index,
+    required AppLocalizations strings,
   }) {
+    final field = _field(section, strings);
     return Padding(
+      key: ValueKey('companyProfileField-${section.name}'),
       padding: const EdgeInsets.only(bottom: 14),
-      child: TextField(
-        key: key,
-        controller: controller,
-        keyboardType: keyboardType,
-        textInputAction: textInputAction,
-        inputFormatters: inputFormatters,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
+      child: _settingsMode
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ReorderableDragStartListener(
+                  key: Key('companyProfileFieldHandle-${section.name}'),
+                  index: index,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(Icons.drag_handle),
+                  ),
+                ),
+                IconButton(
+                  key: Key('companyProfileExcelVisibility-${section.name}'),
+                  tooltip: _excelVisibleSections.contains(section)
+                      ? strings.hideFromExcel
+                      : strings.showInExcel,
+                  onPressed: () => _toggleExcelVisibility(section, strings),
+                  icon: Icon(
+                    _excelVisibleSections.contains(section)
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(child: field),
+              ],
+            )
+          : field,
+    );
+  }
+
+  Widget _field(CompanyProfileSection section, AppLocalizations strings) {
+    final (controller, label, key, keyboardType, action) = switch (section) {
+      CompanyProfileSection.companyName => (
+        _companyName,
+        strings.companyNameOrTradeName,
+        const Key('companyProfileCompanyName'),
+        TextInputType.text,
+        TextInputAction.next,
+      ),
+      CompanyProfileSection.representativeName => (
+        _representativeName,
+        strings.representativeName,
+        const Key('companyProfileRepresentativeName'),
+        TextInputType.name,
+        TextInputAction.next,
+      ),
+      CompanyProfileSection.postalCode => (
+        _postalCode,
+        strings.postalCode,
+        const Key('companyProfilePostalCode'),
+        TextInputType.text,
+        TextInputAction.next,
+      ),
+      CompanyProfileSection.addressLine1 => (
+        _addressLine1,
+        strings.addressLine1,
+        const Key('companyProfileAddressLine1'),
+        TextInputType.streetAddress,
+        TextInputAction.next,
+      ),
+      CompanyProfileSection.addressLine2 => (
+        _addressLine2,
+        strings.addressLine2,
+        const Key('companyProfileAddressLine2'),
+        TextInputType.streetAddress,
+        TextInputAction.next,
+      ),
+      CompanyProfileSection.phoneNumber => (
+        _phoneNumber,
+        strings.phoneNumber,
+        const Key('companyProfilePhoneNumber'),
+        TextInputType.phone,
+        TextInputAction.done,
+      ),
+      CompanyProfileSection.address => throw StateError(
+        'Legacy address section must be expanded before display.',
+      ),
+    };
+    return TextField(
+      key: key,
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: action,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
       ),
     );
   }

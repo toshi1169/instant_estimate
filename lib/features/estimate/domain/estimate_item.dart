@@ -4,6 +4,7 @@ class EstimateItem {
   const EstimateItem({
     required this.id,
     required this.createdAt,
+    this.constructionSymbol = '',
     required this.trade,
     this.constructionLocation = '',
     required this.name,
@@ -24,6 +25,7 @@ class EstimateItem {
     return EstimateItem(
       id: id,
       createdAt: createdAt,
+      constructionSymbol: draft.constructionSymbol,
       trade: draft.trade,
       constructionLocation: draft.constructionLocation,
       name: draft.name,
@@ -41,6 +43,7 @@ class EstimateItem {
     return EstimateItem(
       id: json['id'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      constructionSymbol: json['constructionSymbol'] as String? ?? '',
       trade: json['trade'] as String? ?? '',
       constructionLocation: json['constructionLocation'] as String? ?? '',
       name: json['name'] as String? ?? '',
@@ -56,6 +59,7 @@ class EstimateItem {
 
   final String id;
   final DateTime createdAt;
+  final String constructionSymbol;
   final String trade;
   final String constructionLocation;
   final String name;
@@ -75,6 +79,7 @@ class EstimateItem {
   }
 
   EstimateItemDraft toDraft() => EstimateItemDraft(
+    constructionSymbol: constructionSymbol,
     trade: trade,
     constructionLocation: constructionLocation,
     name: name,
@@ -90,6 +95,7 @@ class EstimateItem {
   Map<String, Object?> toJson() => {
     'id': id,
     'createdAt': createdAt.toIso8601String(),
+    'constructionSymbol': constructionSymbol,
     'trade': trade,
     'constructionLocation': constructionLocation,
     'name': name,

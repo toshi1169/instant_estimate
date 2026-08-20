@@ -7,6 +7,7 @@ import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_quantity.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_totals.dart';
+import 'package:instant_estimate/features/settings/domain/company_profile.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -68,6 +69,97 @@ void main() {
     expect(formatEstimateQuantity(12.34567), '12.34567');
     expect(formatEstimateQuantity(12.300), '12.3');
   });
+
+  test('正式PDF数量は見積設定1～5桁で末尾0を固定表示する', () {
+    expect(formatEstimatePdfQuantity(37, 1), '37.0');
+    expect(formatEstimatePdfQuantity(12.6, 2), '12.60');
+    expect(formatEstimatePdfQuantity(12.346, 3), '12.346');
+    expect(formatEstimatePdfQuantity(1, 4), '1.0000');
+    expect(formatEstimatePdfQuantity(1, 5), '1.00000');
+    expect(formatEstimatePdfQuantity(null, 2), '');
+  });
+
+  test('自社情報は設定順・表示設定を維持して空欄を詰め最大5項目にする', () {
+    const profile = CompanyProfile(
+      companyName: '山田建設',
+      representativeName: '山田太郎',
+      postalCode: '〒100-0001',
+      addressLine1: '東京都千代田区',
+      addressLine2: '',
+      phoneNumber: '03-1234-5678',
+      displayOrder: [
+        CompanyProfileSection.postalCode,
+        CompanyProfileSection.addressLine1,
+        CompanyProfileSection.addressLine2,
+        CompanyProfileSection.companyName,
+        CompanyProfileSection.representativeName,
+        CompanyProfileSection.phoneNumber,
+      ],
+      excelVisibleSections: [
+        CompanyProfileSection.postalCode,
+        CompanyProfileSection.addressLine1,
+        CompanyProfileSection.companyName,
+        CompanyProfileSection.representativeName,
+        CompanyProfileSection.phoneNumber,
+      ],
+    );
+
+    expect(estimatePdfCompanyProfileLines(profile), [
+      '〒100-0001',
+      '東京都千代田区',
+      '山田建設',
+      '山田太郎',
+      '03-1234-5678',
+    ]);
+  });
+
+  test('20行雛形に記号・施工場所・小計・空欄・最終集計を配置する', () {
+    final items = [
+      for (var index = 0; index < 6; index++)
+        _groupItem('$index', symbol: '①', location: '北面', quantity: 1),
+      _groupItem('second', symbol: '②', location: '南面', quantity: 2),
+    ];
+
+    final pages = buildEstimatePdfBreakdownLayout(items);
+
+    expect(pages, hasLength(1));
+    expect(pages.single.number, 1);
+    expect(pages.single.rows, hasLength(17));
+    expect(pages.single.rows[0].type, EstimatePdfRowType.location);
+    expect(pages.single.rows[0].symbol, '①');
+    expect(pages.single.rows[0].location, '北面');
+    expect(pages.single.rows[7].type, EstimatePdfRowType.subtotal);
+    expect(pages.single.rows[8].type, EstimatePdfRowType.blank);
+    // 帳票4行目を0番とするため、9番はExcel/PDFの13行目に相当する。
+    expect(pages.single.rows[9].type, EstimatePdfRowType.location);
+    expect(pages.single.rows[9].symbol, '②');
+    expect(pages.single.rows[11].type, EstimatePdfRowType.subtotal);
+    expect(pages.single.rows[12].type, EstimatePdfRowType.blank);
+    expect(pages.single.rows[13].label, '①+② 計');
+    expect(pages.single.rows[14].label, '消費税10%');
+    expect(pages.single.rows[15].label, '合計');
+    expect(pages.single.rows[15].amount, estimateGrandTotal(items));
+  });
+
+  test('ページ境界でもXLSXと同じ17帳票行で連番ページだけを生成する', () {
+    final items = [
+      for (var index = 0; index < 13; index++)
+        _groupItem('$index', symbol: '①', location: '北面', quantity: 1),
+      _groupItem('second', symbol: '②', location: '南面', quantity: 1),
+    ];
+
+    final pages = buildEstimatePdfBreakdownLayout(items);
+
+    expect(pages.map((page) => page.number), [1, 2]);
+    expect(pages.every((page) => page.rows.length == 17), isTrue);
+    expect(pages.first.rows.last.type, EstimatePdfRowType.blank);
+    expect(pages[1].rows.first.type, EstimatePdfRowType.location);
+    expect(pages[1].rows.first.symbol, '②');
+    expect(
+      pages.expand((page) => page.rows).where((row) => row.label == '合計'),
+      hasLength(1),
+    );
+  });
 }
 
 EstimateItem _item(
@@ -81,6 +173,27 @@ EstimateItem _item(
     quantity: quantity,
     unit: '式',
     unitPrice: unitPrice,
+  ),
+  id: id,
+  createdAt: DateTime(2026, 8, 12),
+);
+
+EstimateItem _groupItem(
+  String id, {
+  required String symbol,
+  required String location,
+  required double quantity,
+}) => EstimateItem.fromDraft(
+  EstimateItemDraft(
+    constructionSymbol: symbol,
+    constructionLocation: location,
+    trade: 'PDFへ出力しない工種',
+    name: '明細$id',
+    specification: '標準仕様',
+    quantity: quantity,
+    unit: '式',
+    unitPrice: 100,
+    description: '摘要$id',
   ),
   id: id,
   createdAt: DateTime(2026, 8, 12),

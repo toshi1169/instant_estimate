@@ -6,6 +6,7 @@ import '../../settings/domain/app_settings.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
+import '../domain/estimate_item_symbol.dart';
 import '../domain/unit_price_master.dart';
 
 enum EstimateItemEditorAction { continueCalculating, openEstimate }
@@ -53,6 +54,7 @@ class EstimateItemEditorScreen extends StatefulWidget {
 
 class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   final _formKey = GlobalKey<FormState>();
+  late String _constructionSymbol = widget.initialDraft.constructionSymbol;
   late final _trade = TextEditingController(text: widget.initialDraft.trade);
   late final _constructionLocation = TextEditingController(
     text: widget.initialDraft.constructionLocation,
@@ -80,6 +82,9 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     super.initState();
     _selectedEstimateId = widget.initialEstimateId;
     _selectedEstimateTitle = widget.estimateTitle;
+    if (_constructionLocation.text.trim().isEmpty) {
+      _constructionLocation.text = _mappedLocation(_constructionSymbol) ?? '';
+    }
   }
 
   @override
@@ -97,6 +102,31 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
 
   double? get _quantityValue => _parseNumber(_quantity.text);
   double? get _unitPriceValue => _parseNumber(_unitPrice.text);
+
+  EstimateDocument? get _selectedEstimate => widget.estimates
+      .where((estimate) => estimate.info.id == _selectedEstimateId)
+      .firstOrNull;
+
+  String? _mappedLocation(String symbol, [EstimateDocument? estimate]) {
+    final normalizedSymbol = symbol.trim();
+    if (normalizedSymbol.isEmpty) return null;
+    return (estimate ?? _selectedEstimate)?.items
+        .where(
+          (item) =>
+              item.constructionSymbol.trim() == normalizedSymbol &&
+              item.constructionLocation.trim().isNotEmpty,
+        )
+        .map((item) => item.constructionLocation.trim())
+        .firstOrNull;
+  }
+
+  void _selectConstructionSymbol(String? value) {
+    final symbol = value?.trim() ?? '';
+    setState(() {
+      _constructionSymbol = symbol;
+      _constructionLocation.text = _mappedLocation(symbol) ?? '';
+    });
+  }
 
   List<_PastUnitPriceCandidate> get _pastUnitPrices {
     final candidates = [
@@ -146,6 +176,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
             _name.text.trim().isNotEmpty &&
             _unitPriceValue != null,
         draft: widget.initialDraft.copyWith(
+          constructionSymbol: _constructionSymbol,
           trade: _trade.text.trim(),
           constructionLocation: _constructionLocation.text.trim(),
           name: _name.text.trim(),
@@ -220,6 +251,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     setState(() {
       _selectedEstimateId = selected.info.id;
       _selectedEstimateTitle = selected.info.displayName;
+      _constructionLocation.text =
+          _mappedLocation(_constructionSymbol, selected) ?? '';
     });
   }
 
@@ -407,6 +440,7 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     if (selected == null || !mounted) return;
     final item = selected.item;
     setState(() {
+      _constructionSymbol = item.constructionSymbol;
       _trade.text = item.trade;
       _constructionLocation.text = item.constructionLocation;
       _name.text = item.name;
@@ -449,26 +483,61 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              _field(
-                _trade,
-                l10n.text('工種'),
-                key: const Key('estimateTradeField'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 88,
+                    child: DropdownButtonFormField<String>(
+                      key: const Key('estimateConstructionSymbolField'),
+                      initialValue: _constructionSymbol,
+                      decoration: InputDecoration(
+                        labelText: l10n.choose(
+                          japanese: '記号',
+                          english: 'Symbol',
+                          simplifiedChinese: '符号',
+                          traditionalChinese: '符號',
+                          vietnamese: 'Ký hiệu',
+                          indonesian: 'Simbol',
+                          filipino: 'Simbolo',
+                          myanmar: 'သင်္ကေတ',
+                        ),
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem(value: '', child: Text('—')),
+                        for (final symbol in {
+                          ...estimateItemSymbols,
+                          if (_constructionSymbol.isNotEmpty)
+                            _constructionSymbol,
+                        })
+                          DropdownMenuItem(value: symbol, child: Text(symbol)),
+                      ],
+                      onChanged: _selectConstructionSymbol,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _field(
+                      _constructionLocation,
+                      l10n.choose(
+                        japanese: '施工場所',
+                        english: 'Work location',
+                        simplifiedChinese: '施工地点',
+                        traditionalChinese: '施工地點',
+                        vietnamese: 'Vị trí thi công',
+                        indonesian: 'Lokasi pekerjaan',
+                        filipino: 'Lokasyon ng trabaho',
+                        myanmar: 'ဆောက်လုပ်ရေးနေရာ',
+                      ),
+                      key: const Key('estimateConstructionLocationField'),
+                      maxLines: null,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
               ),
-              _field(
-                _constructionLocation,
-                l10n.choose(
-                  japanese: '施工場所',
-                  english: 'Work location',
-                  simplifiedChinese: '施工地点',
-                  traditionalChinese: '施工地點',
-                  vietnamese: 'Vị trí thi công',
-                  indonesian: 'Lokasi pekerjaan',
-                  filipino: 'Lokasyon ng trabaho',
-                  myanmar: 'ဆောက်လုပ်ရေးနေရာ',
-                ),
-                key: const Key('estimateConstructionLocationField'),
-                maxLines: null,
-              ),
+              const SizedBox(height: 12),
               _field(
                 _name,
                 l10n.text('名称'),
@@ -581,6 +650,11 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 l10n.text('摘要'),
                 key: const Key('estimateDescriptionField'),
               ),
+              _field(
+                _trade,
+                l10n.text('工種'),
+                key: const Key('estimateTradeField'),
+              ),
               if (widget.initialDraft.calculationBasis.isNotEmpty)
                 ExpansionTile(
                   key: const Key('calculationBasisTile'),
@@ -635,9 +709,10 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     String label, {
     required Key key,
     int? maxLines = 1,
+    EdgeInsetsGeometry padding = const EdgeInsets.only(bottom: 12),
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: padding,
       child: TextFormField(
         key: key,
         controller: controller,

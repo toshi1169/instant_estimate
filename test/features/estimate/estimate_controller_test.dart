@@ -46,12 +46,36 @@ class _MemoryEstimateItemStore implements EstimateItemStore {
 }
 
 void main() {
+  test('空ワークスペースは見積・単価マスタ0件で復元し最初の見積を作成できる', () async {
+    final store = _MemoryEstimateItemStore()
+      ..workspace = const EstimateWorkspace(
+        activeEstimateId: '',
+        estimates: [],
+        unitPriceMasters: [],
+      );
+    final controller = EstimateController(store: store);
+
+    await controller.load();
+    expect(controller.estimates, isEmpty);
+    expect(controller.unitPriceMasters, isEmpty);
+
+    await controller.createEstimate(
+      EstimateInfo.initial(
+        DateTime(2026, 8, 15),
+      ).copyWith(estimateName: '最初の見積'),
+    );
+    expect(controller.estimates, hasLength(1));
+    expect(controller.info.estimateName, '最初の見積');
+  });
+
   test('見積明細を保存し新しいコントローラーで復元できる', () async {
     final store = _MemoryEstimateItemStore();
     final first = EstimateController(store: store);
     await first.load();
     await first.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '根切り',
         quantity: 2.5,
@@ -175,6 +199,8 @@ void main() {
     await controller.load();
     final existing = await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '②',
+        constructionLocation: '南 道路側 土留めブロック工事',
         trade: '土工事',
         name: '根切り',
         quantity: 7.2,
@@ -185,6 +211,8 @@ void main() {
       ),
     );
     const incoming = EstimateItemDraft(
+      constructionSymbol: '②',
+      constructionLocation: '南 道路側 土留めブロック工事',
       trade: '別工種でも候補になる',
       name: ' 根切り ',
       quantity: 3.5,
@@ -195,6 +223,21 @@ void main() {
     );
 
     expect(controller.findQuantityMergeCandidate(incoming)?.id, existing.id);
+    expect(
+      controller.findQuantityMergeCandidate(
+        incoming.copyWith(constructionSymbol: '', constructionLocation: ''),
+      ),
+      isNull,
+    );
+    expect(
+      controller.findQuantityMergeCandidate(
+        incoming.copyWith(
+          constructionSymbol: '③',
+          constructionLocation: '西 隣地側',
+        ),
+      ),
+      isNull,
+    );
     final merged = await controller.mergeQuantity(existing.id, incoming);
 
     expect(controller.items, hasLength(1));
@@ -323,6 +366,8 @@ void main() {
     );
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '根切り',
         quantity: 2,
@@ -344,6 +389,8 @@ void main() {
     expect(copied.info.estimateNumber, isEmpty);
     expect(copied.info.notes, '既存見積');
     expect(copied.items.single.id, isNot(sourceItemId));
+    expect(copied.items.single.constructionSymbol, '①');
+    expect(copied.items.single.constructionLocation, '北側通路');
     expect(copied.items.single.name, '根切り');
     expect(copied.totalAmount, 8000);
     expect(store.workspace.activeEstimateId, copied.info.id);
@@ -353,11 +400,13 @@ void main() {
     expect(controller.items.single.id, sourceItemId);
   });
 
-  test('明細を工種ごとにまとめて小計を計算できる', () async {
+  test('明細を記号と施工場所ごとにまとめて小計を計算できる', () async {
     final controller = EstimateController();
     await controller.load();
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '根切り',
         quantity: 2,
@@ -366,6 +415,8 @@ void main() {
     );
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '埋戻し',
         quantity: 1,
@@ -374,6 +425,8 @@ void main() {
     );
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '②',
+        constructionLocation: '玄関前',
         trade: '型枠工事',
         name: '基礎型枠',
         quantity: 5,
@@ -385,14 +438,104 @@ void main() {
     );
 
     expect(controller.groups, hasLength(3));
-    expect(controller.groups[0].displayName, '土工事');
+    expect(controller.groups[0].displayName, '① 北側通路');
     expect(controller.groups[0].items, hasLength(2));
     expect(controller.groups[0].subtotal, 11000);
-    expect(controller.groups[1].displayName, '型枠工事');
+    expect(controller.groups[1].displayName, '② 玄関前');
     expect(controller.groups[1].subtotal, 30000);
-    expect(controller.groups[2].displayName, '工種未設定');
+    expect(controller.groups[2].displayName, isEmpty);
     expect(controller.groups[2].subtotal, 500);
     expect(controller.totalAmount, 41500);
+  });
+
+  test('既存記号の施工場所を補完し①②③の対応を維持する', () async {
+    final store = _MemoryEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    for (final entry in const [
+      ('①', '西側'),
+      ('②', '南　道路側　土留めブロック工事'),
+      ('③', '東側'),
+    ]) {
+      await controller.add(
+        EstimateItemDraft(
+          constructionSymbol: entry.$1,
+          constructionLocation: entry.$2,
+          name: '${entry.$1}明細',
+          quantity: 1,
+          unitPrice: 100,
+        ),
+      );
+    }
+
+    final added = await controller.add(
+      const EstimateItemDraft(
+        constructionSymbol: '②',
+        name: '②追加明細',
+        quantity: 1,
+        unitPrice: 100,
+      ),
+    );
+
+    expect(added.constructionLocation, '南　道路側　土留めブロック工事');
+    expect(
+      controller.items
+          .where((item) => item.constructionSymbol == '②')
+          .map((item) => item.constructionLocation),
+      everyElement('南　道路側　土留めブロック工事'),
+    );
+    expect(
+      controller.estimates.single.items
+          .where((item) => item.constructionSymbol == '②')
+          .map((item) => item.constructionLocation),
+      everyElement('南　道路側　土留めブロック工事'),
+    );
+  });
+
+  test('同じ記号の施工場所を変更すると全明細を同じ値へ統一する', () async {
+    final store = _MemoryEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    final first = await controller.add(
+      const EstimateItemDraft(
+        constructionSymbol: '②',
+        constructionLocation: '南側',
+        name: '明細1',
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(
+        constructionSymbol: '②',
+        constructionLocation: '南側',
+        name: '明細2',
+      ),
+    );
+    await controller.add(
+      const EstimateItemDraft(
+        constructionSymbol: '②',
+        constructionLocation: '道路側',
+        name: '明細3',
+      ),
+    );
+    expect(
+      controller.items.map((item) => item.constructionLocation),
+      everyElement('道路側'),
+    );
+
+    await controller.update(
+      first.id,
+      first.toDraft().copyWith(constructionLocation: '南　道路側　土留めブロック工事'),
+    );
+
+    expect(controller.groups, hasLength(1));
+    expect(
+      controller.items.map((item) => item.constructionLocation),
+      everyElement('南　道路側　土留めブロック工事'),
+    );
+    expect(
+      store.items.map((item) => item.constructionLocation),
+      everyElement('南　道路側　土留めブロック工事'),
+    );
   });
 
   test('工種カード小計は各行金額を四捨五入してから合計する', () async {
@@ -400,6 +543,8 @@ void main() {
     await controller.load();
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '端数工事',
         name: '明細1',
         quantity: 1.5,
@@ -408,6 +553,8 @@ void main() {
     );
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '端数工事',
         name: '明細2',
         quantity: 1.5,
@@ -492,6 +639,7 @@ void main() {
       isFalse,
     );
     expect(controller.unitPriceMasters, hasLength(1));
+    expect(controller.unitPriceMasters.single.trade, '土工事');
     expect(store.workspace.unitPriceMasters, hasLength(1));
   });
 }

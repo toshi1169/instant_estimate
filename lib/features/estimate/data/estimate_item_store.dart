@@ -20,14 +20,7 @@ class PlatformEstimateItemStore implements EstimateItemStore {
   Future<EstimateWorkspace> load() async {
     final encoded = await _channel.invokeMethod<String>('loadEstimateItems');
     if (encoded == null || encoded.isEmpty) {
-      final document = EstimateDocument(
-        info: EstimateInfo.initial(DateTime.now()),
-        items: const [],
-      );
-      return EstimateWorkspace(
-        activeEstimateId: document.info.id,
-        estimates: [document],
-      );
+      return const EstimateWorkspace(activeEstimateId: '', estimates: []);
     }
     try {
       final decoded = jsonDecode(encoded);
@@ -65,6 +58,11 @@ class PlatformEstimateItemStore implements EstimateItemStore {
             unitPriceMasters: _decodeUnitPriceMasters(map['unitPriceMasters']),
           );
         }
+        return EstimateWorkspace(
+          activeEstimateId: '',
+          estimates: const [],
+          unitPriceMasters: _decodeUnitPriceMasters(map['unitPriceMasters']),
+        );
       }
       final document = EstimateDocument.fromJson(map);
       return EstimateWorkspace(

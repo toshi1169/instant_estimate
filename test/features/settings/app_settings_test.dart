@@ -157,6 +157,20 @@ void main() {
         addressLine1: '東京都千代田区千代田1-1',
         addressLine2: '山田ビル2階',
         phoneNumber: '03-1234-5678',
+        displayOrder: [
+          CompanyProfileSection.postalCode,
+          CompanyProfileSection.addressLine1,
+          CompanyProfileSection.companyName,
+          CompanyProfileSection.representativeName,
+          CompanyProfileSection.addressLine2,
+          CompanyProfileSection.phoneNumber,
+        ],
+        excelVisibleSections: [
+          CompanyProfileSection.postalCode,
+          CompanyProfileSection.addressLine1,
+          CompanyProfileSection.companyName,
+          CompanyProfileSection.representativeName,
+        ],
       ),
     );
 
@@ -168,6 +182,20 @@ void main() {
     expect(restored.companyProfile.addressLine1, '東京都千代田区千代田1-1');
     expect(restored.companyProfile.addressLine2, '山田ビル2階');
     expect(restored.companyProfile.phoneNumber, '03-1234-5678');
+    expect(restored.companyProfile.effectiveDisplayOrder, [
+      CompanyProfileSection.postalCode,
+      CompanyProfileSection.addressLine1,
+      CompanyProfileSection.companyName,
+      CompanyProfileSection.representativeName,
+      CompanyProfileSection.addressLine2,
+      CompanyProfileSection.phoneNumber,
+    ]);
+    expect(restored.companyProfile.effectiveExcelVisibleSections, [
+      CompanyProfileSection.postalCode,
+      CompanyProfileSection.addressLine1,
+      CompanyProfileSection.companyName,
+      CompanyProfileSection.representativeName,
+    ]);
     expect(restored.language, AppLanguage.english);
     expect(restored.decimalPlaces, 4);
   });
@@ -180,6 +208,13 @@ void main() {
     expect(legacy.companyProfile.isEmpty, isTrue);
     expect(legacy.theme, AppThemeSelection.dark);
     expect(restoredBlank.companyProfile.isEmpty, isTrue);
-    expect(restoredBlank.companyProfile.toJson().values, everyElement(isEmpty));
+    expect(
+      restoredBlank.companyProfile.effectiveDisplayOrder,
+      defaultCompanyProfileDisplayOrder,
+    );
+    expect(
+      restoredBlank.companyProfile.effectiveExcelVisibleSections,
+      defaultCompanyProfileExcelVisibleSections,
+    );
   });
 }

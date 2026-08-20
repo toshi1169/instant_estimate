@@ -19,15 +19,6 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
         ? ''
         : widget.initialInfo.estimateName,
   );
-  late final _siteName = TextEditingController(
-    text: widget.initialInfo.siteName,
-  );
-  late final _clientName = TextEditingController(
-    text: widget.initialInfo.clientName,
-  );
-  late final _estimateNumber = TextEditingController(
-    text: widget.initialInfo.estimateNumber,
-  );
   late final _notes = TextEditingController(text: widget.initialInfo.notes);
   late final _proviso = TextEditingController(text: widget.initialInfo.proviso);
   late final _validityPeriod = TextEditingController(
@@ -44,9 +35,6 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
   @override
   void dispose() {
     _estimateName.dispose();
-    _siteName.dispose();
-    _clientName.dispose();
-    _estimateNumber.dispose();
     _notes.dispose();
     _proviso.dispose();
     _validityPeriod.dispose();
@@ -71,10 +59,7 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
         estimateName: _estimateName.text.trim().isEmpty
             ? '名称未設定の見積'
             : _estimateName.text.trim(),
-        siteName: _siteName.text.trim(),
-        clientName: _clientName.text.trim(),
         createdDate: _createdDate,
-        estimateNumber: _estimateNumber.text.trim(),
         notes: _notes.text.trim(),
         proviso: _proviso.text.trim(),
         validityPeriod: _validityPeriod.text.trim(),
@@ -96,24 +81,18 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
           children: [
             _field(
               _estimateName,
-              strings.text('見積名'),
+              strings.choose(
+                japanese: '見積名・現場名',
+                english: 'Estimate / site name',
+                simplifiedChinese: '估算名称・现场名称',
+                traditionalChinese: '估算名稱・現場名稱',
+                vietnamese: 'Tên báo giá / công trường',
+                indonesian: 'Nama penawaran / proyek',
+                filipino: 'Pangalan ng pagtataya / proyekto',
+                myanmar: 'ခန့်မှန်းချက် / လုပ်ငန်းခွင်အမည်',
+              ),
               hint: strings.text('例：○○邸 外構工事'),
               key: const Key('estimateInfoNameField'),
-            ),
-            _field(
-              _siteName,
-              strings.text('現場名'),
-              key: const Key('estimateInfoSiteField'),
-            ),
-            _field(
-              _clientName,
-              strings.text('宛名'),
-              key: const Key('estimateInfoClientField'),
-            ),
-            _field(
-              _estimateNumber,
-              strings.text('見積番号'),
-              key: const Key('estimateInfoNumberField'),
             ),
             ListTile(
               key: const Key('estimateInfoDateField'),

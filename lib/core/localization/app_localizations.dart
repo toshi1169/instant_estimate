@@ -2247,6 +2247,93 @@ class AppLocalizations {
     filipino: 'Numero ng telepono',
     myanmar: 'ဖုန်းနံပါတ်',
   );
+  String get estimateCompanyDisplayOrder => _pick(
+    japanese: '見積書での表示順',
+    english: 'Display order on estimate',
+    simplifiedChinese: '估价单中的显示顺序',
+    traditionalChinese: '估價單上的顯示順序',
+    vietnamese: 'Thứ tự hiển thị trên báo giá',
+    indonesian: 'Urutan tampilan pada penawaran',
+    filipino: 'Pagkakasunod ng pagpapakita sa estima',
+    myanmar: 'ခန့်မှန်းစာတွင် ပြသမည့်အစဉ်',
+  );
+  String get companyAddressBlock => _pick(
+    japanese: '住所',
+    english: 'Address',
+    simplifiedChinese: '地址',
+    traditionalChinese: '地址',
+    vietnamese: 'Địa chỉ',
+    indonesian: 'Alamat',
+    filipino: 'Address',
+    myanmar: 'လိပ်စာ',
+  );
+  String get dragToReorder => _pick(
+    japanese: '≡をドラッグして並べ替え',
+    english: 'Drag ≡ to reorder',
+    simplifiedChinese: '拖动≡调整顺序',
+    traditionalChinese: '拖曳≡調整順序',
+    vietnamese: 'Kéo ≡ để sắp xếp lại',
+    indonesian: 'Seret ≡ untuk mengubah urutan',
+    filipino: 'I-drag ang ≡ upang ayusin ang pagkakasunod',
+    myanmar: 'အစဉ်ပြောင်းရန် ≡ ကို ဆွဲပါ',
+  );
+  String get companyProfileDisplaySettings => _pick(
+    japanese: '並べ替え・Excel表示設定',
+    english: 'Reorder and Excel display',
+    simplifiedChinese: '排序与Excel显示设置',
+    traditionalChinese: '排序與Excel顯示設定',
+    vietnamese: 'Sắp xếp và hiển thị trên Excel',
+    indonesian: 'Urutan dan tampilan Excel',
+    filipino: 'Ayos at pagpapakita sa Excel',
+    myanmar: 'အစဉ်နှင့် Excel ပြသမှု ဆက်တင်',
+  );
+  String get companyProfileDisplaySettingsGuidance => _pick(
+    japanese: '≡で並べ替え、目のアイコンでExcelへの表示を切り替えます。',
+    english: 'Drag ≡ to reorder and use the eye icon to control Excel output.',
+    simplifiedChinese: '拖动≡调整顺序，使用眼睛图标切换Excel输出。',
+    traditionalChinese: '拖曳≡調整順序，使用眼睛圖示切換Excel輸出。',
+    vietnamese:
+        'Kéo ≡ để sắp xếp và dùng biểu tượng mắt để bật/tắt xuất Excel.',
+    indonesian:
+        'Seret ≡ untuk mengurutkan dan gunakan ikon mata untuk keluaran Excel.',
+    filipino:
+        'I-drag ang ≡ para ayusin at gamitin ang eye icon para sa Excel output.',
+    myanmar:
+        'အစဉ်ပြောင်းရန် ≡ ကို ဆွဲပြီး Excel ထုတ်ပြမှုကို မျက်လုံးသင်္ကေတဖြင့် ပြောင်းပါ။',
+  );
+  String get showInExcel => _pick(
+    japanese: 'Excelへ表示',
+    english: 'Show in Excel',
+    simplifiedChinese: '在Excel中显示',
+    traditionalChinese: '在Excel中顯示',
+    vietnamese: 'Hiển thị trong Excel',
+    indonesian: 'Tampilkan di Excel',
+    filipino: 'Ipakita sa Excel',
+    myanmar: 'Excel တွင် ပြမည်',
+  );
+  String get hideFromExcel => _pick(
+    japanese: 'Excelでは非表示',
+    english: 'Hide from Excel',
+    simplifiedChinese: '不在Excel中显示',
+    traditionalChinese: '不在Excel中顯示',
+    vietnamese: 'Ẩn trong Excel',
+    indonesian: 'Sembunyikan dari Excel',
+    filipino: 'Itago sa Excel',
+    myanmar: 'Excel တွင် မပြပါ',
+  );
+  String get companyProfileExcelDisplayLimit => _pick(
+    japanese: 'Excelに表示できる自社情報は5項目までです',
+    english: 'Up to five company information items can be shown in Excel.',
+    simplifiedChinese: 'Excel中最多可显示5项公司信息',
+    traditionalChinese: 'Excel中最多可顯示5項公司資訊',
+    vietnamese:
+        'Có thể hiển thị tối đa 5 mục thông tin doanh nghiệp trong Excel.',
+    indonesian:
+        'Maksimal 5 item informasi perusahaan dapat ditampilkan di Excel.',
+    filipino:
+        'Hanggang 5 item ng impormasyon ng kumpanya ang maipapakita sa Excel.',
+    myanmar: 'Excel တွင် ကုမ္ပဏီအချက်အလက် ၅ ခုအထိသာ ပြနိုင်သည်။',
+  );
   String get notRegistered => _pick(
     japanese: '未登録',
     english: 'Not registered',

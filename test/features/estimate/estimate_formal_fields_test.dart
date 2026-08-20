@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_document.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
@@ -10,7 +11,7 @@ import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 
 void main() {
   group('正式見積用データの後方互換性', () {
-    test('旧明細JSONは施工場所なしで読み込める', () {
+    test('旧明細JSONは記号・施工場所なしで読み込める', () {
       final item = EstimateItem.fromJson({
         'id': 'legacy-item',
         'createdAt': '2026-08-12T00:00:00.000',
@@ -18,27 +19,38 @@ void main() {
         'name': '根切り',
       });
 
+      expect(item.constructionSymbol, isEmpty);
       expect(item.constructionLocation, isEmpty);
       expect(item.name, '根切り');
     });
 
-    test('旧基本情報JSONは追加項目なしで読み込める', () {
+    test('旧基本情報JSONの現場名・宛名・見積番号を保持して読み込める', () {
       final info = EstimateInfo.fromJson({
         'id': 'legacy-estimate',
         'estimateName': '既存見積',
+        'siteName': '旧現場名',
+        'clientName': '旧宛名',
+        'estimateNumber': '旧見積番号',
         'createdDate': '2026-08-12T00:00:00.000',
       });
 
+      expect(info.siteName, '旧現場名');
+      expect(info.clientName, '旧宛名');
+      expect(info.estimateNumber, '旧見積番号');
       expect(info.proviso, isEmpty);
       expect(info.validityPeriod, isEmpty);
       expect(info.constructionPeriod, isEmpty);
       expect(info.paymentTerms, isEmpty);
       expect(info.displayName, '既存見積');
+      expect(info.toJson()['siteName'], '旧現場名');
+      expect(info.toJson()['clientName'], '旧宛名');
+      expect(info.toJson()['estimateNumber'], '旧見積番号');
     });
 
-    test('施工場所を保存・復元できる', () {
+    test('記号と施工場所を保存・復元できる', () {
       final item = EstimateItem.fromDraft(
         const EstimateItemDraft(
+          constructionSymbol: '①',
           trade: '外構工事',
           constructionLocation: '北側通路\n玄関前',
           name: '舗装',
@@ -48,7 +60,9 @@ void main() {
       );
 
       final restored = EstimateItem.fromJson(item.toJson());
+      expect(restored.constructionSymbol, '①');
       expect(restored.constructionLocation, '北側通路\n玄関前');
+      expect(restored.toDraft().constructionSymbol, '①');
       expect(restored.toDraft().constructionLocation, '北側通路\n玄関前');
     });
 
@@ -68,7 +82,11 @@ void main() {
     });
   });
 
-  testWidgets('施工場所・名称・仕様は複数行、摘要は1行で入力できる', (tester) async {
+  testWidgets('記号・施工場所・名称・仕様を順番どおり編集できる', (tester) async {
+    tester.view.physicalSize = const Size(600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     EstimateItemEditorResult? result;
     await tester.pumpWidget(
       MaterialApp(
@@ -102,6 +120,39 @@ void main() {
     );
     expect(field(const Key('estimateNameField')).maxLines, isNull);
     expect(field(const Key('estimateSpecificationField')).maxLines, isNull);
+    double top(String key) => tester.getTopLeft(find.byKey(Key(key))).dy;
+    expect(
+      top('estimateConstructionSymbolField'),
+      top('estimateConstructionLocationField'),
+    );
+    expect(
+      top('estimateConstructionLocationField'),
+      lessThan(top('estimateNameField')),
+    );
+    expect(
+      top('estimateNameField'),
+      lessThan(top('estimateSpecificationField')),
+    );
+    expect(
+      top('estimateSpecificationField'),
+      lessThan(top('estimateQuantityField')),
+    );
+    expect(top('estimateQuantityField'), top('estimateUnitField'));
+    expect(top('estimateUnitField'), lessThan(top('estimateUnitPriceField')));
+    expect(top('estimateUnitPriceField'), lessThan(top('estimateAmountValue')));
+    expect(
+      top('estimateAmountValue'),
+      lessThan(top('estimateDescriptionField')),
+    );
+    expect(
+      top('estimateDescriptionField'),
+      lessThan(top('estimateTradeField')),
+    );
+
+    await tester.tap(find.byKey(const Key('estimateConstructionSymbolField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('①').last);
+    await tester.pumpAndSettle();
 
     await tester.enterText(
       find.byKey(const Key('estimateConstructionLocationField')),
@@ -131,8 +182,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(result?.draft.constructionLocation, '北側通路\n玄関前');
+    expect(result?.draft.constructionSymbol, '①');
     expect(result?.draft.name, '舗装工事\n下地調整含む');
     expect(result?.draft.specification, '密粒度As\nt=50');
+  });
+
+  testWidgets('既存の①②③を選ぶと同じ見積の施工場所を自動入力する', (tester) async {
+    final info = EstimateInfo.initial(DateTime(2026, 8, 15));
+    final estimate = EstimateDocument(
+      info: info,
+      items: [
+        for (final entry in const [
+          ('①', '西・北　隣地側　土留めブロック工事'),
+          ('②', '南　道路側　土留めブロック工事'),
+          ('③', '東側'),
+        ])
+          EstimateItem.fromDraft(
+            EstimateItemDraft(
+              constructionSymbol: entry.$1,
+              constructionLocation: entry.$2,
+              name: '${entry.$1}明細',
+            ),
+            id: entry.$1,
+            createdAt: DateTime(2026, 8, 15),
+          ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EstimateItemEditorScreen(
+          initialDraft: const EstimateItemDraft(),
+          estimateTitle: info.displayName,
+          estimates: [estimate],
+          initialEstimateId: info.id,
+        ),
+      ),
+    );
+
+    String locationText() => tester
+        .widget<EditableText>(
+          find.descendant(
+            of: find.byKey(const Key('estimateConstructionLocationField')),
+            matching: find.byType(EditableText),
+          ),
+        )
+        .controller
+        .text;
+    Future<void> selectSymbol(String symbol) async {
+      await tester.tap(
+        find.byKey(const Key('estimateConstructionSymbolField')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(symbol).last);
+      await tester.pumpAndSettle();
+    }
+
+    await selectSymbol('①');
+    expect(locationText(), '西・北　隣地側　土留めブロック工事');
+    await selectSymbol('②');
+    expect(locationText(), '南　道路側　土留めブロック工事');
+    await selectSymbol('③');
+    expect(locationText(), '東側');
+    await selectSymbol('④');
+    expect(locationText(), isEmpty);
   });
 
   testWidgets('見積基本情報の追加項目を編集して保存できる', (tester) async {
@@ -145,7 +257,12 @@ void main() {
               result = await Navigator.of(context).push<EstimateInfo>(
                 MaterialPageRoute(
                   builder: (_) => EstimateInfoEditorScreen(
-                    initialInfo: EstimateInfo.initial(DateTime(2026, 8, 12)),
+                    initialInfo: EstimateInfo.initial(DateTime(2026, 8, 12))
+                        .copyWith(
+                          siteName: '旧現場名',
+                          clientName: '旧宛名',
+                          estimateNumber: '旧見積番号',
+                        ),
                   ),
                 ),
               );
@@ -158,20 +275,41 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
+    expect(find.text('見積名・現場名'), findsOneWidget);
+    expect(find.byKey(const Key('estimateInfoSiteField')), findsNothing);
+    expect(find.byKey(const Key('estimateInfoClientField')), findsNothing);
+    expect(find.byKey(const Key('estimateInfoNumberField')), findsNothing);
+
     Future<void> enter(Key key, String value) async {
       final finder = find.byKey(key);
       await tester.ensureVisible(finder);
       await tester.enterText(finder, value);
     }
 
+    await enter(const Key('estimateInfoNameField'), '松本邸 外構改修工事');
     await enter(const Key('estimateInfoProvisoField'), '外構工事一式として');
     await enter(const Key('estimateInfoValidityPeriodField'), '発行日より30日間');
     await enter(const Key('estimateInfoConstructionPeriodField'), '契約後30日以内');
     await enter(const Key('estimateInfoPaymentTermsField'), '完了月末締め翌月末払い');
-    await tester.ensureVisible(find.byKey(const Key('saveEstimateInfo')));
-    await tester.tap(find.byKey(const Key('saveEstimateInfo')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('saveEstimateInfo')),
+      250,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateInfoEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    tester
+        .widget<FilledButton>(find.byKey(const Key('saveEstimateInfo')))
+        .onPressed!();
     await tester.pumpAndSettle();
 
+    expect(result?.estimateName, '松本邸 外構改修工事');
+    expect(result?.siteName, '旧現場名');
+    expect(result?.clientName, '旧宛名');
+    expect(result?.estimateNumber, '旧見積番号');
     expect(result?.proviso, '外構工事一式として');
     expect(result?.validityPeriod, '発行日より30日間');
     expect(result?.constructionPeriod, '契約後30日以内');

@@ -119,6 +119,13 @@ class FakeEstimateItemStore implements EstimateItemStore {
     );
   }
 
+  FakeEstimateItemStore.empty()
+    : workspace = const EstimateWorkspace(
+        activeEstimateId: '',
+        estimates: [],
+        unitPriceMasters: [],
+      );
+
   EstimateDocument get document => workspace.estimates.firstWhere(
     (estimate) => estimate.info.id == workspace.activeEstimateId,
   );
@@ -142,6 +149,23 @@ class FakeEstimateItemStore implements EstimateItemStore {
 }
 
 void main() {
+  testWidgets('初期状態は見積・単価マスタ0件で表示できる', (tester) async {
+    final controller = EstimateController(store: FakeEstimateItemStore.empty());
+    await controller.load();
+
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateDocumentsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('0 / 5件'), findsOneWidget);
+    expect(find.byKey(const Key('estimateDocument0')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('openUnitPriceMaster')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('登録された単価はありません'), findsOneWidget);
+  });
+
   testWidgets('英語設定では単価マスタの組み込み項目と空詳細を英語で表示する', (tester) async {
     final store = FakeEstimateItemStore();
     final controller = EstimateController(store: store);
@@ -197,7 +221,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Untitled estimate'), findsOneWidget);
-    expect(find.text('Uncategorized'), findsOneWidget);
+    expect(find.text('—'), findsOneWidget);
     expect(find.text('Custom item'), findsOneWidget);
   });
 
@@ -817,7 +841,9 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.tap(
+      find.bySemanticsLabel(_menuSemanticsLabel(AppLanguage.english)),
+    );
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
     expect(find.text('歩掛：BUGAKARI'), findsOneWidget);
@@ -1071,7 +1097,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.tap(
+      find.bySemanticsLabel(_menuSemanticsLabel(AppLanguage.english)),
+    );
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sideMenuUnitConversion')));
@@ -1260,7 +1288,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.longPress(find.bySemanticsLabel('メニュー'));
+    await tester.longPress(
+      find.bySemanticsLabel(_menuSemanticsLabel(AppLanguage.english)),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Functions'), findsOneWidget);
 
@@ -2069,6 +2099,8 @@ void main() {
     await initialController.load();
     await initialController.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '根切り',
         quantity: 7.2,
@@ -2101,6 +2133,19 @@ void main() {
     await tester.tap(find.byKey(const Key('estimateTransferNext')));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('estimateConstructionSymbolField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('①').last);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('estimateConstructionLocationField')),
+          )
+          .controller
+          ?.text,
+      '北側通路',
+    );
     await tester.enterText(find.byKey(const Key('estimateNameField')), '根切り');
     await tester.enterText(find.byKey(const Key('estimateUnitField')), 'm³');
     await tester.ensureVisible(find.byKey(const Key('estimateUnitPriceField')));
@@ -2143,6 +2188,8 @@ void main() {
     await estimateController.load();
     await estimateController.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '根切り',
         quantity: 2,
@@ -2155,7 +2202,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('土工事'), findsOneWidget);
+    expect(find.text('① 北側通路'), findsOneWidget);
+    expect(find.text('工種：土工事'), findsOneWidget);
     expect(find.byKey(const Key('estimateGroupSubtotal0')), findsOneWidget);
     expect(find.text('¥ 8,000'), findsNWidgets(2));
 
@@ -2176,8 +2224,9 @@ void main() {
 
     expect(find.text('税抜合計  ¥ 10,000'), findsOneWidget);
     expect(find.text('税込総額  ¥ 11,000'), findsOneWidget);
-    expect(find.text('型枠工事'), findsOneWidget);
-    expect(find.text('土工事'), findsNothing);
+    expect(find.text('① 北側通路'), findsOneWidget);
+    expect(find.text('工種：型枠工事'), findsOneWidget);
+    expect(find.text('工種：土工事'), findsNothing);
     expect(find.text('¥ 10,000'), findsNWidgets(2));
     expect(store.items.single.unitPrice, 5000);
 
@@ -2206,14 +2255,19 @@ void main() {
     await controller.load();
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '根切り',
         quantity: 2,
         unitPrice: 4000,
+        description: '小運搬別途',
       ),
     );
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '埋戻し',
         quantity: 1,
@@ -2221,7 +2275,13 @@ void main() {
       ),
     );
     await controller.add(
-      const EstimateItemDraft(name: '諸経費', quantity: 1, unitPrice: 500),
+      const EstimateItemDraft(
+        constructionSymbol: '②',
+        constructionLocation: '玄関前',
+        name: '諸経費',
+        quantity: 1,
+        unitPrice: 500,
+      ),
     );
 
     await tester.pumpWidget(
@@ -2229,11 +2289,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('土工事'), findsOneWidget);
-    expect(find.text('工種未設定'), findsOneWidget);
+    expect(find.text('① 北側通路'), findsOneWidget);
+    expect(find.text('② 玄関前'), findsOneWidget);
+    expect(find.text('摘要：小運搬別途'), findsOneWidget);
+    expect(find.text('工種：土工事'), findsNWidgets(2));
+    expect(
+      tester.getTopLeft(find.text('摘要：小運搬別途')).dy,
+      lessThan(tester.getTopLeft(find.text('工種：土工事').first).dy),
+    );
     expect(find.byKey(const Key('estimateGroup0')), findsOneWidget);
     expect(find.byKey(const Key('estimateGroup1')), findsOneWidget);
-    expect(find.text('工種小計'), findsNWidgets(2));
+    expect(find.text('小計'), findsNWidgets(2));
     expect(find.text('¥ 11,000'), findsOneWidget);
     expect(find.text('¥ 500'), findsNWidgets(2));
     expect(find.text('税抜合計  ¥ 11,500'), findsOneWidget);
@@ -2284,7 +2350,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(copiedText, contains('記号\t名称\t仕様\t数量\t単位\t単価\t金額\t摘要'));
-    expect(copiedText, contains('①\t根切り\t\t2\tm³\t4000\t=D2*F2\t'));
+    expect(copiedText, contains('①\t根切り\t\t2\tm³\t4000\t=ROUND(D2*F2,0)\t'));
     expect(copiedText, isNot(contains('土工事')));
     expect(copiedText, contains('小計\t=SUM(G2:G2)'));
     expect(copiedText, contains('税抜合計'));
@@ -2342,7 +2408,7 @@ void main() {
     await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
     await tester.pumpAndSettle();
 
-    expect(find.text('コンクリート工事'), findsOneWidget);
+    expect(find.text('工種：コンクリート工事'), findsOneWidget);
     expect(find.text('コンクリート打設'), findsOneWidget);
     expect(find.text('税抜合計  ¥ 45,000'), findsOneWidget);
     expect(find.text('税込総額  ¥ 49,500'), findsOneWidget);
@@ -2374,6 +2440,8 @@ void main() {
     await controller.load();
     await controller.add(
       const EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側通路',
         trade: '土工事',
         name: '根切り',
         specification: 'W1.0 × H0.5',
@@ -2394,6 +2462,16 @@ void main() {
 
     expect(find.text('見積明細へ追加'), findsOneWidget);
     expect(find.byKey(const Key('saveEstimateChanges')), findsNothing);
+    expect(find.text('①'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('estimateConstructionLocationField')),
+          )
+          .controller
+          ?.text,
+      '北側通路',
+    );
     expect(
       tester
           .widget<TextFormField>(find.byKey(const Key('estimateTradeField')))
@@ -2443,6 +2521,13 @@ void main() {
     final store = FakeEstimateItemStore();
     final estimateController = EstimateController(store: store);
     await estimateController.load();
+    await estimateController.updateInfo(
+      estimateController.info.copyWith(
+        siteName: '旧現場名',
+        clientName: '旧宛名',
+        estimateNumber: '旧見積番号',
+      ),
+    );
     await estimateController.add(
       const EstimateItemDraft(name: '根切り', quantity: 2, unit: 'm³'),
     );
@@ -2454,21 +2539,13 @@ void main() {
     await tester.tap(find.byKey(const Key('editEstimateInfo')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('estimateInfoEditor')), findsOneWidget);
+    expect(find.text('見積名・現場名'), findsOneWidget);
+    expect(find.byKey(const Key('estimateInfoSiteField')), findsNothing);
+    expect(find.byKey(const Key('estimateInfoClientField')), findsNothing);
+    expect(find.byKey(const Key('estimateInfoNumberField')), findsNothing);
     await tester.enterText(
       find.byKey(const Key('estimateInfoNameField')),
       '○○邸 外構工事',
-    );
-    await tester.enterText(
-      find.byKey(const Key('estimateInfoSiteField')),
-      '○○邸',
-    );
-    await tester.enterText(
-      find.byKey(const Key('estimateInfoClientField')),
-      '○○様',
-    );
-    await tester.enterText(
-      find.byKey(const Key('estimateInfoNumberField')),
-      '2026-001',
     );
     await tester.scrollUntilVisible(
       find.byKey(const Key('saveEstimateInfo')),
@@ -2484,9 +2561,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('○○邸 外構工事'), findsOneWidget);
-    expect(find.textContaining('現場：○○邸'), findsOneWidget);
-    expect(store.document.info.clientName, '○○様');
-    expect(store.document.info.estimateNumber, '2026-001');
+    expect(find.textContaining('旧現場名'), findsNothing);
+    expect(find.textContaining('旧宛名'), findsNothing);
+    expect(find.textContaining('旧見積番号'), findsNothing);
+    expect(store.document.info.siteName, '旧現場名');
+    expect(store.document.info.clientName, '旧宛名');
+    expect(store.document.info.estimateNumber, '旧見積番号');
     expect(store.items.single.name, '根切り');
   });
 
@@ -2741,3 +2821,11 @@ void main() {
     );
   });
 }
+
+String _menuSemanticsLabel(AppLanguage language) =>
+    AppLocalizations(language).choose(
+      japanese: 'メニュー',
+      english: 'Menu',
+      simplifiedChinese: '菜单',
+      traditionalChinese: '選單',
+    );
