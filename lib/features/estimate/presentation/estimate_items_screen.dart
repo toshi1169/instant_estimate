@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pdf/pdf.dart';
-import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/localization/app_localizations.dart';
@@ -10,6 +8,7 @@ import '../../settings/domain/app_settings.dart';
 import '../application/estimate_controller.dart';
 import '../application/estimate_excel_export.dart';
 import '../application/estimate_pdf_export.dart';
+import '../application/estimate_print.dart';
 import '../application/estimate_table_export.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
@@ -27,12 +26,14 @@ class EstimateItemsScreen extends StatelessWidget {
     required this.controller,
     this.settings = const AppSettings(),
     this.onRequestRewardedAdAccess,
+    this.printPdfBytes = printEstimatePdfBytes,
     super.key,
   });
 
   final EstimateController controller;
   final AppSettings settings;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
+  final EstimatePdfBytesPrinter printPdfBytes;
 
   @override
   Widget build(BuildContext context) {
@@ -144,16 +145,15 @@ class EstimateItemsScreen extends StatelessWidget {
     if (!await _requestOutputAccess(RewardedAdEntryPoint.printOutput)) return;
     if (!context.mounted) return;
     try {
-      await Printing.layoutPdf(
+      final pdfBytes = await buildEstimatePdf(
+        info: controller.info,
+        items: controller.items,
+        companyProfile: settings.companyProfile,
+        estimateDecimalPlaces: settings.estimateDecimalPlaces,
+      );
+      await printPdfBytes(
+        bytes: pdfBytes,
         name: '${controller.info.displayName}.pdf',
-        format: PdfPageFormat.a4.landscape,
-        dynamicLayout: false,
-        onLayout: (_) => buildEstimatePdf(
-          info: controller.info,
-          items: controller.items,
-          companyProfile: settings.companyProfile,
-          estimateDecimalPlaces: settings.estimateDecimalPlaces,
-        ),
       );
     } catch (_) {
       if (context.mounted) {
