@@ -1950,6 +1950,28 @@ class AppLocalizations {
     traditionalChinese: '以A4橫向列印',
   );
 
+  String get formalPdf => _pick(
+    japanese: '正式PDF',
+    english: 'Formal PDF',
+    simplifiedChinese: '正式PDF',
+    traditionalChinese: '正式PDF',
+    vietnamese: 'PDF chính thức',
+    indonesian: 'PDF resmi',
+    filipino: 'Opisyal na PDF',
+    myanmar: 'တရားဝင် PDF',
+  );
+
+  String get pdfFileCreationFailed => _pick(
+    japanese: 'PDFファイルを作成できませんでした',
+    english: 'Could not create the PDF file',
+    simplifiedChinese: '无法创建PDF文件',
+    traditionalChinese: '無法建立PDF檔案',
+    vietnamese: 'Không thể tạo tệp PDF',
+    indonesian: 'Tidak dapat membuat file PDF',
+    filipino: 'Hindi makagawa ng PDF file',
+    myanmar: 'PDF ဖိုင်ကို ဖန်တီး၍မရပါ',
+  );
+
   String get exportA4LandscapeExcel => _pick(
     japanese: 'A4横のExcelを出力',
     english: 'Export A4 landscape Excel',

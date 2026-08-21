@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:excel_plus/excel_plus.dart';
 
 import '../../settings/domain/company_profile.dart';
+import 'estimate_export_file_name.dart';
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_symbol.dart';
@@ -56,7 +57,7 @@ Future<File> createEstimateWorkbookFile({
 }) async {
   final directory = await Directory.systemTemp.createTemp('instant_estimate_');
   final file = File(
-    '${directory.path}/${_safeFileName(info.displayName)}.xlsx',
+    '${directory.path}/${safeEstimateExportBaseName(info.displayName)}.xlsx',
   );
   final bytes = buildEstimateWorkbook(
     info: info,
@@ -956,10 +957,3 @@ Border _mediumBorder() =>
     Border(borderStyle: BorderStyle.Medium, borderColorHex: ExcelColor.black);
 
 String _westernDate(DateTime date) => '${date.year}年${date.month}月${date.day}日';
-
-String _safeFileName(String value) {
-  final sanitized = value
-      .replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_')
-      .trim();
-  return sanitized.isEmpty ? '見積書' : sanitized;
-}

@@ -6,8 +6,10 @@ import '../../../core/localization/app_localizations.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../../settings/domain/app_settings.dart';
 import '../application/estimate_controller.dart';
+import '../application/estimate_export_file_name.dart';
 import '../application/estimate_excel_export.dart';
 import '../application/estimate_pdf_export.dart';
+import '../application/estimate_pdf_share.dart';
 import '../application/estimate_print.dart';
 import '../application/estimate_table_export.dart';
 import '../domain/estimate_item.dart';
@@ -27,6 +29,7 @@ class EstimateItemsScreen extends StatelessWidget {
     this.settings = const AppSettings(),
     this.onRequestRewardedAdAccess,
     this.printPdfBytes = printEstimatePdfBytes,
+    this.sharePdfBytes = shareEstimatePdfBytes,
     super.key,
   });
 
@@ -34,6 +37,7 @@ class EstimateItemsScreen extends StatelessWidget {
   final AppSettings settings;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
   final EstimatePdfBytesPrinter printPdfBytes;
+  final EstimatePdfBytesSharer sharePdfBytes;
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +54,12 @@ class EstimateItemsScreen extends StatelessWidget {
             tooltip: l10n.printA4Landscape,
             onPressed: () => _printEstimate(context),
             icon: const Icon(Icons.print_outlined),
+          ),
+          IconButton(
+            key: const Key('shareEstimatePdf'),
+            tooltip: l10n.formalPdf,
+            onPressed: () => _shareEstimatePdf(context),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
           ),
           IconButton(
             key: const Key('exportEstimateExcel'),
@@ -145,15 +155,10 @@ class EstimateItemsScreen extends StatelessWidget {
     if (!await _requestOutputAccess(RewardedAdEntryPoint.printOutput)) return;
     if (!context.mounted) return;
     try {
-      final pdfBytes = await buildEstimatePdf(
-        info: controller.info,
-        items: controller.items,
-        companyProfile: settings.companyProfile,
-        estimateDecimalPlaces: settings.estimateDecimalPlaces,
-      );
+      final pdfBytes = await _buildFormalPdf();
       await printPdfBytes(
         bytes: pdfBytes,
-        name: '${controller.info.displayName}.pdf',
+        name: formalEstimatePdfFileName(controller.info.displayName),
       );
     } catch (_) {
       if (context.mounted) {
@@ -167,6 +172,47 @@ class EstimateItemsScreen extends StatelessWidget {
       }
     }
   }
+
+  Future<void> _shareEstimatePdf(BuildContext context) async {
+    if (controller.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).text('出力する明細がありません')),
+        ),
+      );
+      return;
+    }
+    if (!await _requestOutputAccess(RewardedAdEntryPoint.pdfExport)) return;
+    if (!context.mounted) return;
+    try {
+      final pdfBytes = await _buildFormalPdf();
+      if (!context.mounted) return;
+      final box = context.findRenderObject() as RenderBox?;
+      await sharePdfBytes(
+        bytes: pdfBytes,
+        fileName: formalEstimatePdfFileName(controller.info.displayName),
+        subject: controller.info.displayName,
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).pdfFileCreationFailed),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<Uint8List> _buildFormalPdf() => buildEstimatePdf(
+    info: controller.info,
+    items: controller.items,
+    companyProfile: settings.companyProfile,
+    estimateDecimalPlaces: settings.estimateDecimalPlaces,
+  );
 
   Future<void> _exportExcel(BuildContext context) async {
     if (controller.items.isEmpty) {
