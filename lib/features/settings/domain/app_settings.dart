@@ -26,6 +26,8 @@ class AppSettings {
     this.angleUnit = AngleUnit.degrees,
     this.historySortOrder = HistorySortOrder.ascending,
     this.confirmHistoryDeletion = true,
+    this.calculatorTapSoundEnabled = true,
+    this.calculatorHapticsEnabled = false,
     this.customTransportVehicles = const [],
     this.customDensityMaterials = const [],
     this.companyProfile = const CompanyProfile(),
@@ -40,6 +42,8 @@ class AppSettings {
   final AngleUnit angleUnit;
   final HistorySortOrder historySortOrder;
   final bool confirmHistoryDeletion;
+  final bool calculatorTapSoundEnabled;
+  final bool calculatorHapticsEnabled;
   final List<TransportVehicle> customTransportVehicles;
   final List<DensityMaterialPreset> customDensityMaterials;
   final CompanyProfile companyProfile;
@@ -81,6 +85,8 @@ class AppSettings {
     AngleUnit? angleUnit,
     HistorySortOrder? historySortOrder,
     bool? confirmHistoryDeletion,
+    bool? calculatorTapSoundEnabled,
+    bool? calculatorHapticsEnabled,
     List<TransportVehicle>? customTransportVehicles,
     List<DensityMaterialPreset>? customDensityMaterials,
     CompanyProfile? companyProfile,
@@ -97,6 +103,10 @@ class AppSettings {
       historySortOrder: historySortOrder ?? this.historySortOrder,
       confirmHistoryDeletion:
           confirmHistoryDeletion ?? this.confirmHistoryDeletion,
+      calculatorTapSoundEnabled:
+          calculatorTapSoundEnabled ?? this.calculatorTapSoundEnabled,
+      calculatorHapticsEnabled:
+          calculatorHapticsEnabled ?? this.calculatorHapticsEnabled,
       customTransportVehicles:
           customTransportVehicles ?? this.customTransportVehicles,
       customDensityMaterials:
@@ -115,6 +125,8 @@ class AppSettings {
     'angleUnit': angleUnit.name,
     'historySortOrder': historySortOrder.name,
     'confirmHistoryDeletion': confirmHistoryDeletion,
+    'calculatorTapSoundEnabled': calculatorTapSoundEnabled,
+    'calculatorHapticsEnabled': calculatorHapticsEnabled,
     'customTransportVehicles': customTransportVehicles
         .map((vehicle) => vehicle.toJson())
         .toList(growable: false),
@@ -165,6 +177,12 @@ class AppSettings {
       confirmHistoryDeletion: json['confirmHistoryDeletion'] is bool
           ? json['confirmHistoryDeletion']! as bool
           : true,
+      calculatorTapSoundEnabled: json['calculatorTapSoundEnabled'] is bool
+          ? json['calculatorTapSoundEnabled']! as bool
+          : true,
+      calculatorHapticsEnabled: json['calculatorHapticsEnabled'] is bool
+          ? json['calculatorHapticsEnabled']! as bool
+          : false,
       customTransportVehicles: switch (json['customTransportVehicles']) {
         final List<Object?> values =>
           values

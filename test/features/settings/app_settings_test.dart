@@ -217,4 +217,33 @@ void main() {
       defaultCompanyProfileExcelVisibleSections,
     );
   });
+
+  test('電卓ボタンの音とバイブ設定を保存・復元する', () {
+    const settings = AppSettings(
+      calculatorTapSoundEnabled: true,
+      calculatorHapticsEnabled: true,
+    );
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.calculatorTapSoundEnabled, isTrue);
+    expect(restored.calculatorHapticsEnabled, isTrue);
+  });
+
+  test('旧設定JSONではボタン音ONとバイブOFFを補完する', () {
+    final restored = AppSettings.fromJson(const {'theme': 'dark'});
+
+    expect(restored.calculatorTapSoundEnabled, isTrue);
+    expect(restored.calculatorHapticsEnabled, isFalse);
+  });
+
+  test('明示保存したボタン音OFFとバイブONを既定値より優先する', () {
+    final restored = AppSettings.fromJson(const {
+      'calculatorTapSoundEnabled': false,
+      'calculatorHapticsEnabled': true,
+    });
+
+    expect(restored.calculatorTapSoundEnabled, isFalse);
+    expect(restored.calculatorHapticsEnabled, isTrue);
+  });
 }

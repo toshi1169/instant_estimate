@@ -7,6 +7,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../domain/app_settings.dart';
 import '../domain/company_profile.dart';
 import '../../estimate/domain/estimate_quantity.dart';
+import 'button_settings_screen.dart';
 import 'company_profile_editor_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -222,6 +223,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _editButtonSettings(BuildContext context) {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ButtonSettingsScreen(
+          tapSoundEnabled: _settings.calculatorTapSoundEnabled,
+          hapticsEnabled: _settings.calculatorHapticsEnabled,
+          onTapSoundChanged: (value) =>
+              _update(_settings.copyWith(calculatorTapSoundEnabled: value)),
+          onHapticsChanged: (value) =>
+              _update(_settings.copyWith(calculatorHapticsEnabled: value)),
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmClearHistory(BuildContext context) async {
     final strings = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -305,6 +321,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: Text(_themeLabel(_settings.theme, strings)),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectTheme(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('buttonSettings'),
+                  leading: const Icon(Icons.touch_app_outlined),
+                  title: Text(strings.buttonSettings),
+                  subtitle: Text(
+                    '${strings.calculatorTapSound}: '
+                    '${_settings.calculatorTapSoundEnabled ? 'ON' : 'OFF'}  '
+                    '${strings.calculatorTapHaptics}: '
+                    '${_settings.calculatorHapticsEnabled ? 'ON' : 'OFF'}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _editButtonSettings(context),
                 ),
                 const Divider(height: 1),
                 ListTile(

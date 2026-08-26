@@ -11,6 +11,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../../advertising/presentation/google_mobile_ads_banner.dart';
+import '../application/calculator_button_feedback.dart';
 import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -51,6 +52,7 @@ class CalculatorScreen extends StatefulWidget {
     this.onShowAdvertisingPrivacyOptions,
     this.enableGoogleMobileAds = false,
     this.purchaseStore,
+    this.buttonFeedback = const SystemCalculatorButtonFeedback(),
     super.key,
   });
 
@@ -67,6 +69,7 @@ class CalculatorScreen extends StatefulWidget {
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
   final PurchaseStore? purchaseStore;
+  final CalculatorButtonFeedback buttonFeedback;
 
   static const _keys = <_CalculatorKey>[
     _CalculatorKey.menu(),
@@ -177,8 +180,21 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       unawaited(_openSettings());
       return;
     }
+    unawaited(_provideButtonFeedback());
     final notice = _controller.press(key.label);
     if (notice != null) _showMessage(notice);
+  }
+
+  Future<void> _provideButtonFeedback() async {
+    final feedback = widget.buttonFeedback;
+    final futures = <Future<void>>[];
+    if (widget.settings.calculatorTapSoundEnabled) {
+      futures.add(feedback.playTapSound());
+    }
+    if (widget.settings.calculatorHapticsEnabled) {
+      futures.add(feedback.performLightHaptic());
+    }
+    if (futures.isNotEmpty) await Future.wait(futures);
   }
 
   Future<void> _openSettings() {
@@ -205,6 +221,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       ),
     );
     if (function != null && mounted) {
+      unawaited(_provideButtonFeedback());
       final notice = _controller.insertFunction(function);
       if (notice != null) _showMessage(notice);
     }
@@ -1849,7 +1866,9 @@ class _Keypad extends StatelessWidget {
         return _KeyButton(
           keyData: keyData,
           useFractionToggleColor:
-              keyData.kind == _KeyKind.fractionToggle && canCycleFraction,
+              (keyData.kind == _KeyKind.fraction ||
+                  keyData.kind == _KeyKind.fractionToggle) &&
+              canCycleFraction,
           onPressed: () => onPressed(keyData),
           onDoublePressed: keyData.kind == _KeyKind.menu
               ? onMenuFunctionsRequested

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
+import 'core/platform/app_orientation.dart';
 import 'features/advertising/data/google_mobile_ads_consent_manager.dart';
 import 'features/advertising/data/google_mobile_ads_rewarded_ad_presenter.dart';
 import 'features/calculator/data/calculation_history_store.dart';
@@ -11,8 +12,9 @@ import 'features/productivity/data/productivity_record_store.dart';
 import 'features/subscription/data/app_access_state_store.dart';
 import 'features/subscription/data/in_app_purchase_store.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await configureAppOrientation();
   runApp(
     InstantEstimateApp(
       onboardingPreferences: PlatformOnboardingPreferences(),

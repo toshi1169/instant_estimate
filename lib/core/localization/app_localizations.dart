@@ -223,6 +223,36 @@ class AppLocalizations {
     simplifiedChinese: '设置',
     traditionalChinese: '設定',
   );
+  String get buttonSettings => _pick(
+    japanese: 'ボタン設定',
+    english: 'Button settings',
+    simplifiedChinese: '按钮设置',
+    traditionalChinese: '按鈕設定',
+    vietnamese: 'Cài đặt nút',
+    indonesian: 'Pengaturan tombol',
+    filipino: 'Mga setting ng button',
+    myanmar: 'ခလုတ် ဆက်တင်များ',
+  );
+  String get calculatorTapSound => _pick(
+    japanese: 'タップ音',
+    english: 'Tap sound',
+    simplifiedChinese: '点击音',
+    traditionalChinese: '點按音效',
+    vietnamese: 'Âm thanh khi chạm',
+    indonesian: 'Suara ketukan',
+    filipino: 'Tunog ng pag-tap',
+    myanmar: 'နှိပ်သံ',
+  );
+  String get calculatorTapHaptics => _pick(
+    japanese: 'タップ時バイブレーション',
+    english: 'Vibration on tap',
+    simplifiedChinese: '点击时振动',
+    traditionalChinese: '點按時震動',
+    vietnamese: 'Rung khi chạm',
+    indonesian: 'Getar saat diketuk',
+    filipino: 'Vibration kapag nag-tap',
+    myanmar: 'နှိပ်သည့်အခါ တုန်ခါမှု',
+  );
   String get help => _pick(
     japanese: 'ヘルプ',
     english: 'Help',
