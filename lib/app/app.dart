@@ -238,7 +238,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Instant Estimate',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       locale: _settings.language.locale,
       supportedLocales: const [
