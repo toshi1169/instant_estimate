@@ -16,6 +16,7 @@ import '../application/calculator_controller.dart';
 import '../data/calculation_history_store.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../onboarding/data/onboarding_preferences.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../estimate/presentation/estimate_item_editor_screen.dart';
 import '../../estimate/application/estimate_controller.dart';
@@ -52,6 +53,7 @@ class CalculatorScreen extends StatefulWidget {
     this.onShowAdvertisingPrivacyOptions,
     this.enableGoogleMobileAds = false,
     this.purchaseStore,
+    this.onboardingPreferences,
     this.buttonFeedback = const SystemCalculatorButtonFeedback(),
     super.key,
   });
@@ -69,6 +71,7 @@ class CalculatorScreen extends StatefulWidget {
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
   final PurchaseStore? purchaseStore;
+  final OnboardingPreferences? onboardingPreferences;
   final CalculatorButtonFeedback buttonFeedback;
 
   static const _keys = <_CalculatorKey>[
@@ -104,6 +107,10 @@ class CalculatorScreen extends StatefulWidget {
 
 class _CalculatorScreenState extends State<CalculatorScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  Timer? _digitLimitVisibilityTimer;
+  Timer? _digitLimitCooldownTimer;
+  bool _digitLimitNoticeVisible = false;
+  bool _digitLimitNoticeCoolingDown = false;
   late final CalculatorController _controller =
       widget.controller ??
       CalculatorController(historyStore: widget.historyStore);
@@ -149,6 +156,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   void dispose() {
+    _digitLimitVisibilityTimer?.cancel();
+    _digitLimitCooldownTimer?.cancel();
     if (_ownsController) _controller.dispose();
     if (_ownsEstimateController) _estimateController.dispose();
     if (_ownsProductivityController) _productivityController.dispose();
@@ -182,7 +191,29 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
     unawaited(_provideButtonFeedback());
     final notice = _controller.press(key.label);
-    if (notice != null) _showMessage(notice);
+    if (notice == CalculatorController.digitLimitNotice) {
+      _showDigitLimitNotice();
+    } else if (notice != null) {
+      _showMessage(notice);
+    }
+  }
+
+  void _showDigitLimitNotice() {
+    if (!mounted || _digitLimitNoticeVisible || _digitLimitNoticeCoolingDown) {
+      return;
+    }
+    setState(() => _digitLimitNoticeVisible = true);
+    _digitLimitVisibilityTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() {
+        _digitLimitNoticeVisible = false;
+        _digitLimitNoticeCoolingDown = true;
+      });
+      _digitLimitCooldownTimer = Timer(const Duration(seconds: 10), () {
+        if (!mounted) return;
+        setState(() => _digitLimitNoticeCoolingDown = false);
+      });
+    });
   }
 
   Future<void> _provideButtonFeedback() async {
@@ -207,6 +238,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           onClearHistory: _controller.clearHistory,
           onShowAdvertisingPrivacyOptions:
               widget.onShowAdvertisingPrivacyOptions,
+          onboardingPreferences: widget.onboardingPreferences,
         ),
       ),
     );
@@ -403,6 +435,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         builder: (_) => EstimateDocumentsScreen(
           controller: _estimateController,
           settings: widget.settings,
+          onSettingsChanged: widget.onSettingsChanged,
           onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
         ),
       ),
@@ -755,116 +788,163 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           enableGoogleMobileAds: widget.enableGoogleMobileAds,
           onSelected: _selectSideMenu,
         ),
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxHeight < 700;
-              final gap = compact ? 4.0 : 6.0;
-              const sectionGap = 4.0;
-              final horizontalContentWidth = constraints.maxWidth - gap * 2;
-              final desiredKeypadHeight = _calculatorKeypadHeight(
-                width: horizontalContentWidth,
-                gap: gap,
-              );
-              final adHeight = compact ? 50.0 : 58.0;
-              final contentHeight = constraints.maxHeight - 4 - gap;
-              final desiredExpressionHeight = (constraints.maxHeight * 0.21)
-                  .clamp(compact ? 96.0 : 148.0, compact ? 114.0 : 168.0)
-                  .toDouble();
-              final historyRowCount = widget.accessPlan.showsAds
-                  ? _freeHistoryRowCount
-                  : _adFreeHistoryRowCount;
-              final desiredHistoryHeight = _calculatorHistoryPanelHeight(
-                rowCount: historyRowCount,
-              );
-              final reservedAdBlockHeight = widget.accessPlan.showsAds
-                  ? adHeight + sectionGap
-                  : 0.0;
-              final minimumExpressionHeight = compact
-                  ? 72.0
-                  : desiredExpressionHeight;
-              final keypadBudget =
-                  contentHeight -
-                  reservedAdBlockHeight -
-                  sectionGap * 2 -
-                  desiredHistoryHeight -
-                  minimumExpressionHeight;
-              final keypadHeight = desiredKeypadHeight
-                  .clamp(0.0, keypadBudget.clamp(0.0, double.infinity))
-                  .toDouble();
-              final upperContentBudget =
-                  contentHeight -
-                  reservedAdBlockHeight -
-                  sectionGap * 2 -
-                  keypadHeight;
-              final historyHeight = desiredHistoryHeight
-                  .clamp(
-                    0.0,
-                    (upperContentBudget - minimumExpressionHeight).clamp(
-                      0.0,
-                      double.infinity,
-                    ),
-                  )
-                  .toDouble();
-              final expressionHeight = (upperContentBudget - historyHeight)
-                  .clamp(0.0, double.infinity)
-                  .toDouble();
-              return Padding(
-                padding: EdgeInsets.fromLTRB(gap, 4, gap, gap),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (widget.accessPlan.showsAds) ...[
-                      _AdBanner(
-                        key: const Key('calculatorAdBanner'),
-                        height: adHeight,
-                        enableGoogleMobileAds: widget.enableGoogleMobileAds,
-                        onUpgrade: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => AccessPlanScreen(
-                              plan: AppAccessPlan.adFree,
-                              currentPlan: widget.accessPlan,
-                              purchaseStore: widget.purchaseStore,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxHeight < 700;
+                  final gap = compact ? 4.0 : 6.0;
+                  const sectionGap = 4.0;
+                  final horizontalContentWidth = constraints.maxWidth - gap * 2;
+                  final desiredKeypadHeight = _calculatorKeypadHeight(
+                    width: horizontalContentWidth,
+                    gap: gap,
+                  );
+                  final adHeight = compact ? 50.0 : 58.0;
+                  final contentHeight = constraints.maxHeight - 4 - gap;
+                  final desiredExpressionHeight = (constraints.maxHeight * 0.21)
+                      .clamp(compact ? 96.0 : 148.0, compact ? 114.0 : 168.0)
+                      .toDouble();
+                  final historyRowCount = widget.accessPlan.showsAds
+                      ? _freeHistoryRowCount
+                      : _adFreeHistoryRowCount;
+                  final desiredHistoryHeight = _calculatorHistoryPanelHeight(
+                    rowCount: historyRowCount,
+                  );
+                  final reservedAdBlockHeight = widget.accessPlan.showsAds
+                      ? adHeight + sectionGap
+                      : 0.0;
+                  final minimumExpressionHeight = compact
+                      ? 72.0
+                      : desiredExpressionHeight;
+                  final keypadBudget =
+                      contentHeight -
+                      reservedAdBlockHeight -
+                      sectionGap * 2 -
+                      desiredHistoryHeight -
+                      minimumExpressionHeight;
+                  final keypadHeight = desiredKeypadHeight
+                      .clamp(0.0, keypadBudget.clamp(0.0, double.infinity))
+                      .toDouble();
+                  final upperContentBudget =
+                      contentHeight -
+                      reservedAdBlockHeight -
+                      sectionGap * 2 -
+                      keypadHeight;
+                  final historyHeight = desiredHistoryHeight
+                      .clamp(
+                        0.0,
+                        (upperContentBudget - minimumExpressionHeight).clamp(
+                          0.0,
+                          double.infinity,
+                        ),
+                      )
+                      .toDouble();
+                  final expressionHeight = (upperContentBudget - historyHeight)
+                      .clamp(0.0, double.infinity)
+                      .toDouble();
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(gap, 4, gap, gap),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (widget.accessPlan.showsAds) ...[
+                          _AdBanner(
+                            key: const Key('calculatorAdBanner'),
+                            height: adHeight,
+                            enableGoogleMobileAds: widget.enableGoogleMobileAds,
+                            onUpgrade: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => AccessPlanScreen(
+                                  plan: AppAccessPlan.adFree,
+                                  currentPlan: widget.accessPlan,
+                                  purchaseStore: widget.purchaseStore,
+                                ),
+                              ),
                             ),
                           ),
+                          const SizedBox(height: sectionGap),
+                        ],
+                        SizedBox(
+                          height: historyHeight,
+                          child: _HistoryPanel(
+                            key: const Key('historyPanel'),
+                            history: _controller.history,
+                            onMenuPressed: _showHistoryMenu,
+                            onLongPress: _openFullHistory,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: sectionGap),
-                    ],
-                    SizedBox(
-                      height: historyHeight,
-                      child: _HistoryPanel(
-                        key: const Key('historyPanel'),
-                        history: _controller.history,
-                        onMenuPressed: _showHistoryMenu,
-                        onLongPress: _openFullHistory,
-                      ),
+                        const SizedBox(height: sectionGap),
+                        SizedBox(
+                          height: expressionHeight,
+                          child: _ExpressionPanel(
+                            controller: _controller,
+                            onLongPress: _showCalculationMenu,
+                          ),
+                        ),
+                        const SizedBox(height: sectionGap),
+                        SizedBox(
+                          key: const Key('calculatorKeypadArea'),
+                          height: keypadHeight,
+                          child: _Keypad(
+                            gap: gap,
+                            canCycleFraction: _controller.canCycleFraction,
+                            onPressed: _pressKey,
+                            onBackLongPressed: _controller.clearLeftOfCaret,
+                            onMenuFunctionsRequested: () =>
+                                unawaited(_openFunctionList()),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: sectionGap),
-                    SizedBox(
-                      height: expressionHeight,
-                      child: _ExpressionPanel(
-                        controller: _controller,
-                        onLongPress: _showCalculationMenu,
-                      ),
-                    ),
-                    const SizedBox(height: sectionGap),
-                    SizedBox(
-                      key: const Key('calculatorKeypadArea'),
-                      height: keypadHeight,
-                      child: _Keypad(
-                        gap: gap,
-                        canCycleFraction: _controller.canCycleFraction,
-                        onPressed: _pressKey,
-                        onBackLongPressed: _controller.clearLeftOfCaret,
-                        onMenuFunctionsRequested: () =>
-                            unawaited(_openFunctionList()),
-                      ),
-                    ),
-                  ],
+                  );
+                },
+              ),
+            ),
+            if (_digitLimitNoticeVisible)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.viewPaddingOf(context).bottom + 8,
+                child: const IgnorePointer(
+                  key: Key('digitLimitNoticeIgnorePointer'),
+                  child: _DigitLimitNotice(key: Key('digitLimitNotice')),
                 ),
-              );
-            },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DigitLimitNotice extends StatelessWidget {
+  const _DigitLimitNotice({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    return Center(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: (dark ? Colors.grey.shade700 : Colors.grey.shade300)
+              .withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: dark ? Colors.white24 : Colors.black12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Text(
+            AppLocalizations.of(context).calculatorDigitLimitNotice,
+            key: const Key('digitLimitNoticeText'),
+            style: TextStyle(
+              color: dark ? Colors.white : Colors.black87,
+              fontSize: 13,
+              height: 1.2,
+            ),
           ),
         ),
       ),

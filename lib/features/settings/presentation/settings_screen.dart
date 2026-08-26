@@ -7,6 +7,10 @@ import '../../../core/localization/app_localizations.dart';
 import '../domain/app_settings.dart';
 import '../domain/company_profile.dart';
 import '../../estimate/domain/estimate_quantity.dart';
+import '../../onboarding/data/onboarding_preferences.dart';
+import '../../onboarding/domain/occupation.dart';
+import '../../onboarding/presentation/occupation_selection_screen.dart';
+import '../../help/presentation/disclaimer_screen.dart';
 import 'button_settings_screen.dart';
 import 'company_profile_editor_screen.dart';
 
@@ -15,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
     required this.settings,
     required this.onSettingsChanged,
     required this.onClearHistory,
+    this.onboardingPreferences,
     this.accessPlan = AppAccessPlan.free,
     this.onShowAdvertisingPrivacyOptions,
     super.key,
@@ -23,6 +28,7 @@ class SettingsScreen extends StatefulWidget {
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
   final Future<void> Function() onClearHistory;
+  final OnboardingPreferences? onboardingPreferences;
   final AppAccessPlan accessPlan;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
 
@@ -32,6 +38,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late AppSettings _settings = widget.settings;
+  Occupation? _occupation;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOccupation();
+  }
 
   @override
   void didUpdateWidget(SettingsScreen oldWidget) {
@@ -42,6 +55,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _update(AppSettings settings) {
     setState(() => _settings = settings);
     widget.onSettingsChanged(settings);
+  }
+
+  Future<void> _loadOccupation() async {
+    final preferences = widget.onboardingPreferences;
+    if (preferences == null) return;
+    String? stored;
+    try {
+      stored = await preferences.loadOccupation();
+    } catch (_) {
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _occupation = Occupation.fromStoredValue(stored));
+  }
+
+  Future<void> _selectOccupation(BuildContext context) async {
+    final preferences = widget.onboardingPreferences;
+    if (preferences == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => OccupationSelectionScreen(
+          initialOccupation: _occupation,
+          isEditing: true,
+          onCompleted: (storageKey) async {
+            await preferences.saveOccupation(storageKey);
+            if (!routeContext.mounted) return;
+            Navigator.of(routeContext).pop();
+          },
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _loadOccupation();
   }
 
   Future<T?> _selectValue<T>(
@@ -238,6 +284,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _openDisclaimer(BuildContext context) {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const DisclaimerScreen()),
+    );
+  }
+
   Future<void> _confirmClearHistory(BuildContext context) async {
     final strings = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -312,6 +364,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectLanguage(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('occupationSetting'),
+                  leading: const Icon(Icons.engineering_outlined),
+                  title: Text(strings.mainOccupation),
+                  subtitle: Text(
+                    _occupation == null
+                        ? strings.notRegistered
+                        : strings.occupation(_occupation!.legacyLabel),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: widget.onboardingPreferences == null
+                      ? null
+                      : () => _selectOccupation(context),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -533,6 +600,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 24),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              key: const Key('disclaimerSetting'),
+              leading: const Icon(Icons.gavel_outlined),
+              title: Text(strings.disclaimerTitle),
+              subtitle: Text(strings.disclaimerSettingsSubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openDisclaimer(context),
+            ),
+          ),
         ],
       ),
     );

@@ -521,7 +521,7 @@ void main() {
           .single;
 
       expect(fraction.numerator, '11111111111111111111');
-      expect(notice, '最大20桁まで入力できます');
+      expect(notice, CalculatorController.digitLimitNotice);
 
       controller.press('a/b');
       notice = null;
@@ -532,7 +532,7 @@ void main() {
           .whereType<ExpressionFractionSegment>()
           .single;
       expect(fraction.denominator, '22222222222222222222');
-      expect(notice, '最大20桁まで入力できます');
+      expect(notice, CalculatorController.digitLimitNotice);
     });
 
     test('分子と分母の1・10・11・19・20桁を保持する', () {
@@ -563,7 +563,7 @@ void main() {
       for (var index = 0; index < 20; index++) {
         expect(controller.press('1'), isNull);
       }
-      expect(controller.press('1'), '最大20桁まで入力できます');
+      expect(controller.press('1'), CalculatorController.digitLimitNotice);
 
       final fraction = controller.displaySegments
           .whereType<ExpressionFractionSegment>()
@@ -612,7 +612,7 @@ void main() {
       for (var index = 0; index < 9; index++) {
         expect(controller.press('2'), isNull);
       }
-      expect(controller.press('2'), '最大20桁まで入力できます');
+      expect(controller.press('2'), CalculatorController.digitLimitNotice);
       final fraction = controller.displaySegments
           .whereType<ExpressionFractionSegment>()
           .single;
@@ -693,7 +693,7 @@ void main() {
       for (final character in '1234567890.1234567890'.split('')) {
         expect(controller.press(character), isNull);
       }
-      expect(controller.press('2'), '最大20桁まで入力できます');
+      expect(controller.press('2'), CalculatorController.digitLimitNotice);
 
       final fraction = controller.displaySegments
           .whereType<ExpressionFractionSegment>()
@@ -708,7 +708,7 @@ void main() {
       }
 
       expect(controller.expression, '1234567890.1234567890');
-      expect(controller.press('1'), '最大20桁まで入力できます');
+      expect(controller.press('1'), CalculatorController.digitLimitNotice);
       expect(controller.expression, '1234567890.1234567890');
     });
 
@@ -811,7 +811,10 @@ void main() {
         expect(segment.activeCaretOffset, index);
         expectSingleSource(numeratorController, segment);
       }
-      expect(numeratorController.press('1'), '最大20桁まで入力できます');
+      expect(
+        numeratorController.press('1'),
+        CalculatorController.digitLimitNotice,
+      );
       expect(
         numeratorController.activeFractionInput!.numeratorText,
         numeratorDigits,
@@ -833,7 +836,10 @@ void main() {
         expect(segment.activeCaretOffset, index);
         expectSingleSource(denominatorController, segment);
       }
-      expect(denominatorController.press('1'), '最大20桁まで入力できます');
+      expect(
+        denominatorController.press('1'),
+        CalculatorController.digitLimitNotice,
+      );
 
       final exactExample = CalculatorController();
       for (final key in [

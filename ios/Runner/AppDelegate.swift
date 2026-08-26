@@ -43,6 +43,8 @@ import UIKit
         result(nil)
       case "hasSelectedOccupation":
         result(UserDefaults.standard.object(forKey: "occupation") != nil)
+      case "loadOccupation":
+        result(UserDefaults.standard.string(forKey: "occupation"))
       case "saveOccupation":
         guard
           let arguments = call.arguments as? [String: Any],

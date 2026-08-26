@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../domain/occupation.dart';
 
 class OccupationSelectionScreen extends StatefulWidget {
-  const OccupationSelectionScreen({required this.onCompleted, super.key});
+  const OccupationSelectionScreen({
+    required this.onCompleted,
+    this.initialOccupation,
+    this.isEditing = false,
+    super.key,
+  });
 
   final Future<void> Function(String occupation) onCompleted;
+  final Occupation? initialOccupation;
+  final bool isEditing;
 
   @override
   State<OccupationSelectionScreen> createState() =>
@@ -13,17 +21,7 @@ class OccupationSelectionScreen extends StatefulWidget {
 }
 
 class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
-  static const _occupations = <String>[
-    '建築監督',
-    '土木監督',
-    '建築基礎',
-    '外構',
-    '内装',
-    '多能工',
-    'その他',
-  ];
-
-  String? _selectedOccupation;
+  late Occupation? _selectedOccupation = widget.initialOccupation;
   bool _isSaving = false;
 
   Future<void> _continue() async {
@@ -31,7 +29,7 @@ class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
     if (occupation == null || _isSaving) return;
 
     setState(() => _isSaving = true);
-    await widget.onCompleted(occupation);
+    await widget.onCompleted(occupation.storageKey);
     if (mounted) setState(() => _isSaving = false);
   }
 
@@ -57,7 +55,7 @@ class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
               ),
               const SizedBox(height: 20),
               Expanded(
-                child: RadioGroup<String>(
+                child: RadioGroup<Occupation>(
                   groupValue: _selectedOccupation,
                   onChanged: _isSaving
                       ? (_) {}
@@ -65,13 +63,13 @@ class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
                           setState(() => _selectedOccupation = value);
                         },
                   child: ListView.separated(
-                    itemCount: _occupations.length,
+                    itemCount: Occupation.values.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final occupation = _occupations[index];
-                      return RadioListTile<String>(
+                      final occupation = Occupation.values[index];
+                      return RadioListTile<Occupation>(
                         value: occupation,
-                        title: Text(strings.occupation(occupation)),
+                        title: Text(strings.occupation(occupation.legacyLabel)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(
@@ -94,7 +92,11 @@ class _OccupationSelectionScreenState extends State<OccupationSelectionScreen> {
                           strokeWidth: 2,
                         ),
                       )
-                    : Text(strings.startWithOccupation),
+                    : Text(
+                        widget.isEditing
+                            ? strings.saveOccupation
+                            : strings.startWithOccupation,
+                      ),
               ),
             ],
           ),

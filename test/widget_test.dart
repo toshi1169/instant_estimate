@@ -11,8 +11,10 @@ import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
+import 'package:instant_estimate/features/onboarding/domain/occupation.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
+import 'package:instant_estimate/features/settings/domain/company_profile.dart';
 import 'package:instant_estimate/features/settings/presentation/settings_screen.dart';
 import 'package:instant_estimate/features/subscription/data/app_access_state_store.dart';
 import 'package:instant_estimate/features/subscription/domain/app_access_state.dart';
@@ -31,13 +33,16 @@ import 'package:instant_estimate/features/estimate/presentation/estimate_documen
 import 'package:instant_estimate/features/estimate/presentation/unit_price_master_screen.dart';
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
-  FakeOnboardingPreferences({required this.hasSelected});
+  FakeOnboardingPreferences({required this.hasSelected, this.savedOccupation});
 
   bool hasSelected;
   String? savedOccupation;
 
   @override
   Future<bool> hasSelectedOccupation() async => hasSelected;
+
+  @override
+  Future<String?> loadOccupation() async => savedOccupation;
 
   @override
   Future<void> saveOccupation(String occupation) async {
@@ -60,6 +65,9 @@ class FakeLanguageOnboardingPreferences
 
   @override
   Future<bool> hasSelectedOccupation() async => hasSelected;
+
+  @override
+  Future<String?> loadOccupation() async => savedOccupation;
 
   @override
   Future<void> saveOccupation(String occupation) async {
@@ -610,6 +618,8 @@ void main() {
 
     final placesSetting = find.byKey(const Key('estimateDecimalPlacesSetting'));
     await tester.scrollUntilVisible(placesSetting, 250);
+    await tester.ensureVisible(placesSetting);
+    await tester.pumpAndSettle();
     await tester.tap(placesSetting);
     await tester.pumpAndSettle();
     await tester.tap(find.text('3桁').last);
@@ -619,6 +629,8 @@ void main() {
       const Key('estimateRoundingModeSetting'),
     );
     await tester.scrollUntilVisible(roundingSetting, 250);
+    await tester.ensureVisible(roundingSetting);
+    await tester.pumpAndSettle();
     await tester.tap(roundingSetting);
     await tester.pumpAndSettle();
     await tester.tap(find.text('切上げ').last);
@@ -669,7 +681,7 @@ void main() {
     await tester.tap(find.text('Start with this occupation'));
     await tester.pumpAndSettle();
 
-    expect(preferences.savedOccupation, '土木監督');
+    expect(preferences.savedOccupation, 'civilSupervisor');
     expect(find.byKey(const Key('historyPanel')), findsOneWidget);
   });
 
@@ -1392,8 +1404,149 @@ void main() {
     await tester.tap(find.text('この業種で始める'));
     await tester.pumpAndSettle();
 
-    expect(preferences.savedOccupation, '土木監督');
+    expect(preferences.savedOccupation, 'civilSupervisor');
     expect(find.byKey(const Key('historyPanel')), findsOneWidget);
+  });
+
+  testWidgets('設定から既存業種を表示・変更し同じ保存先から再起動後も復元する', (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final preferences = FakeOnboardingPreferences(
+      hasSelected: true,
+      savedOccupation: '外構',
+    );
+
+    Future<void> pumpApp() async {
+      await tester.pumpWidget(
+        InstantEstimateApp(
+          key: UniqueKey(),
+          onboardingPreferences: preferences,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpApp();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    final occupationSetting = find.byKey(const Key('occupationSetting'));
+    expect(occupationSetting, findsOneWidget);
+    expect(find.text('主な業種'), findsOneWidget);
+    expect(find.text('外構'), findsOneWidget);
+
+    await tester.tap(occupationSetting);
+    await tester.pumpAndSettle();
+    final group = tester.widget<RadioGroup<Occupation>>(
+      find.byType(RadioGroup<Occupation>),
+    );
+    expect(group.groupValue, Occupation.exterior);
+    expect(find.byType(RadioListTile<Occupation>), findsWidgets);
+
+    await tester.tap(find.text('建築監督'));
+    await tester.tap(find.text('業種を保存'));
+    await tester.pumpAndSettle();
+
+    expect(preferences.savedOccupation, 'buildingSupervisor');
+    expect(find.byKey(const Key('occupationSetting')), findsOneWidget);
+    expect(find.text('建築監督'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(402, 874);
+    await pumpApp();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    expect(find.text('建築監督'), findsOneWidget);
+  });
+
+  testWidgets('見積一覧の自社情報ショートカットは既存画面を開き見積を変更しない', (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = FakeEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    var settings = const AppSettings(
+      companyProfile: CompanyProfile(companyName: '既存会社'),
+    );
+    final estimateIds = controller.estimates
+        .map((estimate) => estimate.info.id)
+        .toList();
+    final itemCount = controller.items.length;
+    final grandTotal = controller.grandTotalAmount;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EstimateDocumentsScreen(
+          controller: controller,
+          settings: settings,
+          onSettingsChanged: (value) => settings = value,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final company = find.byKey(const Key('openCompanyProfileFromEstimate'));
+    final unitPrice = find.byKey(const Key('openUnitPriceMaster'));
+    expect(company, findsOneWidget);
+    expect(unitPrice, findsOneWidget);
+    expect(
+      tester.getCenter(company).dx,
+      lessThan(tester.getCenter(unitPrice).dx),
+    );
+    expect(tester.widget<IconButton>(company).tooltip, '自社情報');
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(company);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('companyProfileEditor')), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('companyProfileCompanyName')))
+          .controller!
+          .text,
+      '既存会社',
+    );
+    await tester.tap(find.byKey(const Key('cancelCompanyProfile')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('openCompanyProfileFromEstimate')),
+      findsOneWidget,
+    );
+    expect(settings.companyProfile.companyName, '既存会社');
+    expect(settings.companyProfile.phoneNumber, isEmpty);
+
+    await tester.tap(company);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('companyProfilePhoneNumber')),
+      '+1 (415) 555-0123',
+    );
+    await tester.tap(find.byKey(const Key('saveCompanyProfile')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('openCompanyProfileFromEstimate')),
+      findsOneWidget,
+    );
+    expect(settings.companyProfile.phoneNumber, '+1 (415) 555-0123');
+    expect(
+      controller.estimates.map((estimate) => estimate.info.id).toList(),
+      estimateIds,
+    );
+    expect(controller.items.length, itemCount);
+    expect(controller.grandTotalAmount, grandTotal);
+    expect(tester.takeException(), isNull);
+
+    tester.view.physicalSize = const Size(402, 874);
+    await tester.pump();
+    expect(
+      tester.getCenter(company).dx,
+      lessThan(tester.getCenter(unitPrice).dx),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('電卓ボタンから四則演算できる', (tester) async {

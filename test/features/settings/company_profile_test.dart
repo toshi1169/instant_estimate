@@ -155,6 +155,49 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('電話番号は国内外の記号と先頭0をそのまま保存・復元する', (tester) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var settings = const AppSettings();
+    for (final phoneNumber in const [
+      '09012345678',
+      '090-1234-5678',
+      '03-1234-5678',
+      '+81 90-1234-5678',
+      '+81 90 1234 5678',
+      '(03)1234-5678',
+      '+1 (415) 555-0123',
+    ]) {
+      await _pumpSettings(tester, settings, (value) => settings = value);
+      await _openCompanyProfile(tester);
+      final phoneField = find.byKey(const Key('companyProfilePhoneNumber'));
+      final widget = tester.widget<TextField>(phoneField);
+      expect(widget.keyboardType, TextInputType.text);
+      expect(widget.inputFormatters, isNotEmpty);
+
+      await tester.enterText(phoneField, phoneNumber);
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(phoneField).controller!.text,
+        phoneNumber,
+      );
+      await tester.tap(find.byKey(const Key('saveCompanyProfile')));
+      await tester.pumpAndSettle();
+      expect(settings.companyProfile.phoneNumber, phoneNumber);
+
+      await _pumpSettings(tester, settings, (value) => settings = value);
+      await _openCompanyProfile(tester);
+      expect(
+        tester.widget<TextField>(phoneField).controller!.text,
+        phoneNumber,
+      );
+      await tester.tap(find.byKey(const Key('cancelCompanyProfile')));
+      await tester.pumpAndSettle();
+    }
+  });
+
   testWidgets('入力欄を直接並べ替えExcel表示設定とともに保存・復元する', (tester) async {
     tester.view.physicalSize = const Size(500, 1000);
     tester.view.devicePixelRatio = 1;

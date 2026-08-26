@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../settings/domain/company_profile.dart';
+import '../../settings/presentation/company_profile_editor_screen.dart';
 import '../application/estimate_controller.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
@@ -12,17 +14,33 @@ import 'unit_price_master_screen.dart';
 
 enum _EstimateDocumentAction { duplicate, delete }
 
-class EstimateDocumentsScreen extends StatelessWidget {
+class EstimateDocumentsScreen extends StatefulWidget {
   const EstimateDocumentsScreen({
     required this.controller,
     this.settings = const AppSettings(),
+    this.onSettingsChanged,
     this.onRequestRewardedAdAccess,
     super.key,
   });
 
   final EstimateController controller;
   final AppSettings settings;
+  final ValueChanged<AppSettings>? onSettingsChanged;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
+
+  @override
+  State<EstimateDocumentsScreen> createState() =>
+      _EstimateDocumentsScreenState();
+}
+
+class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
+  late AppSettings _settings = widget.settings;
+
+  @override
+  void didUpdateWidget(EstimateDocumentsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.settings != widget.settings) _settings = widget.settings;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +49,12 @@ class EstimateDocumentsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(strings.instantEstimate),
         actions: [
+          IconButton(
+            key: const Key('openCompanyProfileFromEstimate'),
+            tooltip: strings.companyProfile,
+            icon: const Icon(Icons.business_outlined),
+            onPressed: () => _openCompanyProfile(context),
+          ),
           IconButton(
             key: const Key('openUnitPriceMaster'),
             tooltip: strings.unitPriceMaster,
@@ -41,9 +65,9 @@ class EstimateDocumentsScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: controller,
+          listenable: widget.controller,
           builder: (context, _) {
-            if (!controller.isLoaded) {
+            if (!widget.controller.isLoaded) {
               return const Center(child: CircularProgressIndicator());
             }
             return Column(
@@ -53,19 +77,21 @@ class EstimateDocumentsScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       Text(
-                        controller.estimateLimit == null
-                            ? strings.itemCount(controller.estimates.length)
+                        widget.controller.estimateLimit == null
+                            ? strings.itemCount(
+                                widget.controller.estimates.length,
+                              )
                             : strings.itemCountWithLimit(
-                                controller.estimates.length,
-                                controller.estimateLimit!,
+                                widget.controller.estimates.length,
+                                widget.controller.estimateLimit!,
                               ),
                       ),
                       const Spacer(),
                       Text(
-                        controller.estimateLimit == null
+                        widget.controller.estimateLimit == null
                             ? strings.text('完全版：件数制限なし')
                             : strings.currentSaveLimit(
-                                controller.estimateLimit!,
+                                widget.controller.estimateLimit!,
                               ),
                       ),
                     ],
@@ -76,14 +102,14 @@ class EstimateDocumentsScreen extends StatelessWidget {
                   child: ListView.separated(
                     key: const Key('estimateDocumentsList'),
                     padding: const EdgeInsets.all(12),
-                    itemCount: controller.estimates.length,
+                    itemCount: widget.controller.estimates.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final estimate = controller.estimates[index];
+                      final estimate = widget.controller.estimates[index];
                       return _EstimateDocumentCard(
                         estimate: estimate,
                         index: index,
-                        isActive: estimate.info.id == controller.info.id,
+                        isActive: estimate.info.id == widget.controller.info.id,
                         onTap: () => _openEstimate(context, estimate),
                         onAction: (action) =>
                             _handleAction(context, estimate, action),
@@ -105,6 +131,20 @@ class EstimateDocumentsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _openCompanyProfile(BuildContext context) async {
+    final profile = await Navigator.of(context).push<CompanyProfile>(
+      MaterialPageRoute<CompanyProfile>(
+        builder: (_) => CompanyProfileEditorScreen(
+          initialProfile: _settings.companyProfile,
+        ),
+      ),
+    );
+    if (profile == null || !mounted) return;
+    final updated = _settings.copyWith(companyProfile: profile);
+    setState(() => _settings = updated);
+    widget.onSettingsChanged?.call(updated);
+  }
+
   Future<void> _handleAction(
     BuildContext context,
     EstimateDocument estimate,
@@ -112,7 +152,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
   ) async {
     switch (action) {
       case _EstimateDocumentAction.duplicate:
-        if (!controller.canCreateEstimate) {
+        if (!widget.controller.canCreateEstimate) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(AppLocalizations.of(context).freeEstimateLimit),
@@ -121,7 +161,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
           return;
         }
         try {
-          await controller.duplicateEstimate(estimate.info.id);
+          await widget.controller.duplicateEstimate(estimate.info.id);
         } catch (_) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -143,14 +183,14 @@ class EstimateDocumentsScreen extends StatelessWidget {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => EstimateItemsScreen(
-              controller: controller,
-              settings: settings,
-              onRequestRewardedAdAccess: onRequestRewardedAdAccess,
+              controller: widget.controller,
+              settings: _settings,
+              onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
             ),
           ),
         );
       case _EstimateDocumentAction.delete:
-        if (controller.estimates.length <= 1) {
+        if (widget.controller.estimates.length <= 1) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(AppLocalizations.of(context).text('最後の見積は削除できません')),
@@ -181,7 +221,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
         );
         if (confirmed != true || !context.mounted) return;
         try {
-          await controller.deleteEstimate(estimate.info.id);
+          await widget.controller.deleteEstimate(estimate.info.id);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -204,7 +244,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
   }
 
   Future<void> _createEstimate(BuildContext context) async {
-    if (!controller.canCreateEstimate) {
+    if (!widget.controller.canCreateEstimate) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).freeEstimateLimit)),
       );
@@ -219,7 +259,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
     );
     if (info == null || !context.mounted) return;
     try {
-      await controller.createEstimate(info);
+      await widget.controller.createEstimate(info);
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -236,9 +276,9 @@ class EstimateDocumentsScreen extends StatelessWidget {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => EstimateItemsScreen(
-          controller: controller,
-          settings: settings,
-          onRequestRewardedAdAccess: onRequestRewardedAdAccess,
+          controller: widget.controller,
+          settings: _settings,
+          onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
         ),
       ),
     );
@@ -249,7 +289,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
     EstimateDocument estimate,
   ) async {
     try {
-      await controller.selectEstimate(estimate.info.id);
+      await widget.controller.selectEstimate(estimate.info.id);
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -264,16 +304,16 @@ class EstimateDocumentsScreen extends StatelessWidget {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => EstimateItemsScreen(
-          controller: controller,
-          settings: settings,
-          onRequestRewardedAdAccess: onRequestRewardedAdAccess,
+          controller: widget.controller,
+          settings: _settings,
+          onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
         ),
       ),
     );
   }
 
   Future<void> _openUnitPriceMaster(BuildContext context) async {
-    final requestAccess = onRequestRewardedAdAccess;
+    final requestAccess = widget.onRequestRewardedAdAccess;
     if (requestAccess != null &&
         !await requestAccess(RewardedAdEntryPoint.unitPriceMaster)) {
       return;
@@ -281,7 +321,7 @@ class EstimateDocumentsScreen extends StatelessWidget {
     if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => UnitPriceMasterScreen(controller: controller),
+        builder: (_) => UnitPriceMasterScreen(controller: widget.controller),
       ),
     );
   }

@@ -40,6 +40,9 @@ class MainActivity : FlutterActivity() {
                 "hasSelectedOccupation" -> {
                     result.success(preferences.contains("occupation"))
                 }
+                "loadOccupation" -> {
+                    result.success(preferences.getString("occupation", null))
+                }
                 "saveOccupation" -> {
                     val occupation = call.argument<String>("occupation")
                     if (occupation == null) {

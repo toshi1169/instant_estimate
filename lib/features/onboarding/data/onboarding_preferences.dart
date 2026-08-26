@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 
 abstract interface class OnboardingPreferences {
   Future<bool> hasSelectedOccupation();
+  Future<String?> loadOccupation();
   Future<void> saveOccupation(String occupation);
 }
 
@@ -19,6 +20,11 @@ class PlatformOnboardingPreferences
   @override
   Future<bool> hasSelectedOccupation() async {
     return await _channel.invokeMethod<bool>('hasSelectedOccupation') ?? false;
+  }
+
+  @override
+  Future<String?> loadOccupation() {
+    return _channel.invokeMethod<String>('loadOccupation');
   }
 
   @override

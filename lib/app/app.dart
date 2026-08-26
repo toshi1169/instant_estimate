@@ -380,6 +380,7 @@ class _StartupGateState extends State<_StartupGate> {
                 widget.onShowAdvertisingPrivacyOptions,
             enableGoogleMobileAds: widget.enableGoogleMobileAds,
             purchaseStore: widget.purchaseStore,
+            onboardingPreferences: widget.onboardingPreferences,
           );
         }
 

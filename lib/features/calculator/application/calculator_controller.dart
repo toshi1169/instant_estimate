@@ -294,7 +294,7 @@ class CalculatorController extends ChangeNotifier {
 
   static const int numberDigitLimit = 20;
   static const int fractionDigitLimit = numberDigitLimit;
-  static const String digitLimitNotice = '最大20桁まで入力できます';
+  static const String digitLimitNotice = 'calculatorDigitLimitReached';
   static const double standardNumberDisplayLimit = 10000000000000000;
 
   final CalculationEngine _engine;

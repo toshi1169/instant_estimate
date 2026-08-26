@@ -124,6 +124,36 @@ class AppLocalizations {
     simplifiedChinese: '选择行业',
     traditionalChinese: '選擇行業',
   );
+  String get mainOccupation => _pick(
+    japanese: '主な業種',
+    english: 'Main occupation',
+    simplifiedChinese: '主要行业',
+    traditionalChinese: '主要行業',
+    vietnamese: 'Ngành nghề chính',
+    indonesian: 'Bidang pekerjaan utama',
+    filipino: 'Pangunahing larangan ng trabaho',
+    myanmar: 'အဓိကလုပ်ငန်းအမျိုးအစား',
+  );
+  String get saveOccupation => _pick(
+    japanese: '業種を保存',
+    english: 'Save occupation',
+    simplifiedChinese: '保存行业',
+    traditionalChinese: '儲存行業',
+    vietnamese: 'Lưu ngành nghề',
+    indonesian: 'Simpan bidang pekerjaan',
+    filipino: 'I-save ang larangan ng trabaho',
+    myanmar: 'လုပ်ငန်းအမျိုးအစားကို သိမ်းမည်',
+  );
+  String get calculatorDigitLimitNotice => _pick(
+    japanese: '最大20桁まで入力できます',
+    english: 'You can enter up to 20 digits.',
+    simplifiedChinese: '最多可输入20位数字',
+    traditionalChinese: '最多可輸入20位數字',
+    vietnamese: 'Bạn có thể nhập tối đa 20 chữ số.',
+    indonesian: 'Anda dapat memasukkan maksimal 20 digit.',
+    filipino: 'Hanggang 20 digit ang maaaring ilagay.',
+    myanmar: 'ဂဏန်း ၂၀ လုံးအထိ ထည့်သွင်းနိုင်သည်။',
+  );
   String get occupationPrompt => _pick(
     japanese: 'あなたの主な業種を選んでください',
     english: 'Select your main occupation',
@@ -258,6 +288,286 @@ class AppLocalizations {
     english: 'Help',
     simplifiedChinese: '帮助',
     traditionalChinese: '說明',
+  );
+  String get helpIntroTitle => _pick(
+    japanese: '現場計算と見積を安全に使う',
+    english: 'Use site calculations and estimates safely',
+    simplifiedChinese: '安全使用现场计算与估算',
+    traditionalChinese: '安全使用現場計算與估算',
+    vietnamese: 'Sử dụng phép tính và dự toán công trường an toàn',
+    indonesian: 'Gunakan perhitungan dan estimasi lapangan dengan aman',
+    filipino: 'Ligtas na gamitin ang kalkulasyon at estimasyon sa site',
+    myanmar:
+        'လုပ်ငန်းခွင်တွက်ချက်မှုနှင့် ခန့်မှန်းချက်များကို လုံခြုံစွာ အသုံးပြုပါ',
+  );
+  String get helpIntroBody => _pick(
+    japanese: '関数電卓、便利計算、インスタント見積、帳票出力の現在の使い方を確認できます。',
+    english:
+        'Review the current use of the scientific calculator, practical calculators, instant estimates and document output.',
+    simplifiedChinese: '查看科学计算器、实用计算、即时估算和文档输出的当前使用方法。',
+    traditionalChinese: '查看科學計算機、實用計算、即時估算和文件輸出的目前使用方式。',
+    vietnamese:
+        'Xem cách sử dụng hiện tại của máy tính khoa học, các phép tính tiện ích, dự toán nhanh và xuất tài liệu.',
+    indonesian:
+        'Lihat cara penggunaan kalkulator ilmiah, perhitungan praktis, estimasi instan, dan keluaran dokumen.',
+    filipino:
+        'Tingnan ang kasalukuyang paggamit ng scientific calculator, praktikal na kalkulasyon, instant estimate, at paglabas ng dokumento.',
+    myanmar:
+        'သိပ္ပံဂဏန်းပေါင်းစက်၊ အသုံးဝင်သောတွက်ချက်မှုများ၊ ချက်ချင်းခန့်မှန်းချက်နှင့် စာရွက်စာတမ်းထုတ်ပေးမှုတို့၏ လက်ရှိအသုံးပြုပုံကို ကြည့်နိုင်သည်။',
+  );
+  String get helpCalculatorTitle => _pick(
+    japanese: '電卓の基本操作',
+    english: 'Calculator basics',
+    simplifiedChinese: '计算器基本操作',
+    traditionalChinese: '計算機基本操作',
+    vietnamese: 'Các thao tác cơ bản của máy tính',
+    indonesian: 'Operasi dasar kalkulator',
+    filipino: 'Mga pangunahing operasyon ng calculator',
+    myanmar: 'ဂဏန်းပေါင်းစက်၏ အခြေခံလုပ်ဆောင်ချက်များ',
+  );
+  String get helpCalculatorBody => _pick(
+    japanese:
+        '「…」で左メニュー、長押しまたはダブルタップで関数一覧を開きます。通常数値は小数点と先頭のマイナスを除いて20桁まで入力できます。長い式は自動縮小・複数行表示され、3行以上は式部分を縦にスクロールできます。\n\n設定の「ボタン設定」でタップ音と軽いバイブレーションを個別に切り替えられます。端末の消音・音量設定が優先されます。現在のバージョンは縦画面で使用します。',
+    english:
+        'Tap “…” for the left menu, or long-press or double-tap it for the function list. Regular numbers accept up to 20 digits, excluding the decimal point and a leading minus sign. Long expressions shrink and wrap automatically; from the third line, scroll the expression area vertically.\n\nIn Button settings, tap sound and light vibration can be switched independently. Device mute and volume settings take priority. The current version is used in portrait orientation.',
+    simplifiedChinese:
+        '点击“…”打开左侧菜单，长按或双击可打开函数列表。普通数字最多可输入20位，小数点和开头的负号不计入位数。长算式会自动缩小并换行；从第3行起可在算式区域纵向滚动。\n\n可在“按钮设置”中分别切换点击音和轻微振动。设备的静音和音量设置优先。当前版本使用竖屏。',
+    traditionalChinese:
+        '點按「…」開啟側邊選單，長按或點按兩下可開啟函數列表。一般數字最多可輸入20位，小數點和開頭負號不計入位數。長算式會自動縮小並換行；從第3行起可在算式區域垂直捲動。\n\n可在「按鈕設定」中分別切換點按音效和輕微震動。裝置的靜音和音量設定優先。目前版本使用直向畫面。',
+    vietnamese:
+        'Nhấn “…” để mở menu bên trái; nhấn giữ hoặc nhấn đúp để mở danh sách hàm. Số thông thường cho phép tối đa 20 chữ số, không tính dấu thập phân và dấu trừ ở đầu. Biểu thức dài sẽ tự thu nhỏ và xuống dòng; từ dòng thứ ba, có thể cuộn dọc phần biểu thức.\n\nTrong Cài đặt nút, có thể bật/tắt riêng âm thanh và rung nhẹ. Cài đặt im lặng và âm lượng của thiết bị được ưu tiên. Phiên bản hiện tại dùng màn hình dọc.',
+    indonesian:
+        'Ketuk “…” untuk membuka menu sebelah kiri; tekan lama atau ketuk dua kali untuk membuka daftar fungsi. Angka biasa menerima hingga 20 digit, tidak termasuk tanda desimal dan minus di awal. Ekspresi panjang mengecil dan berpindah baris otomatis; mulai baris ketiga, area ekspresi dapat digulir vertikal.\n\nDi Pengaturan tombol, suara ketukan dan getaran ringan dapat diatur terpisah. Pengaturan senyap dan volume perangkat diprioritaskan. Versi saat ini digunakan dalam orientasi potret.',
+    filipino:
+        'I-tap ang “…” para buksan ang kaliwang menu; i-long-press o i-double-tap para buksan ang listahan ng function. Hanggang 20 digit ang regular na numero, hindi kasama ang decimal point at unang minus sign. Awtomatikong lumiliit at lumilipat ng linya ang mahabang expression; mula ikatlong linya, maaaring i-scroll nang patayo ang expression area.\n\nSa Mga setting ng button, magkahiwalay na makokontrol ang tap sound at mahinang vibration. Masusunod ang mute at volume ng device. Portrait orientation ang gamit ng kasalukuyang bersyon.',
+    myanmar:
+        '“…” ကိုနှိပ်၍ ဘယ်ဘက်မီနူးကို ဖွင့်နိုင်ပြီး၊ ဖိထားခြင်း သို့မဟုတ် နှစ်ချက်နှိပ်ခြင်းဖြင့် function စာရင်းကို ဖွင့်နိုင်သည်။ ပုံမှန်ကိန်းများတွင် ဒဿမအမှတ်နှင့် ရှေ့ဆုံးအနုတ်လက္ခဏာမပါဘဲ ဂဏန်း ၂၀ လုံးအထိ ထည့်နိုင်သည်။ ရှည်သောပုံသေနည်းများသည် အလိုအလျောက်သေးပြီး စာကြောင်းခွဲပြမည်။ တတိယစာကြောင်းမှစ၍ ပုံသေနည်းနေရာကို ဒေါင်လိုက်ရွှေ့ကြည့်နိုင်သည်။\n\nခလုတ်ဆက်တင်တွင် နှိပ်သံနှင့် ပေါ့ပါးသောတုန်ခါမှုကို သီးခြားဖွင့်ပိတ်နိုင်သည်။ စက်၏အသံပိတ်နှင့် အသံအတိုးအကျယ်ဆက်တင်ကို ဦးစားပေးသည်။ လက်ရှိဗားရှင်းကို ဒေါင်လိုက်မျက်နှာပြင်ဖြင့် အသုံးပြုသည်။',
+  );
+  String get helpFractionTitle => _pick(
+    japanese: '分数の入力と表示',
+    english: 'Fractions',
+    simplifiedChinese: '分数输入与显示',
+    traditionalChinese: '分數輸入與顯示',
+    vietnamese: 'Nhập và hiển thị phân số',
+    indonesian: 'Input dan tampilan pecahan',
+    filipino: 'Pag-input at display ng fraction',
+    myanmar: 'အပိုင်းကိန်းထည့်သွင်းခြင်းနှင့် ပြသခြင်း',
+  );
+  String get helpFractionBody => _pick(
+    japanese:
+        '「a/b」で分数枠を挿入します。分子・分母は小数を含めて入力でき、小数点と先頭のマイナスを除いてそれぞれ20桁までです。入力中の末尾0は保持され、分母が数値として0の分数は確定できません。\n\n分数化できる結果では「a/b」と「=」がオレンジになり、仮分数・帯分数・小数を切り替えられます。見積数量へ送る場合は表示形式にかかわらず小数値を使用します。',
+    english:
+        'Tap “a/b” to insert a fraction. Numerators and denominators may contain decimals and accept up to 20 digits each, excluding the decimal point and a leading minus sign. Trailing zeros are preserved while editing, and a denominator whose numeric value is zero cannot be confirmed.\n\nFor results that can be shown as a fraction, “a/b” and “=” turn orange and cycle through improper fraction, mixed fraction and decimal. Sending a result as an estimate quantity always uses its decimal value.',
+    simplifiedChinese:
+        '点击“a/b”插入分数框。分子和分母可输入小数，各最多20位，小数点和开头负号不计入位数。输入中的末尾0会保留，数值为0的分母不能确认。\n\n结果可显示为分数时，“a/b”和“=”会变为橙色，可在假分数、带分数和小数之间切换。发送到估算数量时始终使用小数值。',
+    traditionalChinese:
+        '點按「a/b」插入分數框。分子和分母可輸入小數，各最多20位，小數點和開頭負號不計入位數。輸入中的尾端0會保留，數值為0的分母無法確認。\n\n結果可顯示為分數時，「a/b」和「=」會變成橙色，可在假分數、帶分數和小數之間切換。傳送到估算數量時一律使用小數值。',
+    vietnamese:
+        'Nhấn “a/b” để chèn khung phân số. Tử số và mẫu số có thể chứa số thập phân, mỗi phần tối đa 20 chữ số, không tính dấu thập phân và dấu trừ ở đầu. Số 0 ở cuối được giữ khi nhập và không thể xác nhận mẫu số có giá trị bằng 0.\n\nKhi kết quả có thể hiển thị dưới dạng phân số, “a/b” và “=” chuyển sang màu cam để đổi giữa phân số không đúng, hỗn số và số thập phân. Khi gửi tới số lượng dự toán, luôn dùng giá trị thập phân.',
+    indonesian:
+        'Ketuk “a/b” untuk menyisipkan pecahan. Pembilang dan penyebut dapat berisi desimal, masing-masing hingga 20 digit, tidak termasuk tanda desimal dan minus di awal. Nol di akhir dipertahankan saat mengedit, dan penyebut bernilai nol tidak dapat dikonfirmasi.\n\nJika hasil dapat ditampilkan sebagai pecahan, “a/b” dan “=” menjadi oranye untuk beralih antara pecahan tidak wajar, pecahan campuran, dan desimal. Saat dikirim sebagai kuantitas estimasi, nilai desimal selalu digunakan.',
+    filipino:
+        'I-tap ang “a/b” para maglagay ng fraction. Maaaring may decimal ang numerator at denominator at hanggang 20 digit bawat isa, hindi kasama ang decimal point at unang minus sign. Pinananatili ang trailing zero habang nag-e-edit, at hindi maaaring kumpirmahin ang denominator na zero ang halaga.\n\nKapag maaaring gawing fraction ang resulta, nagiging orange ang “a/b” at “=” upang magpalit sa improper fraction, mixed fraction, at decimal. Decimal value ang palaging ginagamit kapag ipinadala bilang estimate quantity.',
+    myanmar:
+        '“a/b” ကိုနှိပ်၍ အပိုင်းကိန်းဘောင်ထည့်ပါ။ ပိုင်းဝေနှင့် ပိုင်းခြေတွင် ဒဿမထည့်နိုင်ပြီး ဒဿမအမှတ်နှင့် ရှေ့ဆုံးအနုတ်လက္ခဏာမပါဘဲ တစ်ခုစီ ဂဏန်း ၂၀ လုံးအထိ ထည့်နိုင်သည်။ ထည့်သွင်းနေစဉ် နောက်ဆုံးသုညများကို ထိန်းထားပြီး တန်ဖိုးသုညဖြစ်သော ပိုင်းခြေကို အတည်မပြုနိုင်ပါ။\n\nအပိုင်းကိန်းအဖြစ်ပြနိုင်သောရလဒ်တွင် “a/b” နှင့် “=” သည် လိမ္မော်ရောင်ဖြစ်ပြီး မသင့်အပိုင်းကိန်း၊ ရောနှောအပိုင်းကိန်းနှင့် ဒဿမတို့ကို ပြောင်းနိုင်သည်။ ခန့်မှန်းအရေအတွက်သို့ပို့ရာတွင် ဒဿမတန်ဖိုးကို အမြဲအသုံးပြုသည်။',
+  );
+  String get helpHistoryTitle => _pick(
+    japanese: '計算履歴',
+    english: 'Calculation history',
+    simplifiedChinese: '计算历史',
+    traditionalChinese: '計算歷史',
+    vietnamese: 'Lịch sử tính toán',
+    indonesian: 'Riwayat perhitungan',
+    filipino: 'History ng kalkulasyon',
+    myanmar: 'တွက်ချက်မှုမှတ်တမ်း',
+  );
+  String get helpHistoryBody => _pick(
+    japanese:
+        '電卓上部には無料版で3行、広告なし版・完全版で5行を表示します。履歴メニューからコピー、共有、編集、削除、スター、見積への送信ができます。履歴領域を長押しすると、検索・並べ替え・全件確認ができる画面を開きます。',
+    english:
+        'The calculator shows three history rows in the free version and five in the ad-free and full versions. The history menu supports copy, share, edit, delete, star and send to estimate. Long-press the history area for search, sorting and the complete list.',
+    simplifiedChinese:
+        '计算器顶部在免费版显示3行历史，在无广告版和完整版显示5行。历史菜单支持复制、分享、编辑、删除、加星和发送到估算。长按历史区域可搜索、排序并查看全部记录。',
+    traditionalChinese:
+        '計算機頂端在免費版顯示3行紀錄，在無廣告版和完整版顯示5行。紀錄選單支援複製、分享、編輯、刪除、加星號和傳送到估算。長按紀錄區域可搜尋、排序並查看全部紀錄。',
+    vietnamese:
+        'Máy tính hiển thị 3 dòng lịch sử ở bản miễn phí và 5 dòng ở bản không quảng cáo hoặc bản đầy đủ. Menu lịch sử cho phép sao chép, chia sẻ, chỉnh sửa, xóa, đánh dấu sao và gửi tới dự toán. Nhấn giữ vùng lịch sử để tìm kiếm, sắp xếp và xem toàn bộ.',
+    indonesian:
+        'Kalkulator menampilkan 3 baris riwayat pada versi gratis dan 5 baris pada versi bebas iklan atau lengkap. Menu riwayat mendukung salin, bagikan, edit, hapus, bintang, dan kirim ke estimasi. Tekan lama area riwayat untuk mencari, mengurutkan, dan melihat semua.',
+    filipino:
+        'Tatlong history row ang ipinapakita sa libreng bersyon at lima sa ad-free at full na bersyon. Sa history menu maaaring kumopya, mag-share, mag-edit, mag-delete, mag-star, at magpadala sa estimate. I-long-press ang history area para maghanap, mag-sort, at makita ang lahat.',
+    myanmar:
+        'အခမဲ့ဗားရှင်းတွင် မှတ်တမ်း ၃ ကြောင်း၊ ကြော်ငြာမဲ့နှင့် အပြည့်အစုံဗားရှင်းတွင် ၅ ကြောင်း ပြသသည်။ မှတ်တမ်းမီနူးမှ ကူးယူ၊ မျှဝေ၊ ပြင်ဆင်၊ ဖျက်၊ ကြယ်တပ်နှင့် ခန့်မှန်းချက်သို့ ပို့နိုင်သည်။ မှတ်တမ်းနေရာကို ဖိထား၍ ရှာဖွေ၊ စီစဉ်ပြီး အားလုံးကြည့်နိုင်သည်။',
+  );
+  String get helpToolsTitle => _pick(
+    japanese: '単位変換・便利計算',
+    english: 'Unit conversion and practical calculators',
+    simplifiedChinese: '单位换算与实用计算',
+    traditionalChinese: '單位換算與實用計算',
+    vietnamese: 'Chuyển đổi đơn vị và phép tính tiện ích',
+    indonesian: 'Konversi satuan dan perhitungan praktis',
+    filipino: 'Unit conversion at praktikal na kalkulasyon',
+    myanmar: 'ယူနစ်ပြောင်းလဲခြင်းနှင့် အသုံးဝင်သောတွက်ချက်မှုများ',
+  );
+  String get helpToolsBody => _pick(
+    japanese:
+        '単位変換に加え、土量、比重・重量、勾配・法面、三角形・四角形・多角形の面積、対比、歩掛・生産性などを利用できます。初期値や候補値は参考値です。図面、仕様、土質、施工条件に合わせて入力値と係数を確認してください。',
+    english:
+        'Use unit conversion plus earthwork, density and weight, slope, triangle/quadrilateral/polygon area, ratio, labor and productivity calculators. Defaults and suggestions are references; verify inputs and factors against drawings, specifications, soil and site conditions.',
+    simplifiedChinese:
+        '可使用单位换算，以及土方、密度与重量、坡度、三角形/四边形/多边形面积、比例、工时与生产率等计算。默认值和候选值仅供参考，请根据图纸、规格、土质和施工条件确认输入值与系数。',
+    traditionalChinese:
+        '可使用單位換算，以及土方、密度與重量、坡度、三角形／四邊形／多邊形面積、比例、工時與生產率等計算。預設值和候選值僅供參考，請依圖面、規格、土質和施工條件確認輸入值與係數。',
+    vietnamese:
+        'Có thể dùng chuyển đổi đơn vị cùng các phép tính đất, tỷ trọng và trọng lượng, độ dốc, diện tích tam giác/tứ giác/đa giác, tỷ lệ, định mức lao động và năng suất. Giá trị mặc định và gợi ý chỉ để tham khảo; hãy kiểm tra theo bản vẽ, thông số, đất và điều kiện thi công.',
+    indonesian:
+        'Gunakan konversi satuan serta kalkulator pekerjaan tanah, kepadatan dan berat, kemiringan, luas segitiga/segi empat/poligon, rasio, tenaga kerja, dan produktivitas. Nilai awal dan saran adalah referensi; periksa sesuai gambar, spesifikasi, tanah, dan kondisi lapangan.',
+    filipino:
+        'Gamitin ang unit conversion at mga kalkulasyon para sa earthwork, density at timbang, slope, area ng triangle/quadrilateral/polygon, ratio, labor, at productivity. Reference lamang ang default at mungkahing value; beripikahin ayon sa drawing, specification, lupa, at site condition.',
+    myanmar:
+        'ယူနစ်ပြောင်းလဲခြင်းအပြင် မြေထုထည်၊ သိပ်သည်းဆနှင့်အလေးချိန်၊ လျှောစောက်၊ တြိဂံ/စတုဂံ/ဗဟုဂံဧရိယာ၊ အချိုး၊ လုပ်အားနှင့်ထုတ်လုပ်မှုတွက်ချက်မှုများကို အသုံးပြုနိုင်သည်။ မူလနှင့်အကြံပြုတန်ဖိုးများသည် ကိုးကားရန်သာဖြစ်ပြီး ပုံဆွဲ၊ သတ်မှတ်ချက်၊ မြေအမျိုးအစားနှင့် လုပ်ငန်းခွင်အခြေအနေအတိုင်း စစ်ဆေးပါ။',
+  );
+  String get helpEstimateTitle => instantEstimate;
+  String get helpEstimateBody => _pick(
+    japanese:
+        '見積名・現場名、作成日、但し書き、有効期限、工期、支払条件、備考を保存できます。明細は記号と施工場所を1対1でまとめ、名称、仕様、数量、単位、単価、金額、摘要を管理します。工種はアプリ内分類と単価マスタ用で、正式帳票には出力しません。\n\n単価マスタから名称・仕様・単位・単価・工種を復元できます。見積専用の小数桁数と丸め方法は関数電卓設定とは独立し、行金額、小計、消費税、税込合計へ反映されます。',
+    english:
+        'Save the estimate/site name, date, subject note, validity, construction period, payment terms and remarks. Items are grouped by a one-to-one symbol and construction location and hold name, specification, quantity, unit, unit price, amount and note. Work type is for internal classification and the unit-price master and is not printed on formal documents.\n\nThe unit-price master restores name, specification, unit, price and work type. Estimate decimal places and rounding are independent from calculator settings and apply to line amounts, subtotals, tax and grand total.',
+    simplifiedChinese:
+        '可保存估算名/现场名、创建日、但书、有效期、工期、付款条件和备注。明细按一一对应的符号与施工位置分组，并管理名称、规格、数量、单位、单价、金额和摘要。工种仅用于应用内分类和单价主数据，不输出到正式文档。\n\n可从单价主数据恢复名称、规格、单位、单价和工种。估算专用小数位数与舍入方式独立于计算器设置，并用于行金额、小计、税额和含税总额。',
+    traditionalChinese:
+        '可儲存估算名／現場名、建立日、但書、有效期限、工期、付款條件和備註。明細依一對一的記號與施工位置分組，並管理名稱、規格、數量、單位、單價、金額和摘要。工種僅用於應用程式內分類與單價主檔，不輸出至正式文件。\n\n可從單價主檔還原名稱、規格、單位、單價和工種。估算專用小數位數與捨入方式獨立於計算機設定，並套用於各行金額、小計、稅額和含稅總額。',
+    vietnamese:
+        'Có thể lưu tên dự toán/công trường, ngày tạo, nội dung, thời hạn, thời gian thi công, điều khoản thanh toán và ghi chú. Chi tiết được nhóm theo ký hiệu và vị trí thi công một-một, gồm tên, quy cách, số lượng, đơn vị, đơn giá, thành tiền và ghi chú. Loại công việc chỉ dùng để phân loại nội bộ và danh mục đơn giá, không in trên chứng từ chính thức.\n\nDanh mục đơn giá khôi phục tên, quy cách, đơn vị, đơn giá và loại công việc. Số lẻ và cách làm tròn của dự toán độc lập với máy tính và áp dụng cho thành tiền, tạm tính, thuế và tổng cộng.',
+    indonesian:
+        'Simpan nama estimasi/lokasi, tanggal, catatan subjek, masa berlaku, periode konstruksi, syarat pembayaran, dan catatan. Item dikelompokkan menurut simbol dan lokasi konstruksi satu-ke-satu serta menyimpan nama, spesifikasi, kuantitas, satuan, harga satuan, jumlah, dan catatan. Jenis pekerjaan hanya untuk klasifikasi internal dan master harga, tidak dicetak pada dokumen resmi.\n\nMaster harga memulihkan nama, spesifikasi, satuan, harga, dan jenis pekerjaan. Desimal serta pembulatan estimasi terpisah dari kalkulator dan diterapkan ke jumlah baris, subtotal, pajak, dan total.',
+    filipino:
+        'Maaaring i-save ang estimate/site name, petsa, subject note, validity, construction period, payment terms, at remarks. Pinapangkat ang item sa one-to-one na simbolo at construction location, at may name, specification, quantity, unit, unit price, amount, at note. Internal classification at unit-price master lamang ang work type at hindi ito inilalabas sa formal document.\n\nMula sa unit-price master, maibabalik ang name, specification, unit, price, at work type. Hiwalay sa calculator ang decimal places at rounding ng estimate at ginagamit sa line amount, subtotal, tax, at grand total.',
+    myanmar:
+        'ခန့်မှန်း/လုပ်ငန်းခွင်အမည်၊ ဖန်တီးရက်၊ အကြောင်းအရာ၊ သက်တမ်း၊ ဆောက်လုပ်ချိန်၊ ငွေပေးချေမှုစည်းကမ်းနှင့် မှတ်ချက်ကို သိမ်းနိုင်သည်။ အချက်များကို သင်္ကေတနှင့် ဆောက်လုပ်ရာနေရာ တစ်ခုချင်းစီဖြင့် အုပ်စုဖွဲ့ပြီး အမည်၊ သတ်မှတ်ချက်၊ အရေအတွက်၊ ယူနစ်၊ ယူနစ်ဈေး၊ ငွေပမာဏနှင့် မှတ်ချက်ကို စီမံသည်။ အလုပ်အမျိုးအစားသည် အတွင်းပိုင်းခွဲခြားမှုနှင့် ယူနစ်ဈေးစာရင်းအတွက်သာဖြစ်ပြီး တရားဝင်စာရွက်တွင် မထုတ်ပါ။\n\nယူနစ်ဈေးစာရင်းမှ အမည်၊ သတ်မှတ်ချက်၊ ယူနစ်၊ ဈေးနှင့် အလုပ်အမျိုးအစားကို ပြန်ယူနိုင်သည်။ ခန့်မှန်းဒဿမနှင့် လုံးချခြင်းသည် ဂဏန်းပေါင်းစက်ဆက်တင်နှင့် သီးခြားဖြစ်ပြီး အတန်းငွေ၊ အုပ်စုငွေ၊ အခွန်နှင့် စုစုပေါင်းတွင် အသုံးပြုသည်။',
+  );
+  String get helpOutputTitle => _pick(
+    japanese: '見積書の出力',
+    english: 'Estimate output',
+    simplifiedChinese: '估算文档输出',
+    traditionalChinese: '估算文件輸出',
+    vietnamese: 'Xuất báo giá',
+    indonesian: 'Keluaran estimasi',
+    filipino: 'Paglabas ng estimate',
+    myanmar: 'ခန့်မှန်းစာရွက်ထုတ်ခြင်း',
+  );
+  String get helpOutputBody => _pick(
+    japanese:
+        '正式Excelは表紙と20行周期の内訳を出力します。正式PDFは同じ見積データとページ構成を使用し、保存・共有できます。印刷は最新の正式PDFをそのままOSの印刷画面へ渡します。Excel貼り付けコピーは加工用の表データです。\n\n自社情報は設定した順序と表示／非表示を反映し、帳票へ最大5項目を出力します。正式Excel・PDF・印刷では工種を表示しません。',
+    english:
+        'Formal Excel exports a cover and 20-row-cycle breakdown. Formal PDF uses the same estimate data and page structure and can be saved or shared. Print sends a newly generated formal PDF directly to the OS print dialog. Excel table copy is editable tabular data.\n\nCompany information follows its configured order and visibility, with up to five fields on documents. Work type is hidden from formal Excel, PDF and print.',
+    simplifiedChinese:
+        '正式Excel输出封面和按20行周期分页的明细。正式PDF使用相同的估算数据和页面结构，可保存或分享。打印会把最新生成的正式PDF直接交给系统打印界面。Excel表格复制用于后续编辑。\n\n自社信息按设定顺序和显示/隐藏状态输出，文档最多显示5项。正式Excel、PDF和打印不显示工种。',
+    traditionalChinese:
+        '正式Excel輸出封面和以20行週期分頁的明細。正式PDF使用相同的估算資料和頁面結構，可儲存或分享。列印會把最新產生的正式PDF直接交給系統列印畫面。Excel表格複製供後續編輯。\n\n自社資訊依設定順序和顯示／隱藏狀態輸出，文件最多顯示5項。正式Excel、PDF和列印不顯示工種。',
+    vietnamese:
+        'Excel chính thức xuất trang bìa và bảng chi tiết theo chu kỳ 20 dòng. PDF chính thức dùng cùng dữ liệu dự toán và cấu trúc trang, có thể lưu hoặc chia sẻ. In gửi PDF chính thức mới tạo trực tiếp tới hộp thoại in của hệ điều hành. Sao chép bảng Excel dùng cho chỉnh sửa.\n\nThông tin công ty tuân theo thứ tự và trạng thái hiển thị đã đặt, tối đa 5 mục trên chứng từ. Loại công việc không xuất hiện trong Excel, PDF và bản in chính thức.',
+    indonesian:
+        'Excel formal mengekspor sampul dan rincian dengan siklus 20 baris. PDF formal memakai data estimasi dan struktur halaman yang sama serta dapat disimpan atau dibagikan. Cetak mengirim PDF formal terbaru langsung ke dialog cetak OS. Salin tabel Excel adalah data untuk pengolahan.\n\nInformasi perusahaan mengikuti urutan dan visibilitas yang diatur, maksimal 5 bidang pada dokumen. Jenis pekerjaan tidak ditampilkan di Excel, PDF, dan cetak formal.',
+    filipino:
+        'Ang formal Excel ay may cover at breakdown na 20-row cycle. Parehong estimate data at page structure ang gamit ng formal PDF at maaari itong i-save o i-share. Ipinapadala ng Print ang bagong formal PDF sa OS print dialog. Ang Excel table copy ay data para sa pag-edit.\n\nSinusunod ng company information ang itinakdang order at visibility, hanggang 5 field sa dokumento. Hindi ipinapakita ang work type sa formal Excel, PDF, at print.',
+    myanmar:
+        'တရားဝင် Excel တွင် မျက်နှာဖုံးနှင့် အတန်း ၂၀ စက်ဝန်းအသေးစိတ်ကို ထုတ်ပေးသည်။ တရားဝင် PDF သည် တူညီသောခန့်မှန်းဒေတာနှင့် စာမျက်နှာပုံစံကို အသုံးပြုပြီး သိမ်းဆည်း သို့မဟုတ် မျှဝေနိုင်သည်။ ပုံနှိပ်ခြင်းသည် အသစ်ထုတ်သော တရားဝင် PDF ကို OS ပုံနှိပ်မျက်နှာပြင်သို့ တိုက်ရိုက်ပို့သည်။ Excel ဇယားကူးယူမှုသည် ပြင်ဆင်ရန်ဒေတာဖြစ်သည်။\n\nကုမ္ပဏီအချက်အလက်သည် သတ်မှတ်ထားသောအစီအစဉ်နှင့် ပြ/မပြကို လိုက်နာပြီး စာရွက်တွင် ၅ ခုအထိ ထုတ်သည်။ အလုပ်အမျိုးအစားကို တရားဝင် Excel၊ PDF နှင့် ပုံနှိပ်တွင် မပြပါ။',
+  );
+  String get helpRewardedAdsTitle => _pick(
+    japanese: '動画広告と広告非表示プラン',
+    english: 'Video ads and ad-free plans',
+    simplifiedChinese: '视频广告与无广告方案',
+    traditionalChinese: '影片廣告與無廣告方案',
+    vietnamese: 'Quảng cáo video và gói không quảng cáo',
+    indonesian: 'Iklan video dan paket bebas iklan',
+    filipino: 'Video ads at ad-free plan',
+    myanmar: 'ဗီဒီယိုကြော်ငြာနှင့် ကြော်ငြာမဲ့အစီအစဉ်',
+  );
+  String helpRewardedAdsBody(int maximumPerDay) => _pick(
+    japanese:
+        '無料版の動画広告は用途別の3グループです。①便利計算、②インスタント見積と単価マスタ、③正式PDF・正式Excel・印刷・Excel貼り付けコピー。同じグループでは端末の同じ日付中に1回だけで、全グループを利用した場合は最大$maximumPerDay回／日です。\n\n視聴完了後は同じグループをその日の間利用でき、端末のローカル日付が変わると再度対象になります。広告を途中で閉じた場合は解除されません。広告を取得・表示できない場合は機能の利用を妨げません。広告なし版と完全版ではバナー広告・動画広告を表示しません。',
+    english:
+        'The free version has three video-ad groups: (1) practical calculators, (2) instant estimates and the unit-price master, and (3) formal PDF, formal Excel, print and Excel table copy. Each group requests an ad only once per device-local calendar day, for at most $maximumPerDay ads per day when all groups are used.\n\nAfter completion, that group remains available for the day and becomes eligible again when the device-local date changes. Closing the ad early does not unlock it. If an ad cannot be loaded or shown, use of the feature is not blocked. The ad-free and full plans show neither banner nor video ads.',
+    simplifiedChinese:
+        '免费版的视频广告分为3组：①实用计算，②即时估算与单价主数据，③正式PDF、正式Excel、打印与Excel表格复制。同一组在设备本地同一日期内只需一次；使用全部组时每天最多$maximumPerDay次。\n\n完整观看后，该组当天可继续使用；设备本地日期变化后会再次成为对象。中途关闭广告不会解锁。广告无法加载或显示时不会阻止功能使用。无广告版和完整版均不显示横幅或视频广告。',
+    traditionalChinese:
+        '免費版的影片廣告分為3組：①實用計算，②即時估算與單價主檔，③正式PDF、正式Excel、列印與Excel表格複製。同一組在裝置本地同一日期內只需一次；使用全部組別時每天最多$maximumPerDay次。\n\n完整觀看後，該組當天可繼續使用；裝置本地日期變更後會再次成為對象。中途關閉廣告不會解鎖。廣告無法載入或顯示時不會阻止功能使用。無廣告版和完整版均不顯示橫幅或影片廣告。',
+    vietnamese:
+        'Bản miễn phí có 3 nhóm quảng cáo video: (1) phép tính tiện ích, (2) dự toán nhanh và danh mục đơn giá, (3) PDF chính thức, Excel chính thức, in và sao chép bảng Excel. Mỗi nhóm chỉ yêu cầu một lần trong cùng ngày theo ngày cục bộ của thiết bị, tối đa $maximumPerDay quảng cáo/ngày nếu dùng cả ba nhóm.\n\nSau khi xem xong, nhóm đó dùng được trong ngày và sẽ áp dụng lại khi ngày cục bộ của thiết bị thay đổi. Đóng quảng cáo sớm sẽ không mở khóa. Nếu không tải hoặc hiển thị được quảng cáo, tính năng vẫn được sử dụng. Gói không quảng cáo và gói đầy đủ không hiển thị quảng cáo banner hoặc video.',
+    indonesian:
+        'Versi gratis memiliki 3 grup iklan video: (1) perhitungan praktis, (2) estimasi instan dan master harga, (3) PDF formal, Excel formal, cetak, dan salin tabel Excel. Setiap grup hanya meminta iklan sekali pada tanggal lokal perangkat yang sama, maksimal $maximumPerDay iklan per hari bila semua grup digunakan.\n\nSetelah selesai ditonton, grup tersebut tersedia sepanjang hari dan berlaku lagi saat tanggal lokal perangkat berubah. Menutup iklan lebih awal tidak membuka akses. Jika iklan tidak dapat dimuat atau ditampilkan, fitur tetap dapat digunakan. Paket bebas iklan dan lengkap tidak menampilkan iklan banner maupun video.',
+    filipino:
+        'May 3 video-ad group ang libreng bersyon: (1) praktikal na kalkulasyon, (2) instant estimate at unit-price master, at (3) formal PDF, formal Excel, print, at Excel table copy. Isang beses lang humihingi ng ad ang bawat group sa parehong local date ng device, hanggang $maximumPerDay ad bawat araw kapag ginamit ang lahat.\n\nPagkatapos mapanood, magagamit ang group sa buong araw at magiging saklaw muli kapag nagbago ang local date ng device. Hindi nag-a-unlock ang maagang pagsara ng ad. Kung hindi ma-load o maipakita ang ad, hindi haharangin ang feature. Walang banner o video ad sa ad-free at full plan.',
+    myanmar:
+        'အခမဲ့ဗားရှင်းတွင် ဗီဒီယိုကြော်ငြာအုပ်စု ၃ ခုရှိသည်။ (၁) အသုံးဝင်သောတွက်ချက်မှုများ၊ (၂) ချက်ချင်းခန့်မှန်းချက်နှင့် ယူနစ်ဈေးစာရင်း၊ (၃) တရားဝင် PDF၊ တရားဝင် Excel၊ ပုံနှိပ်ခြင်းနှင့် Excel ဇယားကူးယူခြင်း။ အုပ်စုတစ်ခုစီသည် စက်၏တူညီသောဒေသရက်စွဲအတွင်း တစ်ကြိမ်သာ ကြော်ငြာတောင်းပြီး အုပ်စုအားလုံးသုံးပါက တစ်ရက်လျှင် အများဆုံး $maximumPerDay ကြိမ်ဖြစ်သည်။\n\nကြည့်ရှုပြီးနောက် ထိုအုပ်စုကို ထိုနေ့အတွင်း အသုံးပြုနိုင်ပြီး စက်၏ဒေသရက်စွဲပြောင်းလျှင် ပြန်လည်သက်ရောက်မည်။ ကြော်ငြာကို စောစီးစွာပိတ်လျှင် မဖွင့်ပေးပါ။ ကြော်ငြာမတင်နိုင် သို့မဟုတ် မပြနိုင်ပါက လုပ်ဆောင်ချက်အသုံးပြုမှုကို မတားဆီးပါ။ ကြော်ငြာမဲ့နှင့် အပြည့်အစုံအစီအစဉ်တွင် banner နှင့် video ကြော်ငြာမပြပါ။',
+  );
+  String get helpDataTitle => _pick(
+    japanese: 'データの保存',
+    english: 'Data storage',
+    simplifiedChinese: '数据保存',
+    traditionalChinese: '資料儲存',
+    vietnamese: 'Lưu trữ dữ liệu',
+    indonesian: 'Penyimpanan data',
+    filipino: 'Pag-save ng data',
+    myanmar: 'ဒေတာသိမ်းဆည်းမှု',
+  );
+  String get helpDataBody => _pick(
+    japanese:
+        '見積、単価マスタ、計算履歴、歩掛実績、自社情報、設定などは端末内へ保存されます。アプリを削除した場合や端末を初期化した場合は保存内容が失われることがあります。重要な帳票はExcelやPDFとして別途保存してください。',
+    english:
+        'Estimates, the unit-price master, calculation history, productivity records, company information and settings are stored on the device. Deleting the app or resetting the device may remove them. Save important documents separately as Excel or PDF.',
+    simplifiedChinese:
+        '估算、单价主数据、计算历史、生产率记录、自社信息和设置等保存在设备内。删除应用或初始化设备时可能丢失。请将重要文档另存为Excel或PDF。',
+    traditionalChinese:
+        '估算、單價主檔、計算紀錄、生產率紀錄、自社資訊和設定等儲存在裝置內。刪除應用程式或初始化裝置時可能遺失。請將重要文件另存為Excel或PDF。',
+    vietnamese:
+        'Dự toán, danh mục đơn giá, lịch sử tính toán, dữ liệu năng suất, thông tin công ty và cài đặt được lưu trên thiết bị. Xóa ứng dụng hoặc đặt lại thiết bị có thể làm mất dữ liệu. Hãy lưu riêng tài liệu quan trọng dưới dạng Excel hoặc PDF.',
+    indonesian:
+        'Estimasi, master harga, riwayat perhitungan, catatan produktivitas, informasi perusahaan, dan pengaturan disimpan di perangkat. Menghapus aplikasi atau mereset perangkat dapat menghilangkannya. Simpan dokumen penting secara terpisah sebagai Excel atau PDF.',
+    filipino:
+        'Naka-save sa device ang estimate, unit-price master, calculation history, productivity record, company information, at settings. Maaaring mawala ang mga ito kapag dinelete ang app o ni-reset ang device. I-save nang hiwalay bilang Excel o PDF ang mahalagang dokumento.',
+    myanmar:
+        'ခန့်မှန်းချက်၊ ယူနစ်ဈေးစာရင်း၊ တွက်ချက်မှုမှတ်တမ်း၊ ထုတ်လုပ်မှုမှတ်တမ်း၊ ကုမ္ပဏီအချက်အလက်နှင့် ဆက်တင်များကို စက်ထဲတွင် သိမ်းထားသည်။ အက်ပ်ဖျက်ခြင်း သို့မဟုတ် စက်ကို ပြန်လည်သတ်မှတ်ခြင်းဖြင့် ပျောက်ဆုံးနိုင်သည်။ အရေးကြီးစာရွက်များကို Excel သို့မဟုတ် PDF အဖြစ် သီးခြားသိမ်းပါ။',
+  );
+  String get disclaimerTitle => _pick(
+    japanese: '免責・利用上の注意',
+    english: 'Disclaimer and usage notes',
+    simplifiedChinese: '免责声明与使用注意',
+    traditionalChinese: '免責聲明與使用注意事項',
+    vietnamese: 'Tuyên bố miễn trừ và lưu ý sử dụng',
+    indonesian: 'Penafian dan catatan penggunaan',
+    filipino: 'Disclaimer at mga paalala sa paggamit',
+    myanmar: 'တာဝန်ကန့်သတ်ချက်နှင့် အသုံးပြုမှုသတိပြုရန်',
+  );
+  String get disclaimerSettingsSubtitle => _pick(
+    japanese: '計算・見積・帳票を利用する前に確認してください',
+    english: 'Review before using calculations, estimates or documents',
+    simplifiedChinese: '使用计算、估算或文档前请确认',
+    traditionalChinese: '使用計算、估算或文件前請確認',
+    vietnamese: 'Hãy xem trước khi dùng phép tính, dự toán hoặc tài liệu',
+    indonesian: 'Tinjau sebelum memakai perhitungan, estimasi, atau dokumen',
+    filipino: 'Basahin bago gamitin ang kalkulasyon, estimate, o dokumento',
+    myanmar:
+        'တွက်ချက်မှု၊ ခန့်မှန်းချက် သို့မဟုတ် စာရွက်စာတမ်းမသုံးမီ ဖတ်ရှုပါ',
+  );
+  String get disclaimerBody => _pick(
+    japanese:
+        '本アプリの計算結果、数量、見積、換算結果、帳票内容は参考情報です。施工、発注、契約、申請、見積提出などを行う前に、利用者ご自身で入力値、設定、計算過程と出力内容を確認してください。\n\n法令、規格、設計図書、契約条件、メーカー仕様、現場条件などがある場合は、それらを優先してください。入力値や設定内容によって結果が変わるため、重要な用途では別の方法でも確認してください。\n\n本アプリの利用により生じた損害などについては、適用される法令で認められる範囲で責任を制限します。この案内は一般的な利用上の注意であり、すべての地域での法的な有効性を保証するものではありません。',
+    english:
+        'Calculations, quantities, estimates, conversions and document contents produced by this app are reference information. Before construction, ordering, contracting, applications or submitting an estimate, verify the inputs, settings, calculation process and output yourself.\n\nWhere laws, standards, drawings, contract terms, manufacturer specifications or site conditions apply, give them priority. Results vary with inputs and settings, so verify important uses by another method as well.\n\nLiability for loss arising from use of the app is limited to the extent permitted by applicable law. These are general usage notes and do not guarantee legal effectiveness in every jurisdiction.',
+    simplifiedChinese:
+        '本应用生成的计算结果、数量、估算、换算结果和文档内容仅供参考。在施工、订购、签订合同、申请或提交估算前，请自行确认输入值、设置、计算过程和输出内容。\n\n如有适用的法律法规、标准、设计文件、合同条件、制造商规格或现场条件，应优先遵循。结果会因输入和设置而变化，重要用途请同时通过其他方法核对。\n\n对于因使用本应用而产生的损失，责任将在适用法律允许的范围内予以限制。本说明为一般使用注意事项，不保证在所有地区具有完整法律效力。',
+    traditionalChinese:
+        '本應用程式產生的計算結果、數量、估算、換算結果和文件內容僅供參考。在施工、訂購、簽訂契約、申請或提交估算前，請自行確認輸入值、設定、計算過程和輸出內容。\n\n如有適用的法令、標準、設計文件、契約條件、製造商規格或現場條件，應優先遵循。結果會因輸入和設定而改變，重要用途請同時以其他方法核對。\n\n對於因使用本應用程式而產生的損失，責任將在適用法律允許的範圍內予以限制。本說明為一般使用注意事項，不保證在所有地區具有完整法律效力。',
+    vietnamese:
+        'Kết quả tính toán, số lượng, dự toán, chuyển đổi và nội dung tài liệu do ứng dụng tạo ra chỉ là thông tin tham khảo. Trước khi thi công, đặt hàng, ký hợp đồng, nộp hồ sơ hoặc gửi báo giá, hãy tự kiểm tra dữ liệu nhập, cài đặt, quá trình tính và nội dung xuất.\n\nNếu có luật, tiêu chuẩn, bản vẽ thiết kế, điều khoản hợp đồng, thông số nhà sản xuất hoặc điều kiện công trường, hãy ưu tiên các tài liệu đó. Kết quả thay đổi theo dữ liệu và cài đặt, vì vậy hãy kiểm tra các mục đích quan trọng bằng phương pháp khác.\n\nTrách nhiệm đối với thiệt hại phát sinh từ việc sử dụng ứng dụng được giới hạn trong phạm vi pháp luật áp dụng cho phép. Đây là lưu ý sử dụng chung và không bảo đảm hiệu lực pháp lý đầy đủ tại mọi khu vực.',
+    indonesian:
+        'Hasil perhitungan, kuantitas, estimasi, konversi, dan isi dokumen dari aplikasi ini merupakan informasi referensi. Sebelum konstruksi, pemesanan, kontrak, pengajuan, atau menyerahkan estimasi, periksa sendiri input, pengaturan, proses perhitungan, dan hasilnya.\n\nJika berlaku hukum, standar, gambar desain, ketentuan kontrak, spesifikasi produsen, atau kondisi lapangan, prioritaskan semuanya. Hasil berubah sesuai input dan pengaturan; untuk penggunaan penting, periksa juga dengan metode lain.\n\nTanggung jawab atas kerugian akibat penggunaan aplikasi dibatasi sejauh diizinkan oleh hukum yang berlaku. Ini adalah catatan penggunaan umum dan tidak menjamin keabsahan hukum penuh di setiap wilayah.',
+    filipino:
+        'Reference information lamang ang calculation result, quantity, estimate, conversion, at dokumentong ginagawa ng app. Bago ang construction, pag-order, kontrata, application, o pagsusumite ng estimate, sariling suriin ang input, setting, proseso ng pagkalkula, at output.\n\nKapag may naaangkop na batas, standard, design drawing, contract condition, manufacturer specification, o site condition, unahin ang mga iyon. Nagbabago ang resulta ayon sa input at setting, kaya beripikahin din sa ibang paraan ang mahahalagang gamit.\n\nAng pananagutan para sa pinsalang dulot ng paggamit ng app ay nililimitahan hanggang sa pinahihintulutan ng naaangkop na batas. Pangkalahatang paalala ito at hindi garantiya ng ganap na legal na bisa sa bawat hurisdiksiyon.',
+    myanmar:
+        'ဤအက်ပ်မှ ထုတ်ပေးသော တွက်ချက်ရလဒ်၊ အရေအတွက်၊ ခန့်မှန်းချက်၊ ပြောင်းလဲရလဒ်နှင့် စာရွက်စာတမ်းအကြောင်းအရာများသည် ကိုးကားရန်အချက်အလက်သာဖြစ်သည်။ ဆောက်လုပ်ခြင်း၊ မှာယူခြင်း၊ စာချုပ်ချုပ်ခြင်း၊ လျှောက်ထားခြင်း သို့မဟုတ် ခန့်မှန်းချက်တင်ပြခြင်းမပြုမီ ထည့်သွင်းတန်ဖိုး၊ ဆက်တင်၊ တွက်ချက်မှုလုပ်ငန်းစဉ်နှင့် ထုတ်ပေးချက်ကို ကိုယ်တိုင်စစ်ဆေးပါ။\n\nသက်ဆိုင်ရာဥပဒေ၊ စံနှုန်း၊ ဒီဇိုင်းစာရွက်၊ စာချုပ်စည်းကမ်း၊ ထုတ်လုပ်သူသတ်မှတ်ချက် သို့မဟုတ် လုပ်ငန်းခွင်အခြေအနေရှိပါက ၎င်းတို့ကို ဦးစားပေးပါ။ ထည့်သွင်းမှုနှင့်ဆက်တင်အလိုက် ရလဒ်ပြောင်းလဲနိုင်သဖြင့် အရေးကြီးအသုံးပြုမှုများကို အခြားနည်းဖြင့်လည်း စစ်ဆေးပါ။\n\nအက်ပ်အသုံးပြုမှုကြောင့် ဖြစ်ပေါ်သောဆုံးရှုံးမှုများအတွက် တာဝန်ကို သက်ဆိုင်ရာဥပဒေခွင့်ပြုသည့်အတိုင်းအတာအတွင်း ကန့်သတ်သည်။ ဤအချက်များသည် အထွေထွေအသုံးပြုမှုသတိပေးချက်သာဖြစ်ပြီး နေရာတိုင်းတွင် ဥပဒေအရ အပြည့်အဝထိရောက်မှုကို အာမခံခြင်းမဟုတ်ပါ။',
   );
   String get adFreePlan => _pick(
     japanese: '広告なし版（買い切り）',

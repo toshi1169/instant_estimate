@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../domain/company_profile.dart';
@@ -208,13 +209,21 @@ class _CompanyProfileEditorScreenState
   }
 
   Widget _field(CompanyProfileSection section, AppLocalizations strings) {
-    final (controller, label, key, keyboardType, action) = switch (section) {
+    final (
+      controller,
+      label,
+      key,
+      keyboardType,
+      action,
+      inputFormatters,
+    ) = switch (section) {
       CompanyProfileSection.companyName => (
         _companyName,
         strings.companyNameOrTradeName,
         const Key('companyProfileCompanyName'),
         TextInputType.text,
         TextInputAction.next,
+        null,
       ),
       CompanyProfileSection.representativeName => (
         _representativeName,
@@ -222,6 +231,7 @@ class _CompanyProfileEditorScreenState
         const Key('companyProfileRepresentativeName'),
         TextInputType.name,
         TextInputAction.next,
+        null,
       ),
       CompanyProfileSection.postalCode => (
         _postalCode,
@@ -229,6 +239,7 @@ class _CompanyProfileEditorScreenState
         const Key('companyProfilePostalCode'),
         TextInputType.text,
         TextInputAction.next,
+        null,
       ),
       CompanyProfileSection.addressLine1 => (
         _addressLine1,
@@ -236,6 +247,7 @@ class _CompanyProfileEditorScreenState
         const Key('companyProfileAddressLine1'),
         TextInputType.streetAddress,
         TextInputAction.next,
+        null,
       ),
       CompanyProfileSection.addressLine2 => (
         _addressLine2,
@@ -243,13 +255,17 @@ class _CompanyProfileEditorScreenState
         const Key('companyProfileAddressLine2'),
         TextInputType.streetAddress,
         TextInputAction.next,
+        null,
       ),
       CompanyProfileSection.phoneNumber => (
         _phoneNumber,
         strings.phoneNumber,
         const Key('companyProfilePhoneNumber'),
-        TextInputType.phone,
+        TextInputType.text,
         TextInputAction.done,
+        <TextInputFormatter>[
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-() ]')),
+        ],
       ),
       CompanyProfileSection.address => throw StateError(
         'Legacy address section must be expanded before display.',
@@ -260,6 +276,7 @@ class _CompanyProfileEditorScreenState
       controller: controller,
       keyboardType: keyboardType,
       textInputAction: action,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
