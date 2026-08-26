@@ -1496,7 +1496,7 @@ void main() {
     expect(find.text('=  0.5'), findsOneWidget);
   });
 
-  testWidgets('10桁分数は入力中と右側キャレットでエラーを出さない', (tester) async {
+  testWidgets('20桁分数は入力中と右側キャレットでエラーを出さない', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1509,14 +1509,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.bySemanticsLabel('a/b'));
-    for (final key in '1234567890'.split('')) {
+    for (final key in '12345678901234567890'.split('')) {
       await tester.tap(find.widgetWithText(FilledButton, key));
       await tester.pump();
     }
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.bySemanticsLabel('a/b'));
-    for (final key in '0987654321'.split('')) {
+    for (final key in '10987654321098765432'.split('')) {
       await tester.tap(find.widgetWithText(FilledButton, key));
       await tester.pump();
     }
@@ -1529,7 +1529,7 @@ void main() {
     expect(find.byKey(const Key('expressionTrailingTapArea')), findsNothing);
   });
 
-  testWidgets('複数の10桁分数を含む長い式は全体を縮小して表示する', (tester) async {
+  testWidgets('複数の長い分数を含む式は等比縮小と複数行で表示する', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1553,7 +1553,9 @@ void main() {
       '1',
       '1',
       '1',
+      '1',
       'a/b',
+      '2',
       '2',
       '2',
       '2',
@@ -1577,7 +1579,9 @@ void main() {
       '3',
       '3',
       '3',
+      '3',
       'a/b',
+      '4',
       '4',
       '4',
       '4',
@@ -1601,7 +1605,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('分数の11桁目では2秒間入力上限を通知する', (tester) async {
+  testWidgets('分数の21桁目では2秒間入力上限を通知する', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1614,16 +1618,16 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.bySemanticsLabel('a/b'));
-    for (var index = 0; index < 11; index++) {
+    for (var index = 0; index < 21; index++) {
       await tester.tap(find.widgetWithText(FilledButton, '1'));
       await tester.pump();
     }
 
-    expect(find.text('これ以上入力できません'), findsOneWidget);
+    expect(find.text('最大20桁まで入力できます'), findsOneWidget);
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
-    expect(find.text('これ以上入力できません'), findsNothing);
+    expect(find.text('最大20桁まで入力できます'), findsNothing);
   });
 
   testWidgets('帯分数の各欄と左右へキャレットを移動できる', (tester) async {
@@ -1708,15 +1712,15 @@ void main() {
       await tester.pump();
     }
 
+    await tester.tap(find.textContaining('222'));
+    await tester.pump();
+    expect(controller.caretPosition, inInclusiveRange(8, 11));
+    await tester.tap(find.textContaining('3333'));
+    await tester.pump();
+    expect(controller.caretPosition, inInclusiveRange(12, 16));
+
     await tapCharacter('66', 0);
     expect(controller.caretPosition, anyOf(0, 1));
-
-    await tapCharacter('222', -2);
-    expect(controller.caretPosition, anyOf(7, 8));
-    await tapCharacter('222', 1);
-    expect(controller.caretPosition, anyOf(9, 10));
-    await tapCharacter('3333', 1);
-    expect(controller.caretPosition, anyOf(13, 14));
   });
 
   testWidgets('計算結果を横棒付きの仮分数と帯分数へ切り替えられる', (tester) async {

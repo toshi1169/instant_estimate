@@ -30,6 +30,179 @@ class CalculationHistoryEntry {
   final String? mixedFractionResult;
 }
 
+class _ExactDecimal {
+  const _ExactDecimal({required this.unscaled, required this.scale});
+
+  final BigInt unscaled;
+  final int scale;
+
+  BigInt get scaleFactor => BigInt.from(10).pow(scale);
+
+  static _ExactDecimal? tryParse(String value) {
+    final match = RegExp(r'^(\d+)(?:\.(\d+))?$').firstMatch(value);
+    if (match == null) return null;
+    final fractionDigits = match.group(2) ?? '';
+    return _ExactDecimal(
+      unscaled: BigInt.parse('${match.group(1)}$fractionDigits'),
+      scale: fractionDigits.length,
+    );
+  }
+}
+
+class _ExactRational {
+  _ExactRational(BigInt numerator, BigInt denominator)
+    : numerator = denominator.isNegative ? -numerator : numerator,
+      denominator = denominator.abs() {
+    if (denominator == BigInt.zero) {
+      throw const CalculationException('0で割ることはできません');
+    }
+  }
+
+  final BigInt numerator;
+  final BigInt denominator;
+
+  factory _ExactRational.fromDecimal(String value) {
+    final decimal = _ExactDecimal.tryParse(value);
+    if (decimal == null) throw const CalculationException('計算できません');
+    return _ExactRational(decimal.unscaled, decimal.scaleFactor)._normalized();
+  }
+
+  _ExactRational _normalized() {
+    final divisor = numerator.abs().gcd(denominator);
+    return _ExactRational(numerator ~/ divisor, denominator ~/ divisor);
+  }
+
+  _ExactRational operator +(_ExactRational other) => _ExactRational(
+    numerator * other.denominator + other.numerator * denominator,
+    denominator * other.denominator,
+  )._normalized();
+
+  _ExactRational operator -(_ExactRational other) => _ExactRational(
+    numerator * other.denominator - other.numerator * denominator,
+    denominator * other.denominator,
+  )._normalized();
+
+  _ExactRational operator *(_ExactRational other) => _ExactRational(
+    numerator * other.numerator,
+    denominator * other.denominator,
+  )._normalized();
+
+  _ExactRational operator /(_ExactRational other) {
+    if (other.numerator == BigInt.zero) {
+      throw const CalculationException('0で割ることはできません');
+    }
+    return _ExactRational(
+      numerator * other.denominator,
+      denominator * other.numerator,
+    )._normalized();
+  }
+
+  _ExactRational operator -() => _ExactRational(-numerator, denominator);
+
+  double toDouble() => numerator.toDouble() / denominator.toDouble();
+}
+
+class _ExactExpressionParser {
+  _ExactExpressionParser(String source)
+    : _source = source
+          .replaceAll('×', '*')
+          .replaceAll('÷', '/')
+          .replaceAll('−', '-')
+          .replaceAll(RegExp(r'\s+'), '');
+
+  final String _source;
+  int _position = 0;
+
+  static _ExactRational? tryEvaluate(String source) {
+    if (RegExp(r'[^0-9.+\-*/()]').hasMatch(
+      source.replaceAll('×', '*').replaceAll('÷', '/').replaceAll('−', '-'),
+    )) {
+      return null;
+    }
+    try {
+      return _ExactExpressionParser(source).parse();
+    } on CalculationException {
+      rethrow;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _ExactRational parse() {
+    final value = _parseExpression();
+    if (_position != _source.length) {
+      throw const CalculationException('計算できません');
+    }
+    return value;
+  }
+
+  _ExactRational _parseExpression() {
+    var value = _parseTerm();
+    while (true) {
+      if (_consume('+')) {
+        value += _parseTerm();
+      } else if (_consume('-')) {
+        value -= _parseTerm();
+      } else {
+        return value;
+      }
+    }
+  }
+
+  _ExactRational _parseTerm() {
+    var value = _parseUnary();
+    while (true) {
+      if (_consume('*')) {
+        value *= _parseUnary();
+      } else if (_consume('/')) {
+        value /= _parseUnary();
+      } else {
+        return value;
+      }
+    }
+  }
+
+  _ExactRational _parseUnary() {
+    if (_consume('+')) return _parseUnary();
+    if (_consume('-')) return -_parseUnary();
+    if (_consume('(')) {
+      final value = _parseExpression();
+      if (!_consume(')')) throw const CalculationException('計算できません');
+      return value;
+    }
+    final start = _position;
+    var hasDecimalPoint = false;
+    while (_position < _source.length) {
+      final character = _source[_position];
+      if (_isAsciiDigit(character)) {
+        _position++;
+      } else if (character == '.' && !hasDecimalPoint) {
+        hasDecimalPoint = true;
+        _position++;
+      } else {
+        break;
+      }
+    }
+    if (start == _position) throw const CalculationException('計算できません');
+    var number = _source.substring(start, _position);
+    if (number.endsWith('.')) number = number.substring(0, number.length - 1);
+    return _ExactRational.fromDecimal(number);
+  }
+
+  bool _consume(String value) {
+    if (_position >= _source.length || _source[_position] != value) {
+      return false;
+    }
+    _position++;
+    return true;
+  }
+
+  static bool _isAsciiDigit(String value) {
+    final code = value.codeUnitAt(0);
+    return code >= 48 && code <= 57;
+  }
+}
+
 class FormattedExpression {
   const FormattedExpression({required this.text, required this.caretOffset});
 
@@ -54,32 +227,53 @@ class ExpressionCaretSegment extends ExpressionDisplaySegment {
   const ExpressionCaretSegment();
 }
 
+class ExpressionLineBreakSegment extends ExpressionDisplaySegment {
+  const ExpressionLineBreakSegment();
+}
+
 class ExpressionFractionSegment extends ExpressionDisplaySegment {
   const ExpressionFractionSegment({
     required this.marker,
-    required this.wholeNumber,
-    required this.numerator,
-    required this.denominator,
+    required this.input,
     required this.activeField,
     required this.activeCaretOffset,
   });
 
   final String marker;
-  final String wholeNumber;
-  final String numerator;
-  final String denominator;
+  final FractionInputState input;
   final FractionField? activeField;
   final int? activeCaretOffset;
+
+  String get wholeNumber => input.wholeNumberText;
+  String get numerator => input.numeratorText;
+  String get denominator => input.denominatorText;
 }
 
-class _EditableFraction {
-  _EditableFraction({this.wholeNumber = ''});
+@immutable
+class FractionInputState {
+  const FractionInputState({
+    this.wholeNumberText = '',
+    this.numeratorText = '',
+    this.denominatorText = '',
+  });
 
-  String wholeNumber;
-  String numerator = '';
-  String denominator = '';
+  final String wholeNumberText;
+  final String numeratorText;
+  final String denominatorText;
 
-  bool get isComplete => numerator.isNotEmpty && denominator.isNotEmpty;
+  bool get isComplete => numeratorText.isNotEmpty && denominatorText.isNotEmpty;
+
+  FractionInputState copyWith({
+    String? wholeNumberText,
+    String? numeratorText,
+    String? denominatorText,
+  }) {
+    return FractionInputState(
+      wholeNumberText: wholeNumberText ?? this.wholeNumberText,
+      numeratorText: numeratorText ?? this.numeratorText,
+      denominatorText: denominatorText ?? this.denominatorText,
+    );
+  }
 }
 
 class _ResultFraction {
@@ -98,7 +292,9 @@ class CalculatorController extends ChangeNotifier {
     this._angleUnit = AngleUnit.degrees,
   });
 
-  static const int fractionDigitLimit = 10;
+  static const int numberDigitLimit = 20;
+  static const int fractionDigitLimit = numberDigitLimit;
+  static const String digitLimitNotice = '最大20桁まで入力できます';
   static const double standardNumberDisplayLimit = 10000000000000000;
 
   final CalculationEngine _engine;
@@ -120,13 +316,16 @@ class CalculatorController extends ChangeNotifier {
   bool _isPreviewResult = false;
   ResultDisplayMode _resultDisplayMode = ResultDisplayMode.decimal;
   _ResultFraction? _resultFraction;
+  _ExactRational? _exactResult;
   String? _pendingNotice;
   int _caretPosition = 0;
-  final Map<String, _EditableFraction> _fractions = {};
+  final Map<String, FractionInputState> _fractions = {};
   String? _activeFractionMarker;
   FractionField? _activeFractionField;
   int _activeFractionCaretOffset = 0;
   int _nextFractionId = 0;
+  bool _isProcessingKeyPress = false;
+  bool _keyPressNotificationPending = false;
 
   String get expression => _expression;
   String get result => _result;
@@ -140,7 +339,29 @@ class CalculatorController extends ChangeNotifier {
   int? get resultFractionDenominator => _resultFraction?.denominator;
   int get caretPosition => _caretPosition;
   bool get isEditingFraction => _activeFractionMarker != null;
+  FractionInputState? get activeFractionInput =>
+      _activeFractionMarker == null ? null : _fractions[_activeFractionMarker];
+  @visibleForTesting
+  FractionInputState? fractionInputForMarker(String marker) =>
+      _fractions[marker];
+
+  @visibleForTesting
+  FractionInputState fractionInputForEvaluation(String marker) =>
+      _fractions[marker]!;
+
+  @visibleForTesting
+  String fractionExpressionForEvaluation(String marker) =>
+      _fractionExpressionForCalculation(_fractions[marker]!);
   List<CalculationHistoryEntry> get history => List.unmodifiable(_history);
+
+  @override
+  void notifyListeners() {
+    if (_isProcessingKeyPress) {
+      _keyPressNotificationPending = true;
+      return;
+    }
+    super.notifyListeners();
+  }
 
   void updateDisplaySettings({
     required int decimalPlaces,
@@ -158,12 +379,15 @@ class CalculatorController extends ChangeNotifier {
       }
       if (_state == CalculatorState.result) {
         try {
-          final value = _engine.evaluate(
-            _expressionForCalculation(),
-            angleUnit: _angleUnit,
-          );
-          _rawResult = _rawNumber(value);
-          _result = _formatNumber(value);
+          final evaluation = _evaluateCurrentExpression();
+          final value = evaluation.approximate;
+          _exactResult = evaluation.exact;
+          _rawResult = _exactResult == null
+              ? _rawNumber(value)
+              : _roundedExactPlainNumber(_exactResult!);
+          _result = _exactResult == null
+              ? _formatNumber(value)
+              : _formatExactNumber(_exactResult!);
           _resultFraction = _findSimpleFraction(value);
           _canCycleFraction = _resultFraction != null;
           _resultDisplayMode = ResultDisplayMode.decimal;
@@ -173,8 +397,13 @@ class CalculatorController extends ChangeNotifier {
       }
     }
     if (_state != CalculatorState.error && _rawResult.isNotEmpty) {
-      final value = double.tryParse(_rawResult);
-      if (value != null && value.isFinite) _result = _formatNumber(value);
+      if (_exactResult != null) {
+        _rawResult = _roundedExactPlainNumber(_exactResult!);
+        _result = _formatExactNumber(_exactResult!);
+      } else {
+        final value = double.tryParse(_rawResult);
+        if (value != null && value.isFinite) _result = _formatNumber(value);
+      }
     }
     notifyListeners();
   }
@@ -307,6 +536,7 @@ class CalculatorController extends ChangeNotifier {
       textRawOffsets.clear();
     }
 
+    var lineCharacterCount = 0;
     for (var index = 0; index <= _expression.length; index++) {
       if (showCaret &&
           _activeFractionMarker == null &&
@@ -323,9 +553,7 @@ class CalculatorController extends ChangeNotifier {
         segments.add(
           ExpressionFractionSegment(
             marker: character,
-            wholeNumber: fraction.wholeNumber,
-            numerator: fraction.numerator,
-            denominator: fraction.denominator,
+            input: fraction,
             activeField: _activeFractionMarker == character
                 ? _activeFractionField
                 : null,
@@ -334,14 +562,25 @@ class CalculatorController extends ChangeNotifier {
                 : null,
           ),
         );
+        lineCharacterCount += math.max(
+          fraction.numeratorText.length,
+          fraction.denominatorText.length,
+        );
       } else if (_isOperator(character)) {
+        if (lineCharacterCount >= 10) {
+          flushText();
+          segments.add(const ExpressionLineBreakSegment());
+          lineCharacterCount = 0;
+        }
         if (textBuffer.isNotEmpty && !textBuffer.toString().endsWith(' ')) {
           appendText(' ', index, index);
         }
         appendText(character, index, index + 1);
         appendText(' ', index + 1, index + 1);
+        lineCharacterCount++;
       } else {
         appendText(character, index, index + 1);
+        if (character != ' ') lineCharacterCount++;
       }
     }
     flushText();
@@ -350,40 +589,50 @@ class CalculatorController extends ChangeNotifier {
 
   String? press(String key) {
     _pendingNotice = null;
-    switch (key) {
-      case '=':
-        calculate();
-      case '←':
-        backspace();
-      case 'a/b':
-        pressFractionButton();
-      case '()':
-        _insertParenthesis();
-      case '.':
-        _insertDecimalPoint();
-      case '%':
-        _insertPercent();
-      case '+':
-      case '−':
-      case '×':
-      case '÷':
-      case '^':
-        _insertOperator(key);
-      case '0':
-      case '00':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-        _insertDigits(key);
+    _isProcessingKeyPress = true;
+    _keyPressNotificationPending = false;
+    try {
+      switch (key) {
+        case '=':
+          calculate();
+        case '←':
+          backspace();
+        case 'a/b':
+          pressFractionButton();
+        case '()':
+          _insertParenthesis();
+        case '.':
+          _insertDecimalPoint();
+        case '%':
+          _insertPercent();
+        case '+':
+        case '−':
+        case '×':
+        case '÷':
+        case '^':
+          _insertOperator(key);
+        case '0':
+        case '00':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+          _insertDigits(key);
+      }
+      if (_state == CalculatorState.input) _updatePreviewResult();
+      return _pendingNotice;
+    } finally {
+      _isProcessingKeyPress = false;
+      if (_keyPressNotificationPending) {
+        _keyPressNotificationPending = false;
+        super.notifyListeners();
+      }
     }
-    if (_state == CalculatorState.input) _updatePreviewResult();
-    return _pendingNotice;
   }
 
   String? insertFunction(String label) {
@@ -458,7 +707,7 @@ class CalculatorController extends ChangeNotifier {
     if (_hasOperandBeforeCaret) _insertAtCaret('×');
 
     final marker = String.fromCharCode(0xE000 + _nextFractionId++);
-    _fractions[marker] = _EditableFraction()..numerator = '1';
+    _fractions[marker] = const FractionInputState(numeratorText: '1');
     _insertAtCaret(marker);
     _activeFractionMarker = marker;
     _activeFractionField = FractionField.denominator;
@@ -480,12 +729,15 @@ class CalculatorController extends ChangeNotifier {
     }
 
     try {
-      final value = _engine.evaluate(
-        _expressionForCalculation(),
-        angleUnit: _angleUnit,
-      );
-      _rawResult = _rawNumber(value);
-      _result = _formatNumber(value);
+      final evaluation = _evaluateCurrentExpression();
+      final value = evaluation.approximate;
+      _exactResult = evaluation.exact;
+      _rawResult = evaluation.exact == null
+          ? _rawNumber(value)
+          : _roundedExactPlainNumber(evaluation.exact!);
+      _result = evaluation.exact == null
+          ? _formatNumber(value)
+          : _formatExactNumber(evaluation.exact!);
       _state = CalculatorState.result;
       _isPreviewResult = false;
       _errorMessage = null;
@@ -616,11 +868,11 @@ class CalculatorController extends ChangeNotifier {
       final fraction = _fractions[activeMarker]!;
       if (_activeFractionField == FractionField.wholeNumber) {
         _activeFractionField = FractionField.numerator;
-        _activeFractionCaretOffset = fraction.numerator.length;
+        _activeFractionCaretOffset = fraction.numeratorText.length;
       } else if (_activeFractionField == FractionField.numerator) {
         _activeFractionField = FractionField.denominator;
-        _activeFractionCaretOffset = fraction.denominator.length;
-      } else if (fraction.denominator.isNotEmpty) {
+        _activeFractionCaretOffset = fraction.denominatorText.length;
+      } else if (fraction.denominatorText.isNotEmpty) {
         _activeFractionMarker = null;
         _activeFractionField = null;
         _activeFractionCaretOffset = 0;
@@ -649,7 +901,7 @@ class CalculatorController extends ChangeNotifier {
     }
 
     final marker = String.fromCharCode(0xE000 + _nextFractionId++);
-    _fractions[marker] = _EditableFraction(wholeNumber: wholeNumber);
+    _fractions[marker] = FractionInputState(wholeNumberText: wholeNumber);
     _insertAtCaret(marker);
     _activeFractionMarker = marker;
     _activeFractionField = FractionField.numerator;
@@ -690,6 +942,7 @@ class CalculatorController extends ChangeNotifier {
     }
     _caretPosition--;
     _canCycleFraction = false;
+    _updatePreviewResult();
     notifyListeners();
   }
 
@@ -706,7 +959,7 @@ class CalculatorController extends ChangeNotifier {
       _activeFractionField = null;
       _activeFractionCaretOffset = 0;
       _caretPosition = 0;
-      _result = '0';
+      _updatePreviewResult();
       notifyListeners();
       return;
     }
@@ -725,21 +978,22 @@ class CalculatorController extends ChangeNotifier {
     _activeFractionMarker = null;
     _activeFractionField = null;
     _activeFractionCaretOffset = 0;
-    _result = '0';
+    _updatePreviewResult();
     _canCycleFraction = false;
     notifyListeners();
   }
 
   void clear() {
     _expression = '';
-    _result = '0';
-    _rawResult = '0';
+    _result = '';
+    _rawResult = '';
     _errorMessage = null;
     _state = CalculatorState.input;
     _canCycleFraction = false;
     _isPreviewResult = false;
     _resultDisplayMode = ResultDisplayMode.decimal;
     _resultFraction = null;
+    _exactResult = null;
     _caretPosition = 0;
     _fractions.clear();
     _activeFractionMarker = null;
@@ -763,10 +1017,11 @@ class CalculatorController extends ChangeNotifier {
       );
       final marker = String.fromCharCode(0xE000 + _nextFractionId++);
       final isMixedFraction = match.group(1) != null;
-      _fractions[marker] =
-          _EditableFraction(wholeNumber: isMixedFraction ? match.group(1)! : '')
-            ..numerator = isMixedFraction ? match.group(2)! : match.group(4)!
-            ..denominator = isMixedFraction ? match.group(3)! : match.group(5)!;
+      _fractions[marker] = FractionInputState(
+        wholeNumberText: isMixedFraction ? match.group(1)! : '',
+        numeratorText: isMixedFraction ? match.group(2)! : match.group(4)!,
+        denominatorText: isMixedFraction ? match.group(3)! : match.group(5)!,
+      );
       _expression += marker;
       sourceOffset = match.end;
     }
@@ -831,16 +1086,36 @@ class CalculatorController extends ChangeNotifier {
       return;
     }
     _prepareForNumberInput();
+    final currentDigitCount = _numberAroundCaret
+        .split('')
+        .where(_isDigit)
+        .length;
+    final normalizedDigits = _expression.isEmpty && digits == '00'
+        ? '0'
+        : digits;
+    final available = numberDigitLimit - currentDigitCount;
+    if (available <= 0) {
+      _pendingNotice = digitLimitNotice;
+      notifyListeners();
+      return;
+    }
+    final accepted = normalizedDigits.substring(
+      0,
+      normalizedDigits.length.clamp(0, available),
+    );
+    if (accepted.length < normalizedDigits.length) {
+      _pendingNotice = digitLimitNotice;
+    }
     if (_isImmediatelyBeforeFractionOperand) {
       final needsMultiplication =
           _caretPosition < _expression.length &&
           _isFractionMarker(_expression[_caretPosition]);
-      final insertion = needsMultiplication ? '$digits×' : digits;
+      final insertion = needsMultiplication ? '$accepted×' : accepted;
       _expression =
           '${_expression.substring(0, _caretPosition)}'
           '$insertion'
           '${_expression.substring(_caretPosition)}';
-      _caretPosition += digits.length;
+      _caretPosition += accepted.length;
       notifyListeners();
       return;
     }
@@ -850,16 +1125,15 @@ class CalculatorController extends ChangeNotifier {
       _insertAtCaret('×');
     }
 
-    if (_expression.isEmpty && digits == '00') {
-      _insertAtCaret('0');
-    } else {
-      _insertAtCaret(digits);
-    }
+    _insertAtCaret(accepted);
     notifyListeners();
   }
 
   void _insertDecimalPoint() {
-    if (_activeFractionMarker != null) return;
+    if (_activeFractionMarker != null) {
+      _insertFractionDecimalPoint();
+      return;
+    }
     _prepareForNumberInput();
     if (_characterBeforeCaret == ')' ||
         _characterBeforeCaret == '%' ||
@@ -918,9 +1192,10 @@ class CalculatorController extends ChangeNotifier {
       _fractions.clear();
       final marker = String.fromCharCode(0xE000 + _nextFractionId++);
       if (_resultDisplayMode == ResultDisplayMode.improperFraction) {
-        _fractions[marker] = _EditableFraction()
-          ..numerator = fraction.numerator.toString()
-          ..denominator = fraction.denominator.toString();
+        _fractions[marker] = FractionInputState(
+          numeratorText: fraction.numerator.toString(),
+          denominatorText: fraction.denominator.toString(),
+        );
       } else {
         final absoluteNumerator = fraction.numerator.abs();
         final wholeNumber = absoluteNumerator ~/ fraction.denominator;
@@ -928,16 +1203,13 @@ class CalculatorController extends ChangeNotifier {
         final signedWholeNumber = fraction.numerator < 0
             ? -wholeNumber
             : wholeNumber;
-        _fractions[marker] =
-            _EditableFraction(
-                wholeNumber: wholeNumber == 0
-                    ? ''
-                    : signedWholeNumber.toString(),
-              )
-              ..numerator = wholeNumber == 0 && fraction.numerator < 0
-                  ? '-$remainder'
-                  : remainder.toString()
-              ..denominator = fraction.denominator.toString();
+        _fractions[marker] = FractionInputState(
+          wholeNumberText: wholeNumber == 0 ? '' : signedWholeNumber.toString(),
+          numeratorText: wholeNumber == 0 && fraction.numerator < 0
+              ? '-$remainder'
+              : remainder.toString(),
+          denominatorText: fraction.denominator.toString(),
+        );
       }
       _expression = marker;
       _caretPosition = 1;
@@ -997,15 +1269,15 @@ class CalculatorController extends ChangeNotifier {
   }
 
   void _insertFractionDigits(String digits) {
-    final fraction = _fractions[_activeFractionMarker]!;
+    final marker = _activeFractionMarker!;
+    final fraction = _fractions[marker]!;
     final field = _activeFractionField!;
     final target = _fractionFieldValue(fraction, field);
     final normalizedDigits = target.isEmpty && digits == '00' ? '0' : digits;
     final digitCount = target.split('').where(_isDigit).length;
     final available = fractionDigitLimit - digitCount;
     if (available <= 0) {
-      _pendingNotice = 'これ以上入力できません';
-      notifyListeners();
+      _pendingNotice = digitLimitNotice;
       return;
     }
     final accepted = normalizedDigits.substring(
@@ -1019,10 +1291,31 @@ class CalculatorController extends ChangeNotifier {
         '${target.substring(offset)}';
     _activeFractionCaretOffset = offset + accepted.length;
     if (accepted.length < normalizedDigits.length) {
-      _pendingNotice = 'これ以上入力できません';
+      _pendingNotice = digitLimitNotice;
     }
-    _setFractionFieldValue(fraction, field, value);
-    notifyListeners();
+    _setFractionFieldValue(marker, field, value);
+  }
+
+  void _insertFractionDecimalPoint() {
+    final fraction = _fractions[_activeFractionMarker]!;
+    final field = _activeFractionField!;
+    if (field == FractionField.wholeNumber) return;
+
+    final value = _fractionFieldValue(fraction, field);
+    final offset = _activeFractionCaretOffset.clamp(0, value.length);
+    var numberStart = offset;
+    while (numberStart > 0 &&
+        (_isDigit(value[numberStart - 1]) || value[numberStart - 1] == '.')) {
+      numberStart--;
+    }
+    var numberEnd = offset;
+    while (numberEnd < value.length &&
+        (_isDigit(value[numberEnd]) || value[numberEnd] == '.')) {
+      numberEnd++;
+    }
+    if (value.substring(numberStart, numberEnd).contains('.')) return;
+
+    _insertIntoActiveFraction(numberStart == offset ? '0.' : '.');
   }
 
   void _insertFractionOperator(String operator) {
@@ -1032,6 +1325,10 @@ class CalculatorController extends ChangeNotifier {
 
     final value = _fractionFieldValue(fraction, field);
     final offset = _activeFractionCaretOffset.clamp(0, value.length);
+    if (operator == '−' && offset == 0) {
+      _insertMinusBeforeActiveFraction();
+      return;
+    }
     final previous = offset == 0 ? '' : value[offset - 1];
     if (offset == 0 || previous == '(') {
       if (operator == '−') _insertIntoActiveFraction(operator);
@@ -1043,12 +1340,25 @@ class CalculatorController extends ChangeNotifier {
       } else {
         final updated =
             '${value.substring(0, offset - 1)}$operator${value.substring(offset)}';
-        _setFractionFieldValue(fraction, field, updated);
+        _setFractionFieldValue(_activeFractionMarker!, field, updated);
       }
       notifyListeners();
       return;
     }
     if (previous != '.') _insertIntoActiveFraction(operator);
+  }
+
+  void _insertMinusBeforeActiveFraction() {
+    final marker = _activeFractionMarker!;
+    final markerIndex = _expression.indexOf(marker);
+    if (markerIndex < 0) return;
+    if (markerIndex > 0 && _expression[markerIndex - 1] == '−') return;
+
+    _expression =
+        '${_expression.substring(0, markerIndex)}'
+        '−${_expression.substring(markerIndex)}';
+    _caretPosition = markerIndex + 1;
+    notifyListeners();
   }
 
   void _insertFractionParenthesis() {
@@ -1138,7 +1448,7 @@ class CalculatorController extends ChangeNotifier {
     final offset = _activeFractionCaretOffset.clamp(0, value.length);
     final updated =
         '${value.substring(0, offset)}$insertion${value.substring(offset)}';
-    _setFractionFieldValue(fraction, field, updated);
+    _setFractionFieldValue(_activeFractionMarker!, field, updated);
     _activeFractionCaretOffset = offset + insertion.length;
     notifyListeners();
   }
@@ -1155,26 +1465,28 @@ class CalculatorController extends ChangeNotifier {
         final updated =
             '${value.substring(0, offset - functionToken.length)}'
             '${value.substring(offset)}';
-        _setFractionFieldValue(fraction, field, updated);
+        _setFractionFieldValue(marker, field, updated);
         _activeFractionCaretOffset = offset - functionToken.length;
+        _updatePreviewResult();
         notifyListeners();
         return;
       }
       final updated =
           '${value.substring(0, offset - 1)}${value.substring(offset)}';
-      _setFractionFieldValue(fraction, field, updated);
+      _setFractionFieldValue(marker, field, updated);
       _activeFractionCaretOffset = offset - 1;
+      _updatePreviewResult();
       notifyListeners();
       return;
     }
 
     if (field == FractionField.denominator) {
       _activeFractionField = FractionField.numerator;
-      _activeFractionCaretOffset = fraction.numerator.length;
+      _activeFractionCaretOffset = fraction.numeratorText.length;
     } else if (field == FractionField.numerator &&
-        fraction.wholeNumber.isNotEmpty) {
+        fraction.wholeNumberText.isNotEmpty) {
       _activeFractionField = FractionField.wholeNumber;
-      _activeFractionCaretOffset = fraction.wholeNumber.length;
+      _activeFractionCaretOffset = fraction.wholeNumberText.length;
     } else if (field == FractionField.wholeNumber) {
       _activeFractionMarker = null;
       _activeFractionField = null;
@@ -1191,6 +1503,7 @@ class CalculatorController extends ChangeNotifier {
       _activeFractionCaretOffset = 0;
       _caretPosition = index;
     }
+    _updatePreviewResult();
     notifyListeners();
   }
 
@@ -1227,27 +1540,25 @@ class CalculatorController extends ChangeNotifier {
     return null;
   }
 
-  String _fractionFieldValue(_EditableFraction fraction, FractionField field) {
+  String _fractionFieldValue(FractionInputState fraction, FractionField field) {
     return switch (field) {
-      FractionField.wholeNumber => fraction.wholeNumber,
-      FractionField.numerator => fraction.numerator,
-      FractionField.denominator => fraction.denominator,
+      FractionField.wholeNumber => fraction.wholeNumberText,
+      FractionField.numerator => fraction.numeratorText,
+      FractionField.denominator => fraction.denominatorText,
     };
   }
 
   void _setFractionFieldValue(
-    _EditableFraction fraction,
+    String marker,
     FractionField field,
     String value,
   ) {
-    switch (field) {
-      case FractionField.wholeNumber:
-        fraction.wholeNumber = value;
-      case FractionField.numerator:
-        fraction.numerator = value;
-      case FractionField.denominator:
-        fraction.denominator = value;
-    }
+    final current = _fractions[marker]!;
+    _fractions[marker] = switch (field) {
+      FractionField.wholeNumber => current.copyWith(wholeNumberText: value),
+      FractionField.numerator => current.copyWith(numeratorText: value),
+      FractionField.denominator => current.copyWith(denominatorText: value),
+    };
   }
 
   void _replaceBeforeCaret(String value) {
@@ -1330,15 +1641,15 @@ class CalculatorController extends ChangeNotifier {
 
   String _fractionAsLinearText(String marker) {
     final fraction = _fractions[marker]!;
-    final numerator = fraction.numerator.isEmpty
+    final numerator = fraction.numeratorText.isEmpty
         ? '□'
-        : _fractionPartAsLinearText(fraction.numerator);
-    final denominator = fraction.denominator.isEmpty
+        : _fractionPartAsLinearText(fraction.numeratorText);
+    final denominator = fraction.denominatorText.isEmpty
         ? '□'
-        : _fractionPartAsLinearText(fraction.denominator);
-    final whole = fraction.wholeNumber.isEmpty
+        : _fractionPartAsLinearText(fraction.denominatorText);
+    final whole = fraction.wholeNumberText.isEmpty
         ? ''
-        : '${fraction.wholeNumber} ';
+        : '${fraction.wholeNumberText} ';
     return '$whole$numerator/$denominator';
   }
 
@@ -1359,30 +1670,61 @@ class CalculatorController extends ChangeNotifier {
         continue;
       }
 
-      final fraction = _fractions[character]!;
-      if (!fraction.isComplete) {
-        throw const CalculationException('計算できません');
-      }
-      final numerator = _completeFractionPart(fraction.numerator);
-      final denominator = _completeFractionPart(fraction.denominator);
+      buffer.write(_fractionExpressionForCalculation(_fractions[character]!));
+    }
+    return buffer.toString();
+  }
+
+  String _fractionExpressionForCalculation(FractionInputState fraction) {
+    if (!fraction.isComplete) {
+      throw const CalculationException('計算できません');
+    }
+    final numerator = _completeFractionPart(fraction.numeratorText);
+    final denominator = _completeFractionPart(fraction.denominatorText);
+    final exactFractionExpression = _exactDecimalFractionExpression(
+      numerator,
+      denominator,
+    );
+    if (exactFractionExpression == null) {
       final denominatorValue = _engine.evaluate(
         denominator,
         angleUnit: _angleUnit,
       );
       if (denominatorValue == 0) {
-        throw const CalculationException('0で割ることはできません');
-      }
-      final fractionExpression = '(($numerator)÷($denominator))';
-      final whole = int.tryParse(fraction.wholeNumber) ?? 0;
-      if (whole == 0) {
-        buffer.write(fractionExpression);
-      } else if (whole < 0) {
-        buffer.write('($whole−$fractionExpression)');
-      } else {
-        buffer.write('($whole+$fractionExpression)');
+        throw const CalculationException('分母に0は入力できません');
       }
     }
-    return buffer.toString();
+    final fractionExpression =
+        exactFractionExpression ?? '(($numerator)÷($denominator))';
+    final whole = int.tryParse(fraction.wholeNumberText) ?? 0;
+    if (whole == 0) return fractionExpression;
+    if (whole < 0) return '($whole−$fractionExpression)';
+    return '($whole+$fractionExpression)';
+  }
+
+  String? _exactDecimalFractionExpression(
+    String numerator,
+    String denominator,
+  ) {
+    final exactNumerator = _ExactDecimal.tryParse(numerator);
+    final exactDenominator = _ExactDecimal.tryParse(denominator);
+    if (exactNumerator == null || exactDenominator == null) return null;
+    if (exactDenominator.unscaled == BigInt.zero) {
+      throw const CalculationException('分母に0は入力できません');
+    }
+
+    var normalizedNumerator =
+        exactNumerator.unscaled * exactDenominator.scaleFactor;
+    var normalizedDenominator =
+        exactDenominator.unscaled * exactNumerator.scaleFactor;
+    if (normalizedDenominator.isNegative) {
+      normalizedNumerator = -normalizedNumerator;
+      normalizedDenominator = -normalizedDenominator;
+    }
+    final divisor = normalizedNumerator.abs().gcd(normalizedDenominator.abs());
+    normalizedNumerator ~/= divisor;
+    normalizedDenominator ~/= divisor;
+    return '(($normalizedNumerator)÷($normalizedDenominator))';
   }
 
   String _completeFractionPart(String value) {
@@ -1454,26 +1796,89 @@ class CalculatorController extends ChangeNotifier {
     _isPreviewResult = false;
     _resultDisplayMode = ResultDisplayMode.decimal;
     _resultFraction = null;
+    _exactResult = null;
   }
 
   void _updatePreviewResult() {
-    if (_state != CalculatorState.input || _expression.isEmpty) {
+    if (_state != CalculatorState.input) {
       _isPreviewResult = false;
       return;
     }
+    if (_expression.isEmpty) {
+      _result = '';
+      _rawResult = '';
+      _errorMessage = null;
+      _isPreviewResult = false;
+      notifyListeners();
+      return;
+    }
     try {
-      final value = _engine.evaluate(
-        _expressionForCalculation(),
-        angleUnit: _angleUnit,
-      );
-      _result = _formatNumber(value);
-      _rawResult = _rawNumber(value);
+      final evaluation = _evaluateCurrentExpression();
+      _exactResult = evaluation.exact;
+      _result = evaluation.exact == null
+          ? _formatNumber(evaluation.approximate)
+          : _formatExactNumber(evaluation.exact!);
+      _rawResult = evaluation.exact == null
+          ? _rawNumber(evaluation.approximate)
+          : _roundedExactPlainNumber(evaluation.exact!);
       _isPreviewResult = true;
     } catch (_) {
       _result = '0';
+      _exactResult = null;
       _isPreviewResult = false;
     }
     notifyListeners();
+  }
+
+  ({_ExactRational? exact, double approximate}) _evaluateCurrentExpression() {
+    final expression = _expressionForCalculation();
+    final exact = _ExactExpressionParser.tryEvaluate(expression);
+    if (exact != null) {
+      return (exact: exact, approximate: exact.toDouble());
+    }
+    return (
+      exact: null,
+      approximate: _engine.evaluate(expression, angleUnit: _angleUnit),
+    );
+  }
+
+  String _formatExactNumber(_ExactRational value) {
+    final plain = _roundedExactPlainNumber(value);
+    final parts = plain.split('.');
+    final sign = parts.first.startsWith('-') ? '-' : '';
+    final digits = parts.first.replaceFirst('-', '');
+    final grouped = digits.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => ',',
+    );
+    return ['$sign$grouped', if (parts.length == 2) parts[1]].join('.');
+  }
+
+  String _roundedExactPlainNumber(_ExactRational value) {
+    if (value.numerator == BigInt.zero) return '0';
+    final negative = value.numerator.isNegative;
+    final factor = BigInt.from(10).pow(_decimalPlaces);
+    final scaledNumerator = value.numerator.abs() * factor;
+    var quotient = scaledNumerator ~/ value.denominator;
+    final remainder = scaledNumerator.remainder(value.denominator);
+    final increment = switch (_roundingMode) {
+      CalculatorRoundingMode.halfUp =>
+        remainder * BigInt.from(2) >= value.denominator,
+      CalculatorRoundingMode.ceiling => !negative && remainder != BigInt.zero,
+      CalculatorRoundingMode.floor => negative && remainder != BigInt.zero,
+    };
+    if (increment) quotient += BigInt.one;
+
+    var digits = quotient.toString().padLeft(_decimalPlaces + 1, '0');
+    final integerLength = digits.length - _decimalPlaces;
+    var result = _decimalPlaces == 0
+        ? digits
+        : '${digits.substring(0, integerLength)}.'
+              '${digits.substring(integerLength)}';
+    result = result
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+    return negative ? '-$result' : result;
   }
 
   String _rawNumber(double value) {

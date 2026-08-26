@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -742,7 +743,55 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             builder: (context, constraints) {
               final compact = constraints.maxHeight < 700;
               final gap = compact ? 4.0 : 6.0;
-
+              const sectionGap = 4.0;
+              final horizontalContentWidth = constraints.maxWidth - gap * 2;
+              final desiredKeypadHeight = _calculatorKeypadHeight(
+                width: horizontalContentWidth,
+                gap: gap,
+              );
+              final adHeight = compact ? 50.0 : 58.0;
+              final contentHeight = constraints.maxHeight - 4 - gap;
+              final desiredExpressionHeight = (constraints.maxHeight * 0.21)
+                  .clamp(compact ? 96.0 : 148.0, compact ? 114.0 : 168.0)
+                  .toDouble();
+              final historyRowCount = widget.accessPlan.showsAds
+                  ? _freeHistoryRowCount
+                  : _adFreeHistoryRowCount;
+              final desiredHistoryHeight = _calculatorHistoryPanelHeight(
+                rowCount: historyRowCount,
+              );
+              final reservedAdBlockHeight = widget.accessPlan.showsAds
+                  ? adHeight + sectionGap
+                  : 0.0;
+              final minimumExpressionHeight = compact
+                  ? 72.0
+                  : desiredExpressionHeight;
+              final keypadBudget =
+                  contentHeight -
+                  reservedAdBlockHeight -
+                  sectionGap * 2 -
+                  desiredHistoryHeight -
+                  minimumExpressionHeight;
+              final keypadHeight = desiredKeypadHeight
+                  .clamp(0.0, keypadBudget.clamp(0.0, double.infinity))
+                  .toDouble();
+              final upperContentBudget =
+                  contentHeight -
+                  reservedAdBlockHeight -
+                  sectionGap * 2 -
+                  keypadHeight;
+              final historyHeight = desiredHistoryHeight
+                  .clamp(
+                    0.0,
+                    (upperContentBudget - minimumExpressionHeight).clamp(
+                      0.0,
+                      double.infinity,
+                    ),
+                  )
+                  .toDouble();
+              final expressionHeight = (upperContentBudget - historyHeight)
+                  .clamp(0.0, double.infinity)
+                  .toDouble();
               return Padding(
                 padding: EdgeInsets.fromLTRB(gap, 4, gap, gap),
                 child: Column(
@@ -751,7 +800,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                     if (widget.accessPlan.showsAds) ...[
                       _AdBanner(
                         key: const Key('calculatorAdBanner'),
-                        height: compact ? 50 : 58,
+                        height: adHeight,
                         enableGoogleMobileAds: widget.enableGoogleMobileAds,
                         onUpgrade: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
@@ -763,10 +812,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                           ),
                         ),
                       ),
-                      SizedBox(height: gap),
+                      const SizedBox(height: sectionGap),
                     ],
-                    Expanded(
-                      flex: 18,
+                    SizedBox(
+                      height: historyHeight,
                       child: _HistoryPanel(
                         key: const Key('historyPanel'),
                         history: _controller.history,
@@ -774,17 +823,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                         onLongPress: _openFullHistory,
                       ),
                     ),
-                    SizedBox(height: gap),
-                    Expanded(
-                      flex: 20,
+                    const SizedBox(height: sectionGap),
+                    SizedBox(
+                      height: expressionHeight,
                       child: _ExpressionPanel(
                         controller: _controller,
                         onLongPress: _showCalculationMenu,
                       ),
                     ),
-                    SizedBox(height: gap),
-                    Expanded(
-                      flex: 56,
+                    const SizedBox(height: sectionGap),
+                    SizedBox(
+                      key: const Key('calculatorKeypadArea'),
+                      height: keypadHeight,
                       child: _Keypad(
                         gap: gap,
                         canCycleFraction: _controller.canCycleFraction,
@@ -803,6 +853,24 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       ),
     );
   }
+}
+
+double _calculatorKeypadHeight({required double width, required double gap}) {
+  const columnCount = 4;
+  const rowCount = 6;
+  const childAspectRatio = 1.52;
+  final buttonWidth = (width - gap * (columnCount - 1)) / columnCount;
+  final buttonHeight = buttonWidth / childAspectRatio;
+  return buttonHeight * rowCount + gap * (rowCount - 1);
+}
+
+const _historyRowHeight = 24.0;
+const _historyVerticalPadding = 5.0;
+const _freeHistoryRowCount = 3;
+const _adFreeHistoryRowCount = 5;
+
+double _calculatorHistoryPanelHeight({required int rowCount}) {
+  return _historyRowHeight * rowCount + _historyVerticalPadding * 2;
 }
 
 String _displayEstimateQuantity(double? value) {
@@ -926,13 +994,16 @@ class _HistoryPanel extends StatelessWidget {
         ),
         child: ListView.builder(
           reverse: true,
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 9,
+            vertical: _historyVerticalPadding,
+          ),
           itemCount: history.length,
           itemBuilder: (context, reversedIndex) {
             final index = history.length - 1 - reversedIndex;
             final item = history[index];
             return SizedBox(
-              height: 24,
+              height: _historyRowHeight,
               child: Row(
                 children: [
                   GestureDetector(
@@ -1355,95 +1426,145 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
   }
 }
 
-class _EditableExpressionLine extends StatelessWidget {
+class _EditableExpressionLine extends StatefulWidget {
   const _EditableExpressionLine({required this.controller});
 
   final CalculatorController controller;
   static const double _expressionFontSize = 42;
 
   @override
+  State<_EditableExpressionLine> createState() =>
+      _EditableExpressionLineState();
+}
+
+class _EditableExpressionLineState extends State<_EditableExpressionLine> {
+  final ScrollController _scrollController = ScrollController();
+  String _lastExpressionSignature = '';
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final formatted = controller.formattedExpression;
+    final style = theme.textTheme.headlineMedium!.copyWith(
+      fontSize: _EditableExpressionLine._expressionFontSize,
+      fontWeight: FontWeight.w400,
+    );
+    final segments = widget.controller.displaySegments;
+    final lines = <List<ExpressionDisplaySegment>>[[]];
+    for (final segment in segments) {
+      if (segment is ExpressionLineBreakSegment) {
+        lines.add([]);
+      } else {
+        lines.last.add(segment);
+      }
+    }
+    final fractionSignature = segments
+        .whereType<ExpressionFractionSegment>()
+        .map(
+          (segment) =>
+              '${segment.marker}:${segment.wholeNumber}:'
+              '${segment.numerator}:${segment.denominator}:'
+              '${segment.activeField}:${segment.activeCaretOffset}',
+        )
+        .join('|');
+    final signature =
+        '${widget.controller.expression}|'
+        '${widget.controller.caretPosition}|$fractionSignature';
+    if (signature != _lastExpressionSignature) {
+      _lastExpressionSignature = signature;
+      if (lines.length > 2) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || !_scrollController.hasClients) return;
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        });
+      }
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final style = theme.textTheme.headlineMedium!.copyWith(
-          fontSize: _expressionFontSize,
-          fontWeight: FontWeight.w400,
-        );
-        final painter = TextPainter(
-          text: TextSpan(text: formatted.text, style: style),
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-        )..layout();
-
-        void moveCaret(TapDownDetails details) {
-          final startX = constraints.maxWidth - painter.width;
-          final localX = (details.localPosition.dx - startX).clamp(
-            0.0,
-            painter.width,
-          );
-          final position = painter.getPositionForOffset(Offset(localX, 0));
-          controller.moveCaretToDisplayOffset(position.offset);
-        }
-
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: moveCaret,
-          child: ClipRect(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Row(
-                  key: const Key('expressionText'),
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    for (final segment in controller.displaySegments)
-                      switch (segment) {
-                        ExpressionTextSegment() => _EditableExpressionText(
-                          segment: segment,
-                          style: style,
-                          onRawOffsetTap: controller.moveCaretToRawOffset,
-                        ),
-                        ExpressionCaretSegment() => const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 2),
-                          child: SizedBox(
-                            key: Key('calculatorCaret'),
-                            width: 2,
-                            height: 46,
-                            child: ColoredBox(color: AppColors.accent),
+        final visibleLineCount = math.min(2, math.max(1, lines.length));
+        final lineHeight = constraints.maxHeight / visibleLineCount;
+        return ClipRect(
+          child: SingleChildScrollView(
+            key: const Key('expressionVerticalScroll'),
+            controller: _scrollController,
+            scrollDirection: Axis.vertical,
+            child: SizedBox(
+              key: const Key('expressionText'),
+              width: constraints.maxWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var lineIndex = 0; lineIndex < lines.length; lineIndex++)
+                    SizedBox(
+                      key: Key('expressionLine-$lineIndex'),
+                      height: lineHeight,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: FittedBox(
+                          key: Key('expressionLineScale-$lineIndex'),
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              for (final segment in lines[lineIndex])
+                                _buildSegment(segment, style),
+                            ],
                           ),
                         ),
-                        ExpressionFractionSegment() => _InlineFraction(
-                          segment: segment,
-                          fontSize: _expressionFontSize,
-                          onBeforeFractionTap: () {
-                            controller.moveCaretBeforeFraction(segment.marker);
-                          },
-                          onAfterFractionTap: () {
-                            controller.moveCaretAfterFraction(segment.marker);
-                          },
-                          onFieldTap: (field, caretOffset) {
-                            controller.activateFraction(
-                              segment.marker,
-                              field,
-                              caretOffset: caretOffset,
-                            );
-                          },
-                        ),
-                      },
-                  ],
-                ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
         );
       },
     );
+  }
+
+  Widget _buildSegment(ExpressionDisplaySegment segment, TextStyle style) {
+    return switch (segment) {
+      ExpressionTextSegment() => _EditableExpressionText(
+        segment: segment,
+        style: style,
+        onRawOffsetTap: widget.controller.moveCaretToRawOffset,
+      ),
+      ExpressionCaretSegment() => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 2),
+        child: SizedBox(
+          key: Key('calculatorCaret'),
+          width: 2,
+          height: 46,
+          child: ColoredBox(color: AppColors.accent),
+        ),
+      ),
+      ExpressionFractionSegment() => _InlineFraction(
+        segment: segment,
+        fontSize: _EditableExpressionLine._expressionFontSize,
+        onBeforeFractionTap: () {
+          widget.controller.moveCaretBeforeFraction(segment.marker);
+        },
+        onAfterFractionTap: () {
+          widget.controller.moveCaretAfterFraction(segment.marker);
+        },
+        onFieldTap: (field, caretOffset) {
+          widget.controller.activateFraction(
+            segment.marker,
+            field,
+            caretOffset: caretOffset,
+          );
+        },
+      ),
+      ExpressionLineBreakSegment() => const SizedBox.shrink(),
+    };
   }
 }
 
@@ -1503,20 +1624,6 @@ class _InlineFraction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fractionFontSize = fontSize;
-    final fractionWidth = _fractionFieldWidth(
-      context,
-      segment.numerator.length >= segment.denominator.length
-          ? segment.numerator
-          : segment.denominator,
-      fractionFontSize,
-    );
-    final wholeNumberWidth = _fractionFieldWidth(
-      context,
-      segment.wholeNumber,
-      fontSize,
-    );
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Row(
@@ -1530,48 +1637,54 @@ class _InlineFraction extends StatelessWidget {
             child: SizedBox(width: 14, height: fontSize * 2.1),
           ),
           if (segment.wholeNumber.isNotEmpty) ...[
-            SizedBox(
-              width: wholeNumberWidth,
-              child: _FractionFieldDisplay(
-                key: const Key('mixedFractionWholeNumber'),
-                value: segment.wholeNumber,
-                active: segment.activeField == FractionField.wholeNumber,
-                caretOffset: segment.activeField == FractionField.wholeNumber
-                    ? segment.activeCaretOffset
-                    : null,
-                fontSize: fontSize,
-                onTap: (offset) {
-                  onFieldTap(FractionField.wholeNumber, offset);
-                },
-              ),
+            _FractionFieldDisplay(
+              key: const Key('mixedFractionWholeNumber'),
+              caretSlotKey: const Key('mixedFractionWholeNumberCaretSlot'),
+              value: segment.wholeNumber,
+              active: segment.activeField == FractionField.wholeNumber,
+              caretOffset: segment.activeField == FractionField.wholeNumber
+                  ? segment.activeCaretOffset
+                  : null,
+              fontSize: fontSize,
+              onTap: (offset) {
+                onFieldTap(FractionField.wholeNumber, offset);
+              },
             ),
             const SizedBox(width: 2),
           ],
-          SizedBox(
-            width: fractionWidth,
+          IntrinsicWidth(
+            key: const Key('fractionDisplay'),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _FractionFieldDisplay(
+                  key: const Key('fractionNumeratorField'),
+                  caretSlotKey: const Key('fractionNumeratorCaretSlot'),
                   value: segment.numerator,
                   active: segment.activeField == FractionField.numerator,
                   caretOffset: segment.activeField == FractionField.numerator
                       ? segment.activeCaretOffset
                       : null,
-                  fontSize: fractionFontSize,
+                  fontSize: fontSize,
                   onTap: (offset) {
                     onFieldTap(FractionField.numerator, offset);
                   },
                 ),
-                Container(height: 1.5, color: AppColors.accent),
+                Container(
+                  key: const Key('fractionBar'),
+                  height: 1.5,
+                  color: AppColors.accent,
+                ),
                 _FractionFieldDisplay(
+                  key: const Key('fractionDenominatorField'),
+                  caretSlotKey: const Key('fractionDenominatorCaretSlot'),
                   value: segment.denominator,
                   active: segment.activeField == FractionField.denominator,
                   caretOffset: segment.activeField == FractionField.denominator
                       ? segment.activeCaretOffset
                       : null,
-                  fontSize: fractionFontSize,
+                  fontSize: fontSize,
                   onTap: (offset) {
                     onFieldTap(FractionField.denominator, offset);
                   },
@@ -1589,24 +1702,6 @@ class _InlineFraction extends StatelessWidget {
       ),
     );
   }
-
-  double _fractionFieldWidth(
-    BuildContext context,
-    String value,
-    double fieldFontSize,
-  ) {
-    final style = DefaultTextStyle.of(
-      context,
-    ).style.merge(TextStyle(fontSize: fieldFontSize, height: 1));
-    final painter = TextPainter(
-      text: TextSpan(text: value.isEmpty ? '□' : value, style: style),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-    )..layout();
-
-    // The extra width covers both the caret and comfortable digit tap targets.
-    return (painter.width + 32).clamp(34, double.infinity);
-  }
 }
 
 class _FractionFieldDisplay extends StatelessWidget {
@@ -1614,6 +1709,7 @@ class _FractionFieldDisplay extends StatelessWidget {
     required this.value,
     required this.active,
     required this.caretOffset,
+    required this.caretSlotKey,
     required this.fontSize,
     required this.onTap,
     super.key,
@@ -1622,8 +1718,13 @@ class _FractionFieldDisplay extends StatelessWidget {
   final String value;
   final bool active;
   final int? caretOffset;
+  final Key caretSlotKey;
   final double fontSize;
   final ValueChanged<int> onTap;
+
+  static const double _caretGap = 2;
+  static const double _caretWidth = 1.5;
+  static const double _caretHeight = 32;
 
   @override
   Widget build(BuildContext context) {
@@ -1637,64 +1738,83 @@ class _FractionFieldDisplay extends StatelessWidget {
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
     final offset = (caretOffset ?? value.length).clamp(0, value.length);
+    final displayValue = value.isEmpty ? '□' : value;
+    final displayOffset = value.isEmpty ? 0 : offset;
+    final prefix = displayValue.substring(0, displayOffset);
+    final suffix = displayValue.substring(displayOffset);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapUp: (details) {
+        if (value.isEmpty) {
+          onTap(0);
+          return;
+        }
         final painter = TextPainter(
-          text: TextSpan(
-            text: value.isEmpty ? '□' : value,
-            style: value.isEmpty ? placeholderStyle : textStyle,
-          ),
+          text: TextSpan(text: value, style: textStyle),
           textDirection: TextDirection.ltr,
           maxLines: 1,
         )..layout();
-
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapUp: (details) {
-            if (value.isEmpty) {
-              onTap(0);
-              return;
-            }
-            final startX = (constraints.maxWidth - painter.width) / 2;
-            final localX = (details.localPosition.dx - startX).clamp(
-              0.0,
-              painter.width,
-            );
-            final position = painter.getPositionForOffset(Offset(localX, 0));
-            onTap(position.offset.clamp(0, value.length));
-          },
-          child: Container(
-            height: fontSize * 1.05,
-            padding: const EdgeInsets.symmetric(horizontal: 5),
+        var localX = details.localPosition.dx - 5;
+        if (active &&
+            localX > _textWidth(value.substring(0, offset), textStyle)) {
+          localX -= _caretGap + _caretWidth;
+        }
+        final position = painter.getPositionForOffset(
+          Offset(localX.clamp(0.0, painter.width), 0),
+        );
+        onTap(position.offset.clamp(0, value.length));
+      },
+      child: SizedBox(
+        height: fontSize * 1.05,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          child: Align(
+            alignment: Alignment.center,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
-              children: active
-                  ? [
-                      Text(value.substring(0, offset), style: textStyle),
-                      const SizedBox(
-                        key: Key('fractionFieldCaret'),
-                        width: 1.5,
-                        height: 32,
-                        child: ColoredBox(color: AppColors.accent),
-                      ),
-                      if (value.isEmpty)
-                        Text('□', style: placeholderStyle)
-                      else
-                        Text(value.substring(offset), style: textStyle),
-                    ]
-                  : [
-                      Text(
-                        value.isEmpty ? '□' : value,
-                        style: value.isEmpty ? placeholderStyle : textStyle,
-                      ),
-                    ],
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  prefix,
+                  key: Key('${caretSlotKey.toString()}-prefix'),
+                  style: value.isEmpty ? placeholderStyle : textStyle,
+                  maxLines: 1,
+                ),
+                const SizedBox(width: _caretGap),
+                Opacity(
+                  opacity: active ? 1 : 0,
+                  child: SizedBox(
+                    key: caretSlotKey,
+                    width: _caretWidth,
+                    height: _caretHeight,
+                    child: ColoredBox(
+                      key: active ? const Key('fractionFieldCaret') : null,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ),
+                Text(
+                  suffix,
+                  key: Key('${caretSlotKey.toString()}-suffix'),
+                  style: value.isEmpty ? placeholderStyle : textStyle,
+                  maxLines: 1,
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
+  }
+
+  double _textWidth(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    return painter.width;
   }
 }
 

@@ -278,14 +278,14 @@ void main() {
       expect(controller.expression, isEmpty);
     });
 
-    test('クリアは式と結果を初期化する', () {
+    test('クリアは式と解を空欄へ戻す', () {
       final controller = CalculatorController();
       controller.press('9');
       controller.press('=');
       controller.clear();
 
       expect(controller.expression, isEmpty);
-      expect(controller.result, '0');
+      expect(controller.result, isEmpty);
       expect(controller.state, CalculatorState.input);
     });
 
@@ -508,23 +508,87 @@ void main() {
       expect(controller.result, '17,507');
     });
 
-    test('分子と分母は10桁まで入力でき11桁目を通知する', () {
+    test('分子と分母は20桁まで入力でき21桁目を通知する', () {
       final controller = CalculatorController();
       controller.press('a/b');
 
       String? notice;
-      for (var index = 0; index < 11; index++) {
+      for (var index = 0; index < 21; index++) {
         notice = controller.press('1');
       }
-      final fraction = controller.displaySegments
+      var fraction = controller.displaySegments
           .whereType<ExpressionFractionSegment>()
           .single;
 
-      expect(fraction.numerator, '1111111111');
-      expect(notice, 'これ以上入力できません');
+      expect(fraction.numerator, '11111111111111111111');
+      expect(notice, '最大20桁まで入力できます');
+
+      controller.press('a/b');
+      notice = null;
+      for (var index = 0; index < 21; index++) {
+        notice = controller.press('2');
+      }
+      fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.denominator, '22222222222222222222');
+      expect(notice, '最大20桁まで入力できます');
     });
 
-    test('分数内の演算子は10桁の入力上限に数えない', () {
+    test('分子と分母の1・10・11・19・20桁を保持する', () {
+      for (final length in [1, 10, 11, 19, 20]) {
+        final controller = CalculatorController();
+        controller.press('a/b');
+        for (var index = 0; index < length; index++) {
+          controller.press('1');
+        }
+        controller.press('a/b');
+        for (var index = 0; index < length; index++) {
+          controller.press('2');
+        }
+
+        final fraction = controller.displaySegments
+            .whereType<ExpressionFractionSegment>()
+            .single;
+        expect(fraction.numerator, List.filled(length, '1').join());
+        expect(fraction.denominator, List.filled(length, '2').join());
+      }
+    });
+
+    test('分数全体の先頭マイナスを桁数に含めず数字20桁を保持する', () {
+      final controller = CalculatorController();
+      controller.press('a/b');
+      controller.press('−');
+      controller.press('−');
+      for (var index = 0; index < 20; index++) {
+        expect(controller.press('1'), isNull);
+      }
+      expect(controller.press('1'), '最大20桁まで入力できます');
+
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.numerator, '11111111111111111111');
+      expect(controller.expression.startsWith('−'), isTrue);
+      expect(controller.expression.split('−'), hasLength(2));
+    });
+
+    test('マイナス分数は分子・分母内ではなく分数全体の前へ置く', () {
+      final controller = CalculatorController();
+      for (final key in ['a/b', '−', '1', 'a/b', '2', '=']) {
+        controller.press(key);
+      }
+
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.numerator, '1');
+      expect(fraction.denominator, '2');
+      expect(controller.displayExpression, '− 1/2');
+      expect(controller.result, '-0.5');
+    });
+
+    test('分数内の演算子と小数点は20桁の入力上限に数えない', () {
       final controller = CalculatorController();
       controller.press('a/b');
       for (final key in [
@@ -539,15 +603,408 @@ void main() {
         '8',
         '9',
         '0',
+        '.',
+        '1',
       ]) {
         expect(controller.press(key), isNull);
       }
 
-      expect(controller.press('1'), 'これ以上入力できません');
+      for (var index = 0; index < 9; index++) {
+        expect(controller.press('2'), isNull);
+      }
+      expect(controller.press('2'), '最大20桁まで入力できます');
       final fraction = controller.displaySegments
           .whereType<ExpressionFractionSegment>()
           .single;
-      expect(fraction.numerator, '12345+67890');
+      expect(fraction.numerator, '12345+67890.1222222222');
+    });
+
+    test('分子と分母の小数入力を保持し整数比として正規化する', () {
+      for (final values in [
+        ('1.5', '2.5', '0.6'),
+        ('1.50', '2.50', '0.6'),
+        ('0.5', '2', '0.25'),
+        ('2', '0.5', '4'),
+      ]) {
+        final controller = CalculatorController();
+        controller.press('a/b');
+        for (final character in values.$1.split('')) {
+          controller.press(character);
+        }
+        controller.press('a/b');
+        for (final character in values.$2.split('')) {
+          controller.press(character);
+        }
+
+        final displayedNumerator = values.$1.contains('.')
+            ? '(${values.$1})'
+            : values.$1;
+        final displayedDenominator = values.$2.contains('.')
+            ? '(${values.$2})'
+            : values.$2;
+        expect(
+          controller.displayExpression,
+          '$displayedNumerator/$displayedDenominator',
+        );
+        controller.press('=');
+        expect(controller.result, values.$3);
+      }
+    });
+
+    test('小数分数の入力中は末尾0を保持し結果だけ約分する', () {
+      final controller = CalculatorController();
+      for (final key in [
+        'a/b',
+        '1',
+        '.',
+        '5',
+        '0',
+        'a/b',
+        '2',
+        '.',
+        '5',
+        '0',
+      ]) {
+        controller.press(key);
+      }
+
+      expect(controller.displayExpression, '(1.50)/(2.50)');
+      controller.press('=');
+      controller.press('=');
+      expect(controller.result, '3/5');
+    });
+
+    test('先頭小数点は0.として入力し小数点は各数値に1つだけ', () {
+      final controller = CalculatorController();
+      controller.press('a/b');
+      controller.press('.');
+      controller.press('5');
+      controller.press('.');
+
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.numerator, '0.5');
+    });
+
+    test('小数点を除く数字20桁を許可して21桁目を拒否する', () {
+      final controller = CalculatorController();
+      controller.press('a/b');
+      for (final character in '1234567890.1234567890'.split('')) {
+        expect(controller.press(character), isNull);
+      }
+      expect(controller.press('2'), '最大20桁まで入力できます');
+
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.numerator, '1234567890.1234567890');
+    });
+
+    test('通常数値は小数点を除く20桁を保持し21桁目を拒否する', () {
+      final controller = CalculatorController();
+      for (final character in '1234567890.1234567890'.split('')) {
+        expect(controller.press(character), isNull);
+      }
+
+      expect(controller.expression, '1234567890.1234567890');
+      expect(controller.press('1'), '最大20桁まで入力できます');
+      expect(controller.expression, '1234567890.1234567890');
+    });
+
+    test('20桁の四則演算はBigInt比の経路で精度を維持する', () {
+      final addition = CalculatorController();
+      addition.pasteAtCaret('12345678901234567890+12345678901234567890');
+      addition.press('=');
+      expect(addition.result, '24,691,357,802,469,135,780');
+
+      final multiplication = CalculatorController();
+      multiplication.pasteAtCaret('12345678901234567890×2');
+      multiplication.press('=');
+      expect(multiplication.result, '24,691,357,802,469,135,780');
+
+      final decimal = CalculatorController();
+      for (final digit in '1234567890.1234567890'.split('')) {
+        decimal.press(digit);
+      }
+      decimal.press('=');
+      expect(decimal.result, '1,234,567,890.123456789');
+    });
+
+    test('20桁の分子と分母および小数分数との加算を正確に評価する', () {
+      final longFraction = CalculatorController();
+      longFraction.press('a/b');
+      for (final digit in '12345678901234567890'.split('')) {
+        longFraction.press(digit);
+      }
+      longFraction.press('a/b');
+      for (final digit in '12345678901234567890'.split('')) {
+        longFraction.press(digit);
+      }
+      longFraction.press('=');
+      expect(longFraction.result, '1');
+
+      final decimalFraction = CalculatorController();
+      for (final key in ['a/b', '1', '.', '5', 'a/b', '2', '.', '5', 'a/b']) {
+        decimalFraction.press(key);
+      }
+      decimalFraction.press('+');
+      decimalFraction.press('0');
+      decimalFraction.press('.');
+      decimalFraction.press('4');
+      decimalFraction.press('=');
+      expect(decimalFraction.result, '1');
+    });
+
+    test('分子・分母の入力状態を表示・キャレット・評価で逐次共有する', () {
+      String expectedExpression(String numerator, String denominator) {
+        var numeratorValue = BigInt.parse(numerator);
+        var denominatorValue = BigInt.parse(denominator);
+        final divisor = numeratorValue.gcd(denominatorValue);
+        numeratorValue ~/= divisor;
+        denominatorValue ~/= divisor;
+        return '(($numeratorValue)÷($denominatorValue))';
+      }
+
+      void expectSingleSource(
+        CalculatorController controller,
+        ExpressionFractionSegment segment,
+      ) {
+        final controllerInput = controller.fractionInputForMarker(
+          segment.marker,
+        );
+        final evaluationInput = controller.fractionInputForEvaluation(
+          segment.marker,
+        );
+        expect(identical(segment.input, controllerInput), isTrue);
+        expect(identical(controllerInput, evaluationInput), isTrue);
+        expect(
+          controller.fractionExpressionForEvaluation(segment.marker),
+          expectedExpression(segment.numerator, segment.denominator),
+        );
+      }
+
+      const numeratorDigits = '12345678901234567890';
+      const fixedDenominator = '123456789';
+      final numeratorController = CalculatorController()..press('a/b');
+      numeratorController.press('0');
+      numeratorController.press('a/b');
+      for (final digit in fixedDenominator.split('')) {
+        numeratorController.press(digit);
+      }
+      var segment = numeratorController.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      numeratorController.activateFraction(
+        segment.marker,
+        FractionField.numerator,
+        caretOffset: 1,
+      );
+      numeratorController.backspace();
+
+      for (var index = 1; index <= numeratorDigits.length; index++) {
+        numeratorController.press(numeratorDigits[index - 1]);
+        segment = numeratorController.displaySegments
+            .whereType<ExpressionFractionSegment>()
+            .single;
+        expect(segment.numerator, numeratorDigits.substring(0, index));
+        expect(segment.activeCaretOffset, index);
+        expectSingleSource(numeratorController, segment);
+      }
+      expect(numeratorController.press('1'), '最大20桁まで入力できます');
+      expect(
+        numeratorController.activeFractionInput!.numeratorText,
+        numeratorDigits,
+      );
+
+      const fixedNumerator = '1234567895';
+      const denominatorDigits = '12345678901234567890';
+      final denominatorController = CalculatorController()..press('a/b');
+      for (final digit in fixedNumerator.split('')) {
+        denominatorController.press(digit);
+      }
+      denominatorController.press('a/b');
+      for (var index = 1; index <= denominatorDigits.length; index++) {
+        denominatorController.press(denominatorDigits[index - 1]);
+        segment = denominatorController.displaySegments
+            .whereType<ExpressionFractionSegment>()
+            .single;
+        expect(segment.denominator, denominatorDigits.substring(0, index));
+        expect(segment.activeCaretOffset, index);
+        expectSingleSource(denominatorController, segment);
+      }
+      expect(denominatorController.press('1'), '最大20桁まで入力できます');
+
+      final exactExample = CalculatorController();
+      for (final key in [
+        'a/b',
+        ...fixedNumerator.split(''),
+        'a/b',
+        ...fixedDenominator.split(''),
+      ]) {
+        exactExample.press(key);
+      }
+      segment = exactExample.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(
+        exactExample.fractionExpressionForEvaluation(segment.marker),
+        '((1234567895)÷(123456789))',
+      );
+      exactExample.press('=');
+      expect(exactExample.result, '10.0000000405');
+    });
+
+    test('分数の数字1タップを入力・暫定評価後の1通知へまとめる', () {
+      final controller = CalculatorController()..press('a/b');
+      var notifications = 0;
+      controller.addListener(() => notifications++);
+
+      for (final digit in '12345678901234567890'.split('')) {
+        final before = notifications;
+        controller.press(digit);
+        expect(notifications - before, 1);
+      }
+      final beforeRejectedDigit = notifications;
+      controller.press('1');
+      expect(notifications - beforeRejectedDigit, 1);
+    });
+
+    test('実機再現値の表示入力と評価元および結果が一致する', () {
+      CalculatorController enterFraction(String numerator, String denominator) {
+        final controller = CalculatorController()..press('a/b');
+        for (final key in numerator.split('')) {
+          controller.press(key);
+        }
+        controller.press('a/b');
+        for (final key in denominator.split('')) {
+          controller.press(key);
+        }
+        return controller;
+      }
+
+      var controller = enterFraction('1234567890', '1234567890');
+      var segment = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(
+        segment.input,
+        same(controller.fractionInputForEvaluation(segment.marker)),
+      );
+      expect(
+        controller.fractionExpressionForEvaluation(segment.marker),
+        '((1)÷(1))',
+      );
+      controller.press('=');
+      expect(controller.result, '1');
+
+      controller = enterFraction('12345678901', '123456789012');
+      segment = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(
+        segment.input,
+        same(controller.fractionInputForEvaluation(segment.marker)),
+      );
+      expect(
+        controller.fractionExpressionForEvaluation(segment.marker),
+        '((12345678901)÷(123456789012))',
+      );
+      controller.press('=');
+      expect(controller.result, '0.099999999998');
+
+      controller = enterFraction('123456789+5', '1234567890');
+      segment = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(segment.numerator, '123456789+5');
+      expect(
+        segment.input,
+        same(controller.fractionInputForEvaluation(segment.marker)),
+      );
+      expect(
+        controller.fractionExpressionForEvaluation(segment.marker),
+        '((123456789+5)÷(1234567890))',
+      );
+      controller.press('=');
+      expect(controller.result, '0.10000000405');
+    });
+
+    test('10文字以上の行の後の演算子を次行先頭へ配置する', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('1234567890');
+      controller.press('+');
+      controller.press('5');
+
+      final segments = controller.displaySegments;
+      final breakIndex = segments.indexWhere(
+        (segment) => segment is ExpressionLineBreakSegment,
+      );
+      expect(breakIndex, greaterThan(0));
+      final followingText = segments
+          .skip(breakIndex + 1)
+          .whereType<ExpressionTextSegment>()
+          .first
+          .text;
+      expect(followingText, startsWith('+'));
+    });
+
+    test('0・0.0・0.00の分母は確定できない', () {
+      for (final denominator in ['0', '0.0', '0.00']) {
+        final controller = CalculatorController();
+        controller.press('a/b');
+        controller.press('1');
+        controller.press('a/b');
+        for (final character in denominator.split('')) {
+          controller.press(character);
+        }
+        controller.press('=');
+
+        expect(controller.state, CalculatorState.error);
+        expect(controller.errorMessage, '分母に0は入力できません');
+      }
+    });
+
+    test('分数内の小数点をBackspaceで1文字ずつ削除できる', () {
+      final controller = CalculatorController();
+      for (final key in ['a/b', '1', '.', '5']) {
+        controller.press(key);
+      }
+
+      controller.backspace();
+      controller.backspace();
+
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+      expect(fraction.numerator, '1');
+    });
+
+    test('式を1文字ずつ完全削除すると解とエラーも空欄になる', () {
+      final controller = CalculatorController();
+      controller.press('1');
+      controller.press('+');
+      controller.press('1');
+      expect(controller.result, '2');
+
+      controller.backspace();
+      controller.backspace();
+      controller.backspace();
+
+      expect(controller.expression, isEmpty);
+      expect(controller.result, isEmpty);
+      expect(controller.errorMessage, isNull);
+    });
+
+    test('長押し相当の全削除で解とエラーも空欄になる', () {
+      final controller = CalculatorController();
+      controller.press('9');
+      controller.moveCaretToDisplayOffset(1);
+      controller.clearLeftOfCaret();
+
+      expect(controller.expression, isEmpty);
+      expect(controller.result, isEmpty);
+      expect(controller.errorMessage, isNull);
     });
 
     test('関数一覧の全項目を分子と分母で入力して計算できる', () {
@@ -636,12 +1093,12 @@ void main() {
       expect(fraction.numerator, isEmpty);
     });
 
-    test('1京を超える解は10のべき乗で表示する', () {
+    test('20桁以内の整数解は指数化せず正確な全桁を表示する', () {
       final controller = CalculatorController();
       controller.pasteAtCaret('10000000000000000×10');
       controller.press('=');
 
-      expect(controller.result, '1 × 10¹⁷');
+      expect(controller.result, '100,000,000,000,000,000');
     });
 
     test('計算可能な入力途中では暫定解を表示する', () {
