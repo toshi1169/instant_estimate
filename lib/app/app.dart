@@ -261,7 +261,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
           ? AppTheme.gray
           : AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: _settings.themeMode,
+      themeMode: _isSettingsReady ? _settings.themeMode : ThemeMode.system,
       home: _isAccessStateReady && _isSettingsReady
           ? _StartupGate(
               onboardingPreferences: widget.onboardingPreferences,
@@ -281,7 +281,10 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
                   _advertisingConsentState.canRequestAds,
               purchaseStore: widget.purchaseStore,
             )
-          : const ColoredBox(color: Colors.transparent),
+          : Builder(
+              builder: (context) =>
+                  ColoredBox(color: Theme.of(context).scaffoldBackgroundColor),
+            ),
     );
   }
 }

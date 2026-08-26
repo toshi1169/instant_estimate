@@ -25,7 +25,7 @@ void main() {
     expect(invocation?.arguments, ['DeviceOrientation.portraitUp']);
   });
 
-  test('iOSはiPhoneとiPadでPortraitのみを宣言する', () {
+  test('iOSはPortraitのみを宣言し非推奨の全画面除外を使用しない', () {
     final infoPlist = File('ios/Runner/Info.plist').readAsStringSync();
 
     expect(infoPlist, contains('UIInterfaceOrientationPortrait'));
@@ -35,6 +35,6 @@ void main() {
       infoPlist,
       isNot(contains('UIInterfaceOrientationPortraitUpsideDown')),
     );
-    expect(infoPlist, contains('<key>UIRequiresFullScreen</key>'));
+    expect(infoPlist, isNot(contains('<key>UIRequiresFullScreen</key>')));
   });
 }
