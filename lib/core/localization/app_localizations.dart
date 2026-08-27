@@ -283,6 +283,141 @@ class AppLocalizations {
     filipino: 'Vibration kapag nag-tap',
     myanmar: 'နှိပ်သည့်အခါ တုန်ခါမှု',
   );
+  String get dataBackup => _pick(
+    japanese: 'データのバックアップ',
+    english: 'Data backup',
+    simplifiedChinese: '数据备份',
+    traditionalChinese: '資料備份',
+    vietnamese: 'Sao lưu dữ liệu',
+    indonesian: 'Cadangan data',
+    filipino: 'Backup ng data',
+    myanmar: 'ဒေတာအရန်သိမ်းခြင်း',
+  );
+  String get dataBackupSettingsSubtitle => _pick(
+    japanese: '機種変更に備えてバックアップを書き出します',
+    english: 'Export a backup for moving to another device',
+    simplifiedChinese: '导出备份以便更换设备',
+    traditionalChinese: '匯出備份以便更換裝置',
+    vietnamese: 'Xuất bản sao lưu để chuyển sang thiết bị khác',
+    indonesian: 'Ekspor cadangan untuk pindah perangkat',
+    filipino: 'Mag-export ng backup para sa paglipat ng device',
+    myanmar: 'စက်ပြောင်းရန်အတွက် အရန်ဖိုင်ထုတ်ပါ',
+  );
+  String get exportBackup => _pick(
+    japanese: 'バックアップを書き出す',
+    english: 'Export backup',
+    simplifiedChinese: '导出备份',
+    traditionalChinese: '匯出備份',
+    vietnamese: 'Xuất bản sao lưu',
+    indonesian: 'Ekspor cadangan',
+    filipino: 'I-export ang backup',
+    myanmar: 'အရန်ဖိုင်ထုတ်မည်',
+  );
+  String get backupContents => _pick(
+    japanese: 'バックアップ内容',
+    english: 'Backup contents',
+    simplifiedChinese: '备份内容',
+    traditionalChinese: '備份內容',
+    vietnamese: 'Nội dung sao lưu',
+    indonesian: 'Isi cadangan',
+    filipino: 'Nilalaman ng backup',
+    myanmar: 'အရန်ဖိုင်အကြောင်းအရာ',
+  );
+  String get backupSensitiveDataNotice => _pick(
+    japanese: 'バックアップには会社情報、住所、電話番号、見積、単価、履歴などが含まれます。保存先や共有先の管理にご注意ください。',
+    english:
+        'The backup contains company information, addresses, phone numbers, estimates, prices and history. Please manage where you save or share it carefully.',
+    simplifiedChinese: '备份包含公司信息、地址、电话号码、估算、单价和历史记录等。请妥善管理保存位置和共享对象。',
+    traditionalChinese: '備份包含公司資訊、地址、電話號碼、估價、單價和紀錄等。請妥善管理儲存位置和分享對象。',
+    vietnamese:
+        'Bản sao lưu chứa thông tin công ty, địa chỉ, số điện thoại, dự toán, đơn giá và lịch sử. Hãy quản lý cẩn thận nơi lưu hoặc chia sẻ.',
+    indonesian:
+        'Cadangan berisi informasi perusahaan, alamat, nomor telepon, estimasi, harga, dan riwayat. Kelola lokasi penyimpanan dan tujuan berbagi dengan hati-hati.',
+    filipino:
+        'Kasama sa backup ang impormasyon ng kumpanya, address, numero ng telepono, estimate, presyo, at history. Ingatan ang pagpili ng pagse-save at pagbabahagian.',
+    myanmar:
+        'အရန်ဖိုင်တွင် ကုမ္ပဏီအချက်အလက်၊ လိပ်စာ၊ ဖုန်းနံပါတ်၊ ခန့်မှန်းချက်၊ ဈေးနှုန်းနှင့် မှတ်တမ်းများ ပါဝင်သည်။ သိမ်းဆည်းရာနှင့် မျှဝေရာကို သေချာစွာ စီမံပါ။',
+  );
+  String backupEstimateCount(int count) => _pick(
+    japanese: '見積：$count件',
+    english: 'Estimates: $count',
+    simplifiedChinese: '估算：$count项',
+    traditionalChinese: '估價：$count筆',
+    vietnamese: 'Dự toán: $count',
+    indonesian: 'Estimasi: $count',
+    filipino: 'Mga estimate: $count',
+    myanmar: 'ခန့်မှန်းချက်: $count',
+  );
+  String backupUnitPriceCount(int count) => _pick(
+    japanese: '単価マスタ：$count件',
+    english: 'Unit-price master: $count',
+    simplifiedChinese: '单价主数据：$count项',
+    traditionalChinese: '單價主檔：$count筆',
+    vietnamese: 'Danh mục đơn giá: $count',
+    indonesian: 'Master harga satuan: $count',
+    filipino: 'Unit-price master: $count',
+    myanmar: 'ယူနစ်ဈေးစာရင်း: $count',
+  );
+  String backupHistoryCount(int count) => _pick(
+    japanese: '計算履歴：$count件',
+    english: 'Calculation history: $count',
+    simplifiedChinese: '计算历史：$count项',
+    traditionalChinese: '計算紀錄：$count筆',
+    vietnamese: 'Lịch sử tính toán: $count',
+    indonesian: 'Riwayat perhitungan: $count',
+    filipino: 'Calculation history: $count',
+    myanmar: 'တွက်ချက်မှုမှတ်တမ်း: $count',
+  );
+  String backupProductivityCount(int count) => _pick(
+    japanese: '歩掛実績：$count件',
+    english: 'Productivity records: $count',
+    simplifiedChinese: '生产率记录：$count项',
+    traditionalChinese: '生產率紀錄：$count筆',
+    vietnamese: 'Dữ liệu năng suất: $count',
+    indonesian: 'Catatan produktivitas: $count',
+    filipino: 'Productivity records: $count',
+    myanmar: 'ထုတ်လုပ်မှုမှတ်တမ်း: $count',
+  );
+  String get backupGenerationFailed => _pick(
+    japanese: 'バックアップを作成できませんでした',
+    english: 'Could not create the backup.',
+    simplifiedChinese: '无法创建备份',
+    traditionalChinese: '無法建立備份',
+    vietnamese: 'Không thể tạo bản sao lưu.',
+    indonesian: 'Cadangan tidak dapat dibuat.',
+    filipino: 'Hindi nagawa ang backup.',
+    myanmar: 'အရန်ဖိုင်ကို မဖန်တီးနိုင်ပါ။',
+  );
+  String get backupShareFailed => _pick(
+    japanese: 'バックアップを共有できませんでした',
+    english: 'Could not share the backup.',
+    simplifiedChinese: '无法共享备份',
+    traditionalChinese: '無法分享備份',
+    vietnamese: 'Không thể chia sẻ bản sao lưu.',
+    indonesian: 'Cadangan tidak dapat dibagikan.',
+    filipino: 'Hindi maibahagi ang backup.',
+    myanmar: 'အရန်ဖိုင်ကို မမျှဝေနိုင်ပါ။',
+  );
+  String get backupShareSubject => _pick(
+    japanese: '現場電卓 データバックアップ',
+    english: 'GenbaCalc data backup',
+    simplifiedChinese: '现场计算器数据备份',
+    traditionalChinese: '現場計算機資料備份',
+    vietnamese: 'Sao lưu dữ liệu GenbaCalc',
+    indonesian: 'Cadangan data GenbaCalc',
+    filipino: 'Backup ng data ng GenbaCalc',
+    myanmar: 'GenbaCalc ဒေတာအရန်ဖိုင်',
+  );
+  String get retry => _pick(
+    japanese: '再試行',
+    english: 'Retry',
+    simplifiedChinese: '重试',
+    traditionalChinese: '重試',
+    vietnamese: 'Thử lại',
+    indonesian: 'Coba lagi',
+    filipino: 'Subukan muli',
+    myanmar: 'ထပ်မံကြိုးစားမည်',
+  );
   String get help => _pick(
     japanese: 'ヘルプ',
     english: 'Help',
@@ -529,6 +664,25 @@ class AppLocalizations {
         'Naka-save sa device ang estimate, unit-price master, calculation history, productivity record, company information, at settings. Maaaring mawala ang mga ito kapag dinelete ang app o ni-reset ang device. I-save nang hiwalay bilang Excel o PDF ang mahalagang dokumento.',
     myanmar:
         'ခန့်မှန်းချက်၊ ယူနစ်ဈေးစာရင်း၊ တွက်ချက်မှုမှတ်တမ်း၊ ထုတ်လုပ်မှုမှတ်တမ်း၊ ကုမ္ပဏီအချက်အလက်နှင့် ဆက်တင်များကို စက်ထဲတွင် သိမ်းထားသည်။ အက်ပ်ဖျက်ခြင်း သို့မဟုတ် စက်ကို ပြန်လည်သတ်မှတ်ခြင်းဖြင့် ပျောက်ဆုံးနိုင်သည်။ အရေးကြီးစာရွက်များကို Excel သို့မဟုတ် PDF အဖြစ် သီးခြားသိမ်းပါ။',
+  );
+  String get helpBackupTitle => dataBackup;
+  String get helpBackupBody => _pick(
+    japanese:
+        '機種変更前に、設定の「データのバックアップ」からバックアップを書き出し、FilesやiCloud Driveなどへ保存してください。ファイルには会社情報、見積、単価、計算履歴などが含まれるため、保存先と共有先を適切に管理してください。\n\n購入権利と広告の視聴状態はバックアップに含まれません。購入権利は新しい端末でApp Storeから復元してください。バックアップファイルを編集したり破損させたりしないでください。',
+    english:
+        'Before changing devices, export a backup from Data backup in Settings and save it to Files, iCloud Drive or another safe location. It contains company information, estimates, prices and calculation history, so manage its storage and sharing carefully.\n\nPurchase rights and ad-viewing status are not included. Restore purchases from the App Store on the new device. Do not edit or damage the backup file.',
+    simplifiedChinese:
+        '更换设备前，请从“设置”中的“数据备份”导出备份，并保存到“文件”、iCloud Drive或其他安全位置。文件包含公司信息、估算、单价和计算历史等，请妥善管理保存位置和共享对象。\n\n购买权益和广告观看状态不包含在备份中。请在新设备上通过App Store恢复购买。请勿编辑或损坏备份文件。',
+    traditionalChinese:
+        '更換裝置前，請從「設定」中的「資料備份」匯出備份，並儲存至「檔案」、iCloud Drive或其他安全位置。檔案包含公司資訊、估價、單價和計算紀錄等，請妥善管理儲存位置和分享對象。\n\n購買權益和廣告觀看狀態不包含在備份中。請在新裝置上透過App Store回復購買。請勿編輯或損壞備份檔案。',
+    vietnamese:
+        'Trước khi đổi thiết bị, hãy xuất bản sao lưu từ mục Sao lưu dữ liệu trong Cài đặt và lưu vào Files, iCloud Drive hoặc nơi an toàn khác. Tệp có thông tin công ty, dự toán, đơn giá và lịch sử tính toán, vì vậy hãy quản lý cẩn thận nơi lưu và chia sẻ.\n\nQuyền mua và trạng thái xem quảng cáo không được sao lưu. Hãy khôi phục giao dịch mua từ App Store trên thiết bị mới. Không chỉnh sửa hoặc làm hỏng tệp sao lưu.',
+    indonesian:
+        'Sebelum berganti perangkat, ekspor cadangan dari Cadangan data di Pengaturan dan simpan ke Files, iCloud Drive, atau lokasi aman lainnya. File berisi informasi perusahaan, estimasi, harga satuan, dan riwayat perhitungan, jadi kelola penyimpanan dan pembagiannya dengan hati-hati.\n\nHak pembelian dan status tontonan iklan tidak disertakan. Pulihkan pembelian dari App Store di perangkat baru. Jangan mengedit atau merusak file cadangan.',
+    filipino:
+        'Bago magpalit ng device, i-export ang backup mula sa Data backup sa Settings at i-save sa Files, iCloud Drive, o ibang ligtas na lokasyon. May kasama itong impormasyon ng kumpanya, estimate, presyo, at calculation history, kaya ingatan ang pag-save at pagbabahagi.\n\nHindi kasama ang purchase rights at ad-viewing status. I-restore ang purchases mula sa App Store sa bagong device. Huwag i-edit o sirain ang backup file.',
+    myanmar:
+        'စက်မပြောင်းမီ ဆက်တင်ရှိ ဒေတာအရန်သိမ်းခြင်းမှ အရန်ဖိုင်ထုတ်ပြီး Files၊ iCloud Drive သို့မဟုတ် လုံခြုံသောနေရာတွင် သိမ်းပါ။ ဖိုင်တွင် ကုမ္ပဏီအချက်အလက်၊ ခန့်မှန်းချက်၊ ဈေးနှုန်းနှင့် တွက်ချက်မှုမှတ်တမ်းများ ပါဝင်သဖြင့် သိမ်းဆည်းခြင်းနှင့် မျှဝေခြင်းကို သေချာစွာ စီမံပါ။\n\nဝယ်ယူခွင့်နှင့် ကြော်ငြာကြည့်ရှုမှုအခြေအနေ မပါဝင်ပါ။ စက်အသစ်တွင် App Store မှ ဝယ်ယူမှုကို ပြန်လည်ရယူပါ။ အရန်ဖိုင်ကို မပြင်ဆင်ပါနှင့်၊ မပျက်စီးစေပါနှင့်။',
   );
   String get disclaimerTitle => _pick(
     japanese: '免責・利用上の注意',

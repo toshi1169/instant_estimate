@@ -71,6 +71,12 @@ class HelpScreen extends StatelessWidget {
               body: l10n.helpDataBody,
             ),
             _HelpSection(
+              key: const Key('helpSectionBackup'),
+              icon: Icons.backup_outlined,
+              title: l10n.helpBackupTitle,
+              body: l10n.helpBackupBody,
+            ),
+            _HelpSection(
               key: const Key('helpSectionDisclaimer'),
               icon: Icons.gavel_outlined,
               title: l10n.disclaimerTitle,

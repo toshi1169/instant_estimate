@@ -11,6 +11,8 @@ import '../../onboarding/data/onboarding_preferences.dart';
 import '../../onboarding/domain/occupation.dart';
 import '../../onboarding/presentation/occupation_selection_screen.dart';
 import '../../help/presentation/disclaimer_screen.dart';
+import '../../backup/application/backup_snapshot_factory.dart';
+import '../../backup/presentation/backup_screen.dart';
 import 'button_settings_screen.dart';
 import 'company_profile_editor_screen.dart';
 
@@ -22,6 +24,7 @@ class SettingsScreen extends StatefulWidget {
     this.onboardingPreferences,
     this.accessPlan = AppAccessPlan.free,
     this.onShowAdvertisingPrivacyOptions,
+    this.backupSnapshotFactory,
     super.key,
   });
 
@@ -31,6 +34,7 @@ class SettingsScreen extends StatefulWidget {
   final OnboardingPreferences? onboardingPreferences;
   final AppAccessPlan accessPlan;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
+  final BackupSnapshotFactory? backupSnapshotFactory;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -287,6 +291,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _openDisclaimer(BuildContext context) {
     return Navigator.of(context).push<void>(
       MaterialPageRoute<void>(builder: (_) => const DisclaimerScreen()),
+    );
+  }
+
+  Future<void> _openBackup(BuildContext context) {
+    final factory = widget.backupSnapshotFactory;
+    if (factory == null) return Future.value();
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            BackupScreen(snapshotFactory: factory, settings: _settings),
+      ),
     );
   }
 
@@ -600,6 +615,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 24),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              key: const Key('dataBackupSetting'),
+              leading: const Icon(Icons.backup_outlined),
+              title: Text(strings.dataBackup),
+              subtitle: Text(strings.dataBackupSettingsSubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: widget.backupSnapshotFactory == null
+                  ? null
+                  : () => _openBackup(context),
+            ),
+          ),
           const SizedBox(height: 24),
           Card(
             margin: EdgeInsets.zero,

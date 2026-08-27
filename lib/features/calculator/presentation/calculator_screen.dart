@@ -36,6 +36,7 @@ import '../../help/presentation/help_screen.dart';
 import '../../unit_conversion/presentation/unit_conversion_screen.dart';
 import '../../subscription/presentation/access_plan_screen.dart';
 import '../../subscription/domain/purchase_store.dart';
+import '../../backup/application/backup_snapshot_factory.dart';
 import 'function_list_dialog.dart';
 
 class CalculatorScreen extends StatefulWidget {
@@ -231,6 +232,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   Future<void> _openSettings() {
+    final historyStore = widget.historyStore;
+    final estimateStore = widget.estimateItemStore;
+    final productivityStore = widget.productivityRecordStore;
+    final onboardingPreferences = widget.onboardingPreferences;
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SettingsScreen(
@@ -241,6 +246,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           onShowAdvertisingPrivacyOptions:
               widget.onShowAdvertisingPrivacyOptions,
           onboardingPreferences: widget.onboardingPreferences,
+          backupSnapshotFactory:
+              historyStore != null &&
+                  estimateStore != null &&
+                  productivityStore != null &&
+                  onboardingPreferences != null
+              ? BackupSnapshotFactory(
+                  historyStore: historyStore,
+                  estimateStore: estimateStore,
+                  productivityStore: productivityStore,
+                  onboardingPreferences: onboardingPreferences,
+                )
+              : null,
         ),
       ),
     );
