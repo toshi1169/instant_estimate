@@ -418,6 +418,264 @@ class AppLocalizations {
     filipino: 'Subukan muli',
     myanmar: 'ထပ်မံကြိုးစားမည်',
   );
+  String get restoreFromBackup => _pick(
+    japanese: 'バックアップから復元',
+    english: 'Restore from backup',
+    simplifiedChinese: '从备份恢复',
+    traditionalChinese: '從備份回復',
+    vietnamese: 'Khôi phục từ bản sao lưu',
+    indonesian: 'Pulihkan dari cadangan',
+    filipino: 'I-restore mula sa backup',
+    myanmar: 'အရန်ဖိုင်မှ ပြန်လည်ရယူမည်',
+  );
+  String get restorePreviewTitle => _pick(
+    japanese: '復元内容の確認',
+    english: 'Review restore contents',
+    simplifiedChinese: '确认恢复内容',
+    traditionalChinese: '確認回復內容',
+    vietnamese: 'Kiểm tra nội dung khôi phục',
+    indonesian: 'Tinjau isi pemulihan',
+    filipino: 'Suriin ang ire-restore',
+    myanmar: 'ပြန်လည်ရယူမည့်အကြောင်းအရာ စစ်ဆေးရန်',
+  );
+  String get restoreReplacementWarning => _pick(
+    japanese: '復元すると、現在のユーザーデータはバックアップ内容で置き換えられます。',
+    english: 'Restoring replaces the current user data with this backup.',
+    simplifiedChinese: '恢复后，当前用户数据将被此备份替换。',
+    traditionalChinese: '回復後，目前的使用者資料將由此備份取代。',
+    vietnamese:
+        'Khôi phục sẽ thay thế dữ liệu người dùng hiện tại bằng bản sao lưu này.',
+    indonesian:
+        'Pemulihan akan mengganti data pengguna saat ini dengan cadangan ini.',
+    filipino: 'Papalitan ng backup na ito ang kasalukuyang user data.',
+    myanmar:
+        'ပြန်လည်ရယူပါက လက်ရှိအသုံးပြုသူဒေတာကို ဤအရန်ဖိုင်ဖြင့် အစားထိုးမည်။',
+  );
+  String get restoreDoesNotChangeAccess => _pick(
+    japanese: '購入権利と広告の視聴状態は復元されず、変更されません。',
+    english:
+        'Purchase rights and ad-viewing status are not restored or changed.',
+    simplifiedChinese: '购买权益和广告观看状态不会恢复或更改。',
+    traditionalChinese: '購買權益和廣告觀看狀態不會回復或變更。',
+    vietnamese:
+        'Quyền mua và trạng thái xem quảng cáo không được khôi phục hoặc thay đổi.',
+    indonesian:
+        'Hak pembelian dan status tontonan iklan tidak dipulihkan atau diubah.',
+    filipino:
+        'Hindi ire-restore o babaguhin ang purchase rights at ad-viewing status.',
+    myanmar:
+        'ဝယ်ယူခွင့်နှင့် ကြော်ငြာကြည့်ရှုမှုအခြေအနေကို ပြန်မယူဘဲ မပြောင်းလဲပါ။',
+  );
+  String get backupCreatedAt => _pick(
+    japanese: 'バックアップ作成日時',
+    english: 'Backup created',
+    simplifiedChinese: '备份创建时间',
+    traditionalChinese: '備份建立時間',
+    vietnamese: 'Thời gian tạo',
+    indonesian: 'Waktu dibuat',
+    filipino: 'Ginawa noong',
+    myanmar: 'အရန်ဖိုင်ဖန်တီးချိန်',
+  );
+  String get backupSourceVersion => _pick(
+    japanese: '作成元アプリ',
+    english: 'Source app version',
+    simplifiedChinese: '来源应用版本',
+    traditionalChinese: '來源 App 版本',
+    vietnamese: 'Phiên bản ứng dụng nguồn',
+    indonesian: 'Versi aplikasi sumber',
+    filipino: 'Source app version',
+    myanmar: 'မူလအက်ပ်ဗားရှင်း',
+  );
+  String get registered => _pick(
+    japanese: '登録あり',
+    english: 'Registered',
+    simplifiedChinese: '已登记',
+    traditionalChinese: '已登錄',
+    vietnamese: 'Đã đăng ký',
+    indonesian: 'Terdaftar',
+    filipino: 'Naka-register',
+    myanmar: 'မှတ်ပုံတင်ထားသည်',
+  );
+  String get restoreConfirmationTitle => _pick(
+    japanese: 'バックアップから復元しますか？',
+    english: 'Restore from this backup?',
+    simplifiedChinese: '从此备份恢复吗？',
+    traditionalChinese: '要從此備份回復嗎？',
+    vietnamese: 'Khôi phục từ bản sao lưu này?',
+    indonesian: 'Pulihkan dari cadangan ini?',
+    filipino: 'I-restore mula sa backup na ito?',
+    myanmar: 'ဤအရန်ဖိုင်မှ ပြန်လည်ရယူမလား။',
+  );
+  String get restoreConfirmationBody => _pick(
+    japanese: '現在の見積、単価マスタ、履歴、歩掛実績、自社情報、設定をバックアップ内容で置き換えます。購入権利と広告状態は変更しません。',
+    english:
+        'Current estimates, unit prices, history, productivity records, company information and settings will be replaced. Purchase rights and ad status will not change.',
+    simplifiedChinese: '当前估算、单价、历史、生产率记录、公司信息和设置将被替换。购买权益和广告状态不会更改。',
+    traditionalChinese: '目前的估價、單價、紀錄、生產率紀錄、自社資訊和設定將被取代。購買權益和廣告狀態不會變更。',
+    vietnamese:
+        'Dự toán, đơn giá, lịch sử, năng suất, thông tin công ty và cài đặt hiện tại sẽ bị thay thế. Quyền mua và trạng thái quảng cáo không đổi.',
+    indonesian:
+        'Estimasi, harga, riwayat, produktivitas, informasi perusahaan, dan pengaturan saat ini akan diganti. Hak pembelian dan status iklan tidak berubah.',
+    filipino:
+        'Papalitan ang kasalukuyang estimate, presyo, history, productivity, company information, at settings. Hindi magbabago ang purchase rights at ad status.',
+    myanmar:
+        'လက်ရှိခန့်မှန်းချက်၊ ဈေးနှုန်း၊ မှတ်တမ်း၊ ထုတ်လုပ်မှု၊ ကုမ္ပဏီအချက်အလက်နှင့် ဆက်တင်များကို အစားထိုးမည်။ ဝယ်ယူခွင့်နှင့် ကြော်ငြာအခြေအနေ မပြောင်းပါ။',
+  );
+  String get restoreNow => _pick(
+    japanese: '復元する',
+    english: 'Restore',
+    simplifiedChinese: '恢复',
+    traditionalChinese: '回復',
+    vietnamese: 'Khôi phục',
+    indonesian: 'Pulihkan',
+    filipino: 'I-restore',
+    myanmar: 'ပြန်လည်ရယူမည်',
+  );
+  String get restoringBackup => _pick(
+    japanese: '復元中…',
+    english: 'Restoring…',
+    simplifiedChinese: '正在恢复…',
+    traditionalChinese: '正在回復…',
+    vietnamese: 'Đang khôi phục…',
+    indonesian: 'Memulihkan…',
+    filipino: 'Nire-restore…',
+    myanmar: 'ပြန်လည်ရယူနေသည်…',
+  );
+  String get restoreSucceeded => _pick(
+    japanese: 'バックアップから復元しました',
+    english: 'Restored from backup.',
+    simplifiedChinese: '已从备份恢复',
+    traditionalChinese: '已從備份回復',
+    vietnamese: 'Đã khôi phục từ bản sao lưu.',
+    indonesian: 'Berhasil dipulihkan dari cadangan.',
+    filipino: 'Na-restore mula sa backup.',
+    myanmar: 'အရန်ဖိုင်မှ ပြန်လည်ရယူပြီးပါပြီ။',
+  );
+  String get restoreFailedTitle => _pick(
+    japanese: '復元できませんでした',
+    english: 'Restore failed',
+    simplifiedChinese: '恢复失败',
+    traditionalChinese: '回復失敗',
+    vietnamese: 'Khôi phục thất bại',
+    indonesian: 'Pemulihan gagal',
+    filipino: 'Hindi na-restore',
+    myanmar: 'ပြန်လည်ရယူမှု မအောင်မြင်ပါ',
+  );
+  String get restoreFailedAndRolledBack => _pick(
+    japanese: '復元に失敗したため、元のデータへ戻しました。',
+    english: 'Restore failed, so the original data was restored.',
+    simplifiedChinese: '恢复失败，已还原原始数据。',
+    traditionalChinese: '回復失敗，已還原原始資料。',
+    vietnamese: 'Khôi phục thất bại nên dữ liệu ban đầu đã được hoàn nguyên.',
+    indonesian: 'Pemulihan gagal, sehingga data asli telah dikembalikan.',
+    filipino: 'Nabigo ang restore kaya ibinalik ang dating data.',
+    myanmar: 'ပြန်လည်ရယူမှုမအောင်မြင်သဖြင့် မူလဒေတာသို့ ပြန်ထားသည်။',
+  );
+  String get restoreRollbackFailed => _pick(
+    japanese: '元のデータへ安全に戻せませんでした。これ以上編集せずアプリを終了し、サポートへ連絡してください。',
+    english:
+        'The original data could not be restored safely. Do not continue editing; close the app and contact support.',
+    simplifiedChinese: '无法安全还原原始数据。请勿继续编辑，关闭应用并联系支持。',
+    traditionalChinese: '無法安全還原原始資料。請勿繼續編輯，關閉 App 並聯絡支援。',
+    vietnamese:
+        'Không thể hoàn nguyên dữ liệu ban đầu an toàn. Không tiếp tục chỉnh sửa; hãy đóng ứng dụng và liên hệ hỗ trợ.',
+    indonesian:
+        'Data asli tidak dapat dikembalikan dengan aman. Jangan lanjut mengedit; tutup aplikasi dan hubungi dukungan.',
+    filipino:
+        'Hindi ligtas na naibalik ang dating data. Huwag nang mag-edit; isara ang app at kontakin ang support.',
+    myanmar:
+        'မူလဒေတာကို လုံခြုံစွာ ပြန်မထားနိုင်ပါ။ ဆက်မပြင်ဘဲ အက်ပ်ပိတ်ပြီး အကူအညီကို ဆက်သွယ်ပါ။',
+  );
+  String get restoreSaveFailed => restoreFailedTitle;
+  String get close => _pick(
+    japanese: '閉じる',
+    english: 'Close',
+    simplifiedChinese: '关闭',
+    traditionalChinese: '關閉',
+    vietnamese: 'Đóng',
+    indonesian: 'Tutup',
+    filipino: 'Isara',
+    myanmar: 'ပိတ်မည်',
+  );
+  String get backupReadFailed => _pick(
+    japanese: 'バックアップファイルを読み込めませんでした',
+    english: 'Could not read the backup file.',
+    simplifiedChinese: '无法读取备份文件',
+    traditionalChinese: '無法讀取備份檔案',
+    vietnamese: 'Không thể đọc tệp sao lưu.',
+    indonesian: 'File cadangan tidak dapat dibaca.',
+    filipino: 'Hindi mabasa ang backup file.',
+    myanmar: 'အရန်ဖိုင်ကို မဖတ်နိုင်ပါ။',
+  );
+  String get backupTooLarge => _pick(
+    japanese: '20MBを超えるバックアップは復元できません',
+    english: 'Backups larger than 20 MB cannot be restored.',
+    simplifiedChinese: '无法恢复超过20MB的备份',
+    traditionalChinese: '無法回復超過20MB的備份',
+    vietnamese: 'Không thể khôi phục bản sao lưu lớn hơn 20 MB.',
+    indonesian: 'Cadangan lebih dari 20 MB tidak dapat dipulihkan.',
+    filipino: 'Hindi maibabalik ang backup na lampas 20 MB.',
+    myanmar: '20 MB ထက်ကြီးသော အရန်ဖိုင်ကို ပြန်မယူနိုင်ပါ။',
+  );
+  String get backupInvalidData => _pick(
+    japanese: 'バックアップ内容が壊れているか不正です',
+    english: 'The backup contents are damaged or invalid.',
+    simplifiedChinese: '备份内容损坏或无效',
+    traditionalChinese: '備份內容損壞或無效',
+    vietnamese: 'Nội dung sao lưu bị hỏng hoặc không hợp lệ.',
+    indonesian: 'Isi cadangan rusak atau tidak valid.',
+    filipino: 'Sira o invalid ang nilalaman ng backup.',
+    myanmar: 'အရန်ဖိုင်အကြောင်းအရာ ပျက်စီးနေသည် သို့မဟုတ် မမှန်ပါ။',
+  );
+  String get backupWrongFileType => _pick(
+    japanese: '.genbacalcバックアップを選択してください',
+    english: 'Select a .genbacalc backup.',
+    simplifiedChinese: '请选择.genbacalc备份',
+    traditionalChinese: '請選擇.genbacalc備份',
+    vietnamese: 'Hãy chọn bản sao lưu .genbacalc.',
+    indonesian: 'Pilih cadangan .genbacalc.',
+    filipino: 'Pumili ng .genbacalc backup.',
+    myanmar: '.genbacalc အရန်ဖိုင်ကို ရွေးပါ။',
+  );
+  String get backupWrongFormat => _pick(
+    japanese: 'このアプリのバックアップではありません',
+    english: 'This is not a backup from this app.',
+    simplifiedChinese: '这不是本应用的备份',
+    traditionalChinese: '這不是本 App 的備份',
+    vietnamese: 'Đây không phải bản sao lưu của ứng dụng này.',
+    indonesian: 'Ini bukan cadangan dari aplikasi ini.',
+    filipino: 'Hindi ito backup mula sa app na ito.',
+    myanmar: 'ဤအက်ပ်၏ အရန်ဖိုင်မဟုတ်ပါ။',
+  );
+  String get backupFutureVersion => _pick(
+    japanese: '新しいバージョンで作成されたため、このアプリでは復元できません',
+    english:
+        'This backup was created by a newer version and cannot be restored here.',
+    simplifiedChinese: '此备份由较新版本创建，当前应用无法恢复',
+    traditionalChinese: '此備份由較新版本建立，目前 App 無法回復',
+    vietnamese:
+        'Bản sao lưu được tạo bằng phiên bản mới hơn nên không thể khôi phục tại đây.',
+    indonesian:
+        'Cadangan dibuat oleh versi lebih baru dan tidak dapat dipulihkan di sini.',
+    filipino:
+        'Ginawa ang backup sa mas bagong bersyon at hindi ito maibabalik dito.',
+    myanmar:
+        'ပိုသစ်သောဗားရှင်းဖြင့် ဖန်တီးထားသဖြင့် ဤအက်ပ်တွင် ပြန်မယူနိုင်ပါ။',
+  );
+  String get restoreInterruptedRolledBack => _pick(
+    japanese: '前回の復元処理が完了しなかったため、元のデータへ戻しました',
+    english:
+        'The previous restore did not finish, so the original data was restored.',
+    simplifiedChinese: '上次恢复未完成，已还原原始数据',
+    traditionalChinese: '上次回復未完成，已還原原始資料',
+    vietnamese:
+        'Lần khôi phục trước chưa hoàn tất nên dữ liệu ban đầu đã được hoàn nguyên.',
+    indonesian:
+        'Pemulihan sebelumnya tidak selesai, sehingga data asli telah dikembalikan.',
+    filipino:
+        'Hindi natapos ang nakaraang restore kaya ibinalik ang dating data.',
+    myanmar: 'ယခင်ပြန်လည်ရယူမှု မပြီးဆုံးသဖြင့် မူလဒေတာသို့ ပြန်ထားသည်။',
+  );
   String get help => _pick(
     japanese: 'ヘルプ',
     english: 'Help',
@@ -683,6 +941,24 @@ class AppLocalizations {
         'Bago magpalit ng device, i-export ang backup mula sa Data backup sa Settings at i-save sa Files, iCloud Drive, o ibang ligtas na lokasyon. May kasama itong impormasyon ng kumpanya, estimate, presyo, at calculation history, kaya ingatan ang pag-save at pagbabahagi.\n\nHindi kasama ang purchase rights at ad-viewing status. I-restore ang purchases mula sa App Store sa bagong device. Huwag i-edit o sirain ang backup file.',
     myanmar:
         'စက်မပြောင်းမီ ဆက်တင်ရှိ ဒေတာအရန်သိမ်းခြင်းမှ အရန်ဖိုင်ထုတ်ပြီး Files၊ iCloud Drive သို့မဟုတ် လုံခြုံသောနေရာတွင် သိမ်းပါ။ ဖိုင်တွင် ကုမ္ပဏီအချက်အလက်၊ ခန့်မှန်းချက်၊ ဈေးနှုန်းနှင့် တွက်ချက်မှုမှတ်တမ်းများ ပါဝင်သဖြင့် သိမ်းဆည်းခြင်းနှင့် မျှဝေခြင်းကို သေချာစွာ စီမံပါ။\n\nဝယ်ယူခွင့်နှင့် ကြော်ငြာကြည့်ရှုမှုအခြေအနေ မပါဝင်ပါ။ စက်အသစ်တွင် App Store မှ ဝယ်ယူမှုကို ပြန်လည်ရယူပါ။ အရန်ဖိုင်ကို မပြင်ဆင်ပါနှင့်၊ မပျက်စီးစေပါနှင့်။',
+  );
+  String get helpRestoreBody => _pick(
+    japanese:
+        '復元すると、現在の見積、単価マスタ、計算履歴、歩掛実績、自社情報、業種と設定がバックアップ内容で置き換えられます。必要な場合は、復元前に現在データも別のバックアップとして保存してください。\n\n購入権利はバックアップに含まれないためApp Storeから復元してください。広告の視聴状態も移行されません。別アプリのファイル、壊れたファイル、対応していない新しい形式は復元できません。復元中はアプリを終了しないでください。',
+    english:
+        'Restoring replaces current estimates, unit prices, calculation history, productivity records, company information, occupation and settings with the backup. If needed, export the current data as another backup first.\n\nPurchase rights are not included; restore them from the App Store. Ad-viewing status is not transferred. Files from another app, damaged files and unsupported newer formats cannot be restored. Do not close the app while restoring.',
+    simplifiedChinese:
+        '恢复会用备份替换当前估算、单价、计算历史、生产率记录、公司信息、业种和设置。如有需要，请先另行备份当前数据。\n\n购买权益不包含在备份中，请从App Store恢复。广告观看状态也不会迁移。其他应用的文件、损坏文件和不支持的新格式无法恢复。恢复过程中请勿关闭应用。',
+    traditionalChinese:
+        '回復會以備份取代目前的估價、單價、計算紀錄、生產率紀錄、自社資訊、業種和設定。如有需要，請先另外備份目前資料。\n\n購買權益不包含在備份中，請從App Store回復。廣告觀看狀態也不會移轉。其他App的檔案、損壞檔案和不支援的新格式無法回復。回復過程中請勿關閉App。',
+    vietnamese:
+        'Khôi phục sẽ thay thế dự toán, đơn giá, lịch sử tính toán, năng suất, thông tin công ty, ngành nghề và cài đặt hiện tại bằng bản sao lưu. Nếu cần, hãy xuất dữ liệu hiện tại thành một bản sao lưu khác trước.\n\nQuyền mua không có trong bản sao lưu; hãy khôi phục từ App Store. Trạng thái xem quảng cáo không được chuyển. Không thể khôi phục tệp của ứng dụng khác, tệp hỏng hoặc định dạng mới chưa hỗ trợ. Không đóng ứng dụng khi đang khôi phục.',
+    indonesian:
+        'Pemulihan mengganti estimasi, harga, riwayat perhitungan, produktivitas, informasi perusahaan, bidang kerja, dan pengaturan saat ini dengan cadangan. Jika perlu, ekspor data saat ini sebagai cadangan lain terlebih dahulu.\n\nHak pembelian tidak disertakan; pulihkan dari App Store. Status tontonan iklan tidak dipindahkan. File aplikasi lain, file rusak, dan format baru yang belum didukung tidak dapat dipulihkan. Jangan tutup aplikasi selama pemulihan.',
+    filipino:
+        'Papalitan ng restore ang kasalukuyang estimate, presyo, calculation history, productivity, company information, occupation, at settings gamit ang backup. Kung kailangan, i-export muna ang kasalukuyang data bilang ibang backup.\n\nHindi kasama ang purchase rights; i-restore ang mga ito mula sa App Store. Hindi inililipat ang ad-viewing status. Hindi maibabalik ang file ng ibang app, sirang file, o hindi suportadong bagong format. Huwag isara ang app habang nagre-restore.',
+    myanmar:
+        'ပြန်လည်ရယူပါက လက်ရှိခန့်မှန်းချက်၊ ဈေးနှုန်း၊ တွက်ချက်မှုမှတ်တမ်း၊ ထုတ်လုပ်မှု၊ ကုမ္ပဏီအချက်အလက်၊ အလုပ်အမျိုးအစားနှင့် ဆက်တင်များကို အရန်ဖိုင်ဖြင့် အစားထိုးမည်။ လိုအပ်ပါက လက်ရှိဒေတာကို အခြားအရန်ဖိုင်အဖြစ် အရင်ထုတ်ပါ။\n\nဝယ်ယူခွင့်မပါဝင်သဖြင့် App Store မှ ပြန်ယူပါ။ ကြော်ငြာကြည့်ရှုမှုအခြေအနေ မရွှေ့ပါ။ အခြားအက်ပ်ဖိုင်၊ ပျက်စီးဖိုင်နှင့် မပံ့ပိုးသောပုံစံအသစ်ကို ပြန်မယူနိုင်ပါ။ ပြန်လည်ရယူနေစဉ် အက်ပ်မပိတ်ပါနှင့်။',
   );
   String get disclaimerTitle => _pick(
     japanese: '免責・利用上の注意',

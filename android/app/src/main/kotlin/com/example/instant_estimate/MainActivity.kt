@@ -1,8 +1,10 @@
 package com.example.instant_estimate
 
+import android.util.AtomicFile
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.FileOutputStream
 
 class MainActivity : FlutterActivity() {
     private val channelName = "jp.instant_estimate/onboarding_preferences"
@@ -11,6 +13,7 @@ class MainActivity : FlutterActivity() {
     private val estimateItemsChannelName = "jp.instant_estimate/estimate_items"
     private val productivityRecordsChannelName = "jp.instant_estimate/productivity_records"
     private val accessChannelName = "jp.instant_estimate/app_access"
+    private val restoreJournalChannelName = "jp.instant_estimate/backup_restore_journal"
     private val preferencesName = "instant_estimate_preferences"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -172,6 +175,54 @@ class MainActivity : FlutterActivity() {
                     } else {
                         preferences.edit().putString("appAccessState", accessState).apply()
                         result.success(null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            restoreJournalChannelName,
+        ).setMethodCallHandler { call, result ->
+            val journalFile = AtomicFile(filesDir.resolve("backup_restore_journal.json"))
+            when (call.method) {
+                "loadRestoreJournal" -> {
+                    if (!journalFile.baseFile.exists()) {
+                        result.success(null)
+                    } else {
+                        try {
+                            result.success(journalFile.openRead().bufferedReader().use { it.readText() })
+                        } catch (error: Exception) {
+                            result.error("JOURNAL_READ_FAILED", "Restore journal could not be read.", error.message)
+                        }
+                    }
+                }
+                "saveRestoreJournal" -> {
+                    val journal = call.argument<String>("journal")
+                    if (journal == null) {
+                        result.error("INVALID_ARGUMENT", "Restore journal is required.", null)
+                    } else {
+                        var output: FileOutputStream? = null
+                        try {
+                            val stream = journalFile.startWrite()
+                            output = stream
+                            stream.write(journal.toByteArray(Charsets.UTF_8))
+                            stream.fd.sync()
+                            journalFile.finishWrite(stream)
+                            result.success(null)
+                        } catch (error: Exception) {
+                            output?.let(journalFile::failWrite)
+                            result.error("JOURNAL_WRITE_FAILED", "Restore journal could not be saved.", error.message)
+                        }
+                    }
+                }
+                "clearRestoreJournal" -> {
+                    try {
+                        journalFile.delete()
+                        result.success(null)
+                    } catch (error: Exception) {
+                        result.error("JOURNAL_CLEAR_FAILED", "Restore journal could not be cleared.", error.message)
                     }
                 }
                 else -> result.notImplemented()

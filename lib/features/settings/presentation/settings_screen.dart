@@ -12,6 +12,7 @@ import '../../onboarding/domain/occupation.dart';
 import '../../onboarding/presentation/occupation_selection_screen.dart';
 import '../../help/presentation/disclaimer_screen.dart';
 import '../../backup/application/backup_snapshot_factory.dart';
+import '../../backup/application/backup_restore_coordinator.dart';
 import '../../backup/presentation/backup_screen.dart';
 import 'button_settings_screen.dart';
 import 'company_profile_editor_screen.dart';
@@ -25,6 +26,8 @@ class SettingsScreen extends StatefulWidget {
     this.accessPlan = AppAccessPlan.free,
     this.onShowAdvertisingPrivacyOptions,
     this.backupSnapshotFactory,
+    this.backupRestoreCoordinator,
+    this.onBackupRestored,
     super.key,
   });
 
@@ -35,6 +38,8 @@ class SettingsScreen extends StatefulWidget {
   final AppAccessPlan accessPlan;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final BackupSnapshotFactory? backupSnapshotFactory;
+  final BackupRestoreCoordinator? backupRestoreCoordinator;
+  final Future<void> Function(AppSettings settings)? onBackupRestored;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -299,8 +304,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (factory == null) return Future.value();
     return Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            BackupScreen(snapshotFactory: factory, settings: _settings),
+        builder: (_) => BackupScreen(
+          snapshotFactory: factory,
+          settings: _settings,
+          restoreCoordinator: widget.backupRestoreCoordinator,
+          onRestored: (settings) async {
+            if (!mounted) return;
+            setState(() => _settings = settings);
+            widget.onSettingsChanged(settings);
+            await _loadOccupation();
+            await widget.onBackupRestored?.call(settings);
+          },
+        ),
       ),
     );
   }

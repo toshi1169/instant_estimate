@@ -1,22 +1,32 @@
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../settings/domain/app_settings.dart';
+import '../application/backup_file_import.dart';
 import '../application/backup_file_export.dart';
+import '../application/backup_restore_coordinator.dart';
 import '../application/backup_snapshot_factory.dart';
 import '../domain/backup_snapshot.dart';
+import 'backup_restore_preview_screen.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({
     required this.snapshotFactory,
     required this.settings,
     this.shareBytes = shareBackupBytes,
+    this.restoreCoordinator,
+    this.onRestored,
+    this.pickFile = pickBackupFile,
     super.key,
   });
 
   final BackupSnapshotFactory snapshotFactory;
   final AppSettings settings;
   final BackupBytesSharer shareBytes;
+  final BackupRestoreCoordinator? restoreCoordinator;
+  final Future<void> Function(AppSettings settings)? onRestored;
+  final BackupFilePicker pickFile;
 
   @override
   State<BackupScreen> createState() => _BackupScreenState();
@@ -25,6 +35,7 @@ class BackupScreen extends StatefulWidget {
 class _BackupScreenState extends State<BackupScreen> {
   late Future<BackupSnapshot> _snapshot = _loadSnapshot();
   bool _sharing = false;
+  bool _selecting = false;
 
   Future<BackupSnapshot> _loadSnapshot() {
     return widget.snapshotFactory.create(widget.settings);
@@ -67,6 +78,47 @@ class _BackupScreenState extends State<BackupScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _selectAndRestore() async {
+    final coordinator = widget.restoreCoordinator;
+    final onRestored = widget.onRestored;
+    if (_selecting || coordinator == null || onRestored == null) return;
+    setState(() => _selecting = true);
+    final strings = AppLocalizations.of(context);
+    try {
+      final file = await widget.pickFile();
+      if (file == null || !mounted) return;
+      final snapshot = await readBackupFile(file);
+      if (!mounted) return;
+      final restored = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => BackupRestorePreviewScreen(
+            snapshot: snapshot,
+            coordinator: coordinator,
+            onRestored: onRestored,
+          ),
+        ),
+      );
+      if (restored == true && mounted) {
+        setState(() {
+          _snapshot = _loadSnapshot();
+        });
+        _showMessage(AppLocalizations.of(context).restoreSucceeded);
+      }
+    } on BackupImportException catch (error) {
+      if (mounted) _showMessage(_importErrorMessage(strings, error.failure));
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          '[BackupImport] UNEXPECTED error type=${error.runtimeType} '
+          'message=$error\n$stackTrace',
+        );
+      }
+      if (mounted) _showMessage(strings.backupReadFailed);
+    } finally {
+      if (mounted) setState(() => _selecting = false);
+    }
   }
 
   @override
@@ -166,6 +218,21 @@ class _BackupScreenState extends State<BackupScreen> {
                       : const Icon(Icons.ios_share_outlined),
                   label: Text(strings.exportBackup),
                 ),
+                if (widget.restoreCoordinator != null &&
+                    widget.onRestored != null) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    key: const Key('restoreBackupButton'),
+                    onPressed: _selecting ? null : _selectAndRestore,
+                    icon: _selecting
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.restore),
+                    label: Text(strings.restoreFromBackup),
+                  ),
+                ],
               ],
             );
           },
@@ -174,6 +241,21 @@ class _BackupScreenState extends State<BackupScreen> {
     );
   }
 }
+
+String _importErrorMessage(
+  AppLocalizations strings,
+  BackupImportFailure failure,
+) => switch (failure) {
+  BackupImportFailure.pickerFailed => strings.backupReadFailed,
+  BackupImportFailure.readFailed => strings.backupReadFailed,
+  BackupImportFailure.tooLarge => strings.backupTooLarge,
+  BackupImportFailure.invalidUtf8 ||
+  BackupImportFailure.malformedJson ||
+  BackupImportFailure.invalidData => strings.backupInvalidData,
+  BackupImportFailure.wrongFileType => strings.backupWrongFileType,
+  BackupImportFailure.wrongFormat => strings.backupWrongFormat,
+  BackupImportFailure.unsupportedVersion => strings.backupFutureVersion,
+};
 
 class _CountTile extends StatelessWidget {
   const _CountTile({required this.icon, required this.label});

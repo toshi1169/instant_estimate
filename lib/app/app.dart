@@ -21,6 +21,7 @@ import '../features/settings/domain/app_settings.dart';
 import '../features/subscription/data/app_access_state_store.dart';
 import '../features/subscription/domain/app_access_state.dart';
 import '../features/subscription/domain/purchase_store.dart';
+import '../features/backup/application/backup_restore_coordinator.dart';
 
 class InstantEstimateApp extends StatefulWidget {
   const InstantEstimateApp({
@@ -35,6 +36,7 @@ class InstantEstimateApp extends StatefulWidget {
     this.enableGoogleMobileAds = false,
     this.purchaseStore,
     this.accessPlan = AppAccessPlan.free,
+    this.backupRestoreCoordinator,
     super.key,
   });
 
@@ -49,12 +51,14 @@ class InstantEstimateApp extends StatefulWidget {
   final bool enableGoogleMobileAds;
   final PurchaseStore? purchaseStore;
   final AppAccessPlan accessPlan;
+  final BackupRestoreCoordinator? backupRestoreCoordinator;
 
   @override
   State<InstantEstimateApp> createState() => _InstantEstimateAppState();
 }
 
 class _InstantEstimateAppState extends State<InstantEstimateApp> {
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   AppSettings _settings = const AppSettings();
   late AppAccessPlan _accessPlan = widget.accessPlan;
   late AppAccessState _accessState = AppAccessState(plan: widget.accessPlan);
@@ -68,6 +72,8 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       );
   late bool _isAccessStateReady = widget.accessStateStore == null;
   late bool _isSettingsReady = widget.appSettingsStore == null;
+  late bool _isRestoreRecoveryReady = widget.backupRestoreCoordinator == null;
+  RestoreRecoveryResult _restoreRecoveryResult = RestoreRecoveryResult.none;
   late AdvertisingConsentState _advertisingConsentState =
       widget.advertisingConsentManager?.state.value ??
       const AdvertisingConsentState(canRequestAds: true);
@@ -81,7 +87,11 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
     widget.advertisingConsentManager?.state.addListener(
       _handleAdvertisingConsentChanged,
     );
-    unawaited(_loadSettings());
+    if (widget.backupRestoreCoordinator == null) {
+      unawaited(_loadSettings());
+    } else {
+      unawaited(_recoverAndLoadSettings());
+    }
     unawaited(_initializeAccessAndPurchases());
     if (widget.enableGoogleMobileAds) {
       unawaited(widget.advertisingConsentManager?.gatherConsent());
@@ -228,6 +238,22 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
     });
   }
 
+  Future<void> _recoverAndLoadSettings() async {
+    var result = RestoreRecoveryResult.rollbackFailed;
+    try {
+      result = await widget.backupRestoreCoordinator!
+          .recoverInterruptedRestore();
+    } catch (_) {
+      result = RestoreRecoveryResult.rollbackFailed;
+    }
+    if (!mounted) return;
+    setState(() {
+      _restoreRecoveryResult = result;
+      _isRestoreRecoveryReady = true;
+    });
+    await _loadSettings();
+  }
+
   void _changeSettings(AppSettings settings) {
     setState(() => _settings = settings);
     final store = widget.appSettingsStore;
@@ -248,6 +274,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: _scaffoldMessengerKey,
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       locale: _settings.language.locale,
@@ -272,26 +299,36 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
           : AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: _isSettingsReady ? _settings.themeMode : ThemeMode.system,
-      home: _isAccessStateReady && _isSettingsReady
-          ? _StartupGate(
-              onboardingPreferences: widget.onboardingPreferences,
-              calculationHistoryStore: widget.calculationHistoryStore,
-              estimateItemStore: widget.estimateItemStore,
-              productivityRecordStore: widget.productivityRecordStore,
-              accessPlan: _accessPlan,
-              settings: _settings,
-              onSettingsChanged: _changeSettings,
-              onRequestRewardedAdAccess: _requestRewardedAdAccess,
-              isRewardedAdRequired: _isRewardedAdRequired,
-              onShowAdvertisingPrivacyOptions:
-                  _advertisingConsentState.privacyOptionsRequired
-                  ? widget.advertisingConsentManager?.showPrivacyOptions
-                  : null,
-              enableGoogleMobileAds:
-                  widget.enableGoogleMobileAds &&
-                  _advertisingConsentState.canRequestAds,
-              purchaseStore: widget.purchaseStore,
-            )
+      home: _isAccessStateReady && _isSettingsReady && _isRestoreRecoveryReady
+          ? _restoreRecoveryResult == RestoreRecoveryResult.rollbackFailed
+                ? const _RestoreRecoveryBlockedScreen()
+                : _StartupGate(
+                    onboardingPreferences: widget.onboardingPreferences,
+                    calculationHistoryStore: widget.calculationHistoryStore,
+                    estimateItemStore: widget.estimateItemStore,
+                    productivityRecordStore: widget.productivityRecordStore,
+                    accessPlan: _accessPlan,
+                    settings: _settings,
+                    onSettingsChanged: _changeSettings,
+                    onRequestRewardedAdAccess: _requestRewardedAdAccess,
+                    isRewardedAdRequired: _isRewardedAdRequired,
+                    onShowAdvertisingPrivacyOptions:
+                        _advertisingConsentState.privacyOptionsRequired
+                        ? widget.advertisingConsentManager?.showPrivacyOptions
+                        : null,
+                    enableGoogleMobileAds:
+                        widget.enableGoogleMobileAds &&
+                        _advertisingConsentState.canRequestAds,
+                    purchaseStore: widget.purchaseStore,
+                    backupRestoreCoordinator: widget.backupRestoreCoordinator,
+                    restoreRecoveryMessage:
+                        _restoreRecoveryResult ==
+                            RestoreRecoveryResult.rolledBack
+                        ? AppLocalizations.of(
+                            context,
+                          ).restoreInterruptedRolledBack
+                        : null,
+                  )
           : Builder(
               builder: (context) =>
                   ColoredBox(color: Theme.of(context).scaffoldBackgroundColor),
@@ -314,6 +351,8 @@ class _StartupGate extends StatefulWidget {
     required this.onShowAdvertisingPrivacyOptions,
     required this.enableGoogleMobileAds,
     required this.purchaseStore,
+    required this.backupRestoreCoordinator,
+    required this.restoreRecoveryMessage,
   });
 
   final OnboardingPreferences onboardingPreferences;
@@ -328,6 +367,8 @@ class _StartupGate extends StatefulWidget {
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
   final PurchaseStore? purchaseStore;
+  final BackupRestoreCoordinator? backupRestoreCoordinator;
+  final String? restoreRecoveryMessage;
 
   @override
   State<_StartupGate> createState() => _StartupGateState();
@@ -335,6 +376,7 @@ class _StartupGate extends StatefulWidget {
 
 class _StartupGateState extends State<_StartupGate> {
   late Future<_StartupStatus> _startupStatus = _loadStartupStatus();
+  bool _restoreRecoveryMessageShown = false;
 
   Future<_StartupStatus> _loadStartupStatus() async {
     final preferences = widget.onboardingPreferences;
@@ -365,6 +407,16 @@ class _StartupGateState extends State<_StartupGate> {
         }
 
         final status = snapshot.data!;
+        final recoveryMessage = widget.restoreRecoveryMessage;
+        if (recoveryMessage != null && !_restoreRecoveryMessageShown) {
+          _restoreRecoveryMessageShown = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(recoveryMessage)));
+          });
+        }
         if (!status.hasSelectedLanguage) {
           return LanguageSelectionScreen(
             selectedLanguage: widget.settings.language,
@@ -398,6 +450,7 @@ class _StartupGateState extends State<_StartupGate> {
             enableGoogleMobileAds: widget.enableGoogleMobileAds,
             purchaseStore: widget.purchaseStore,
             onboardingPreferences: widget.onboardingPreferences,
+            backupRestoreCoordinator: widget.backupRestoreCoordinator,
           );
         }
 
@@ -409,6 +462,39 @@ class _StartupGateState extends State<_StartupGate> {
           },
         );
       },
+    );
+  }
+}
+
+class _RestoreRecoveryBlockedScreen extends StatelessWidget {
+  const _RestoreRecoveryBlockedScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  strings.restoreRollbackFailed,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

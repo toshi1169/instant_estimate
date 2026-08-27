@@ -37,6 +37,7 @@ import '../../unit_conversion/presentation/unit_conversion_screen.dart';
 import '../../subscription/presentation/access_plan_screen.dart';
 import '../../subscription/domain/purchase_store.dart';
 import '../../backup/application/backup_snapshot_factory.dart';
+import '../../backup/application/backup_restore_coordinator.dart';
 import 'function_list_dialog.dart';
 
 class CalculatorScreen extends StatefulWidget {
@@ -56,6 +57,7 @@ class CalculatorScreen extends StatefulWidget {
     this.enableGoogleMobileAds = false,
     this.purchaseStore,
     this.onboardingPreferences,
+    this.backupRestoreCoordinator,
     this.buttonFeedback = const SystemCalculatorButtonFeedback(),
     super.key,
   });
@@ -75,6 +77,7 @@ class CalculatorScreen extends StatefulWidget {
   final bool enableGoogleMobileAds;
   final PurchaseStore? purchaseStore;
   final OnboardingPreferences? onboardingPreferences;
+  final BackupRestoreCoordinator? backupRestoreCoordinator;
   final CalculatorButtonFeedback buttonFeedback;
 
   static const _keys = <_CalculatorKey>[
@@ -258,9 +261,19 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                   onboardingPreferences: onboardingPreferences,
                 )
               : null,
+          backupRestoreCoordinator: widget.backupRestoreCoordinator,
+          onBackupRestored: (_) => _reloadRestoredData(),
         ),
       ),
     );
+  }
+
+  Future<void> _reloadRestoredData() async {
+    await Future.wait([
+      _controller.loadHistory(),
+      _estimateController.load(),
+      _productivityController.load(),
+    ]);
   }
 
   Future<void> _openFunctionList() async {

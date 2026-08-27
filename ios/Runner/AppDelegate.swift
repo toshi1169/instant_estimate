@@ -216,5 +216,67 @@ import UIKit
         result(FlutterMethodNotImplemented)
       }
     }
+
+    let restoreJournalChannel = FlutterMethodChannel(
+      name: "jp.instant_estimate/backup_restore_journal",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    restoreJournalChannel.setMethodCallHandler { call, result in
+      let fileManager = FileManager.default
+      guard let applicationSupport = fileManager.urls(
+        for: .applicationSupportDirectory,
+        in: .userDomainMask
+      ).first else {
+        result(FlutterError(code: "JOURNAL_PATH_FAILED", message: "Restore journal location is unavailable.", details: nil))
+        return
+      }
+      let journalURL = applicationSupport.appendingPathComponent("backup_restore_journal.json")
+      switch call.method {
+      case "loadRestoreJournal":
+        guard fileManager.fileExists(atPath: journalURL.path) else {
+          result(nil)
+          return
+        }
+        do {
+          let data = try Data(contentsOf: journalURL)
+          guard let journal = String(data: data, encoding: .utf8) else {
+            result(FlutterError(code: "JOURNAL_READ_FAILED", message: "Restore journal is not valid UTF-8.", details: nil))
+            return
+          }
+          result(journal)
+        } catch {
+          result(FlutterError(code: "JOURNAL_READ_FAILED", message: "Restore journal could not be read.", details: error.localizedDescription))
+        }
+      case "saveRestoreJournal":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let journal = arguments["journal"] as? String
+        else {
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Restore journal is required.", details: nil))
+          return
+        }
+        do {
+          try fileManager.createDirectory(
+            at: applicationSupport,
+            withIntermediateDirectories: true
+          )
+          try Data(journal.utf8).write(to: journalURL, options: .atomic)
+          result(nil)
+        } catch {
+          result(FlutterError(code: "JOURNAL_WRITE_FAILED", message: "Restore journal could not be saved.", details: error.localizedDescription))
+        }
+      case "clearRestoreJournal":
+        do {
+          if fileManager.fileExists(atPath: journalURL.path) {
+            try fileManager.removeItem(at: journalURL)
+          }
+          result(nil)
+        } catch {
+          result(FlutterError(code: "JOURNAL_CLEAR_FAILED", message: "Restore journal could not be cleared.", details: error.localizedDescription))
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
   }
 }

@@ -11,17 +11,41 @@ import 'features/estimate/data/estimate_item_store.dart';
 import 'features/productivity/data/productivity_record_store.dart';
 import 'features/subscription/data/app_access_state_store.dart';
 import 'features/subscription/data/in_app_purchase_store.dart';
+import 'features/backup/application/backup_restore_coordinator.dart';
+import 'features/backup/application/backup_snapshot_factory.dart';
+import 'features/backup/data/backup_restore_journal_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await configureAppOrientation();
+  final onboardingPreferences = PlatformOnboardingPreferences();
+  final calculationHistoryStore = PlatformCalculationHistoryStore();
+  final appSettingsStore = PlatformAppSettingsStore();
+  final estimateItemStore = PlatformEstimateItemStore();
+  final productivityRecordStore = PlatformProductivityRecordStore();
+  final snapshotFactory = BackupSnapshotFactory(
+    historyStore: calculationHistoryStore,
+    estimateStore: estimateItemStore,
+    productivityStore: productivityRecordStore,
+    onboardingPreferences: onboardingPreferences,
+  );
+  final restoreCoordinator = BackupRestoreCoordinator(
+    snapshotFactory: snapshotFactory,
+    settingsStore: appSettingsStore,
+    historyStore: calculationHistoryStore,
+    estimateStore: estimateItemStore,
+    productivityStore: productivityRecordStore,
+    onboardingPreferences: onboardingPreferences,
+    journalStore: PlatformBackupRestoreJournalStore(),
+  );
   runApp(
     InstantEstimateApp(
-      onboardingPreferences: PlatformOnboardingPreferences(),
-      calculationHistoryStore: PlatformCalculationHistoryStore(),
-      appSettingsStore: PlatformAppSettingsStore(),
-      estimateItemStore: PlatformEstimateItemStore(),
-      productivityRecordStore: PlatformProductivityRecordStore(),
+      onboardingPreferences: onboardingPreferences,
+      calculationHistoryStore: calculationHistoryStore,
+      appSettingsStore: appSettingsStore,
+      estimateItemStore: estimateItemStore,
+      productivityRecordStore: productivityRecordStore,
+      backupRestoreCoordinator: restoreCoordinator,
       accessStateStore: PlatformAppAccessStateStore(),
       rewardedAdPresenter: const GoogleMobileAdsRewardedAdPresenter(),
       advertisingConsentManager: GoogleMobileAdsConsentManager(),

@@ -34,9 +34,13 @@ class PlatformAppSettingsStore implements AppSettingsStore {
   }
 
   @override
-  Future<void> save(AppSettings settings) {
-    return _channel.invokeMethod<void>('saveSettings', <String, Object>{
+  Future<void> save(AppSettings settings) async {
+    await _channel.invokeMethod<void>('saveSettings', <String, Object>{
       'settings': jsonEncode(settings.toJson()),
+    });
+    // Keep only the compatibility value required by older app versions.
+    await _channel.invokeMethod<void>('saveThemeMode', <String, Object>{
+      'themeMode': settings.theme.name,
     });
   }
 }
