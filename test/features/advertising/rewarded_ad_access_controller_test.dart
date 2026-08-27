@@ -7,6 +7,71 @@ import 'package:instant_estimate/features/subscription/domain/app_access_state.d
 
 void main() {
   group('RewardedAdAccessController', () {
+    test('次回広告が必要な状態を既存の日次ゲートから判定する', () async {
+      var now = DateTime(2026, 8, 10, 9);
+      final controller = RewardedAdAccessController(
+        initialState: const AppAccessState(),
+        presenter: _FakePresenter(),
+        now: () => now,
+      );
+
+      expect(
+        controller.requiresAd(RewardedAdEntryPoint.convenientCalculation),
+        isTrue,
+      );
+      expect(
+        controller.requiresAd(RewardedAdEntryPoint.instantEstimate),
+        isTrue,
+      );
+
+      await controller.requestAccess(RewardedAdEntryPoint.instantEstimate);
+
+      expect(
+        controller.requiresAd(RewardedAdEntryPoint.instantEstimate),
+        isFalse,
+      );
+      expect(
+        controller.requiresAd(RewardedAdEntryPoint.unitPriceMaster),
+        isFalse,
+      );
+      expect(
+        controller.requiresAd(RewardedAdEntryPoint.convenientCalculation),
+        isTrue,
+      );
+
+      now = DateTime(2026, 8, 11);
+      expect(
+        controller.requiresAd(RewardedAdEntryPoint.instantEstimate),
+        isTrue,
+      );
+    });
+
+    test('広告失敗による開放と有料プランを動画アイコン不要と判定する', () async {
+      final failedController = RewardedAdAccessController(
+        initialState: const AppAccessState(),
+        presenter: _FakePresenter(results: [RewardedAdResult.failed]),
+        now: () => DateTime(2026, 8, 10),
+      );
+      await failedController.requestAccess(
+        RewardedAdEntryPoint.convenientCalculation,
+      );
+      expect(
+        failedController.requiresAd(RewardedAdEntryPoint.convenientCalculation),
+        isFalse,
+      );
+
+      for (final plan in [AppAccessPlan.adFree, AppAccessPlan.full]) {
+        final controller = RewardedAdAccessController(
+          initialState: AppAccessState(plan: plan),
+          now: () => DateTime(2026, 8, 10),
+        );
+        expect(
+          controller.requiresAd(RewardedAdEntryPoint.convenientCalculation),
+          isFalse,
+        );
+      }
+    });
+
     test('同じグループは同日1回だけ広告を要求する', () async {
       final presenter = _FakePresenter();
       final store = _MemoryStore();

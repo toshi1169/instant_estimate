@@ -10,6 +10,8 @@ import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
+import 'package:instant_estimate/features/advertising/application/rewarded_ad_access_controller.dart';
+import 'package:instant_estimate/features/advertising/domain/rewarded_ad_policy.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 import 'package:instant_estimate/features/onboarding/domain/occupation.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
@@ -110,6 +112,16 @@ class FakeAppAccessStateStore implements AppAccessStateStore {
   @override
   Future<void> save(AppAccessState state) async {
     this.state = state;
+  }
+}
+
+class FakeCompletedRewardedAdPresenter implements RewardedAdPresenter {
+  final List<RewardedAdEntryPoint> calls = [];
+
+  @override
+  Future<RewardedAdResult> show(RewardedAdEntryPoint entryPoint) async {
+    calls.add(entryPoint);
+    return RewardedAdResult.completed;
   }
 }
 
@@ -921,6 +933,68 @@ void main() {
 
     expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
     expect(find.text('便利計算一覧'), findsOneWidget);
+  });
+
+  testWidgets('Rewarded視聴後は同一グループの動画アイコンを即時に消す', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final presenter = FakeCompletedRewardedAdPresenter();
+    final store = FakeAppAccessStateStore(const AppAccessState());
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessStateStore: store,
+        rewardedAdPresenter: presenter,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('calculatorSideMenu')),
+      const Offset(0, -140),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('sideMenuRewardedAd-convenientCalculations')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('sideMenuRewardedAd-estimateAndUnitPriceMaster')),
+      findsNWidgets(2),
+    );
+
+    await tester.tap(find.byKey(const Key('sideMenuInstantEstimate')));
+    await tester.pumpAndSettle();
+    expect(presenter.calls, [RewardedAdEntryPoint.instantEstimate]);
+    expect(find.byType(EstimateDocumentsScreen), findsOneWidget);
+
+    Navigator.of(tester.element(find.byType(EstimateDocumentsScreen))).pop();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calculatorSideMenu')), findsOneWidget);
+    expect(
+      find.byKey(const Key('sideMenuRewardedAd-estimateAndUnitPriceMaster')),
+      findsNothing,
+    );
+    await tester.drag(
+      find.byKey(const Key('calculatorSideMenu')),
+      const Offset(0, 140),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('sideMenuRewardedAd-convenientCalculations')),
+      findsOneWidget,
+    );
+    expect(
+      store.state.rewardedAccessGroups,
+      contains(RewardedAdGroup.estimateAndUnitPriceMaster.name),
+    );
   });
 
   testWidgets('左メニューから広告なし版と完全版の内容を確認できる', (tester) async {

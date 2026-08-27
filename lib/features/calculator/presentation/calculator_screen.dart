@@ -50,6 +50,7 @@ class CalculatorScreen extends StatefulWidget {
     this.productivityController,
     this.accessPlan = AppAccessPlan.free,
     this.onRequestRewardedAdAccess,
+    this.isRewardedAdRequired,
     this.onShowAdvertisingPrivacyOptions,
     this.enableGoogleMobileAds = false,
     this.purchaseStore,
@@ -68,6 +69,7 @@ class CalculatorScreen extends StatefulWidget {
   final ProductivityController? productivityController;
   final AppAccessPlan accessPlan;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
+  final bool Function(RewardedAdEntryPoint)? isRewardedAdRequired;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
   final PurchaseStore? purchaseStore;
@@ -785,6 +787,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         drawer: CalculatorSideMenu(
           showAds: widget.accessPlan.showsAds,
           accessPlan: widget.accessPlan,
+          isRewardedAdRequired: widget.isRewardedAdRequired,
           enableGoogleMobileAds: widget.enableGoogleMobileAds,
           onSelected: _selectSideMenu,
         ),

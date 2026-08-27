@@ -181,7 +181,17 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
         return true;
       }
     }
-    return _rewardedAdAccessController.requestAccess(entryPoint);
+    final granted = await _rewardedAdAccessController.requestAccess(entryPoint);
+    if (!mounted) return granted;
+    setState(() {
+      _accessState = _rewardedAdAccessController.state;
+      _accessPlan = _accessState.effectivePlan();
+    });
+    return granted;
+  }
+
+  bool _isRewardedAdRequired(RewardedAdEntryPoint entryPoint) {
+    return _rewardedAdAccessController.requiresAd(entryPoint);
   }
 
   Future<void> _loadAccessState() async {
@@ -272,6 +282,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
               settings: _settings,
               onSettingsChanged: _changeSettings,
               onRequestRewardedAdAccess: _requestRewardedAdAccess,
+              isRewardedAdRequired: _isRewardedAdRequired,
               onShowAdvertisingPrivacyOptions:
                   _advertisingConsentState.privacyOptionsRequired
                   ? widget.advertisingConsentManager?.showPrivacyOptions
@@ -299,6 +310,7 @@ class _StartupGate extends StatefulWidget {
     required this.settings,
     required this.onSettingsChanged,
     required this.onRequestRewardedAdAccess,
+    required this.isRewardedAdRequired,
     required this.onShowAdvertisingPrivacyOptions,
     required this.enableGoogleMobileAds,
     required this.purchaseStore,
@@ -312,6 +324,7 @@ class _StartupGate extends StatefulWidget {
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
   final Future<bool> Function(RewardedAdEntryPoint) onRequestRewardedAdAccess;
+  final bool Function(RewardedAdEntryPoint) isRewardedAdRequired;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final bool enableGoogleMobileAds;
   final PurchaseStore? purchaseStore;
@@ -379,6 +392,7 @@ class _StartupGateState extends State<_StartupGate> {
             settings: widget.settings,
             onSettingsChanged: widget.onSettingsChanged,
             onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
+            isRewardedAdRequired: widget.isRewardedAdRequired,
             onShowAdvertisingPrivacyOptions:
                 widget.onShowAdvertisingPrivacyOptions,
             enableGoogleMobileAds: widget.enableGoogleMobileAds,

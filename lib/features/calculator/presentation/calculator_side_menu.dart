@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/domain/app_access_plan.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/widgets/technical_term_info.dart';
+import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../../advertising/presentation/google_mobile_ads_banner.dart';
 
 enum CalculatorSideMenuDestination {
@@ -22,6 +23,7 @@ class CalculatorSideMenu extends StatelessWidget {
     required this.onSelected,
     required this.showAds,
     required this.accessPlan,
+    this.isRewardedAdRequired,
     this.enableGoogleMobileAds = false,
     super.key,
   });
@@ -29,6 +31,7 @@ class CalculatorSideMenu extends StatelessWidget {
   final ValueChanged<CalculatorSideMenuDestination> onSelected;
   final bool showAds;
   final AppAccessPlan accessPlan;
+  final bool Function(RewardedAdEntryPoint)? isRewardedAdRequired;
   final bool enableGoogleMobileAds;
 
   @override
@@ -78,6 +81,14 @@ class CalculatorSideMenu extends StatelessWidget {
               key: const Key('sideMenuConstructionCalculations'),
               icon: Icons.engineering_outlined,
               label: strings.convenientCalculations,
+              rewardedAdIconKey: const Key(
+                'sideMenuRewardedAd-convenientCalculations',
+              ),
+              showRewardedAd:
+                  isRewardedAdRequired?.call(
+                    RewardedAdEntryPoint.convenientCalculation,
+                  ) ??
+                  false,
               onTap: () => onSelected(
                 CalculatorSideMenuDestination.constructionCalculations,
               ),
@@ -93,6 +104,14 @@ class CalculatorSideMenu extends StatelessWidget {
               key: const Key('sideMenuInstantEstimate'),
               icon: Icons.request_quote_outlined,
               label: strings.instantEstimate,
+              rewardedAdIconKey: const Key(
+                'sideMenuRewardedAd-estimateAndUnitPriceMaster',
+              ),
+              showRewardedAd:
+                  isRewardedAdRequired?.call(
+                    RewardedAdEntryPoint.instantEstimate,
+                  ) ??
+                  false,
               onTap: () =>
                   onSelected(CalculatorSideMenuDestination.instantEstimate),
             ),
@@ -101,6 +120,14 @@ class CalculatorSideMenu extends StatelessWidget {
               key: const Key('sideMenuUnitPriceMaster'),
               icon: Icons.price_change_outlined,
               label: strings.unitPriceMaster,
+              rewardedAdIconKey: const Key(
+                'sideMenuRewardedAd-estimateAndUnitPriceMaster',
+              ),
+              showRewardedAd:
+                  isRewardedAdRequired?.call(
+                    RewardedAdEntryPoint.unitPriceMaster,
+                  ) ??
+                  false,
               onTap: () =>
                   onSelected(CalculatorSideMenuDestination.unitPriceMaster),
             ),
@@ -196,6 +223,8 @@ class _MenuTile extends StatelessWidget {
     this.subtitle,
     this.subtitleKey,
     this.statusActive = false,
+    this.showRewardedAd = false,
+    this.rewardedAdIconKey,
     super.key,
   });
 
@@ -207,11 +236,15 @@ class _MenuTile extends StatelessWidget {
   final String? subtitle;
   final Key? subtitleKey;
   final bool statusActive;
+  final bool showRewardedAd;
+  final Key? rewardedAdIconKey;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       minTileHeight: 54,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      horizontalTitleGap: 10,
       leading: Icon(icon),
       title: Row(
         children: [
@@ -232,7 +265,23 @@ class _MenuTile extends StatelessWidget {
                 fontWeight: statusActive ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
-      trailing: const Icon(Icons.chevron_right),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showRewardedAd) ...[
+            ExcludeSemantics(
+              child: Icon(
+                Icons.videocam_outlined,
+                key: rewardedAdIconKey,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+          const Icon(Icons.chevron_right),
+        ],
+      ),
       onTap: onTap,
     );
   }

@@ -39,16 +39,15 @@ class RewardedAdAccessController {
     _state = state;
   }
 
+  bool requiresAd(RewardedAdEntryPoint entryPoint) {
+    return _requiresAd(entryPoint, _now());
+  }
+
   Future<bool> requestAccess(RewardedAdEntryPoint entryPoint) {
     final now = _now();
-    if (!_state.effectivePlan(now: now).showsAds) {
-      return Future.value(true);
-    }
-
     final group = entryPoint.group;
     final day = _dayKey(now);
-    if (_state.rewardedAccessDay == day &&
-        _state.rewardedAccessGroups.contains(group.name)) {
+    if (!_requiresAd(entryPoint, now)) {
       return Future.value(true);
     }
 
@@ -58,6 +57,14 @@ class RewardedAdAccessController {
     final request = _requestAndRecord(entryPoint, group, day);
     _pending[group] = request;
     return request.whenComplete(() => _pending.remove(group));
+  }
+
+  bool _requiresAd(RewardedAdEntryPoint entryPoint, DateTime now) {
+    if (!_state.effectivePlan(now: now).showsAds) return false;
+    final group = entryPoint.group;
+    final day = _dayKey(now);
+    return _state.rewardedAccessDay != day ||
+        !_state.rewardedAccessGroups.contains(group.name);
   }
 
   Future<bool> _requestAndRecord(
