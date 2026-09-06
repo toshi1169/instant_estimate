@@ -4,13 +4,21 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../application/advertising_consent_manager.dart';
+import 'google_mobile_ads_initializer.dart';
 
 class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
+  GoogleMobileAdsConsentManager({
+    GoogleMobileAdsInitializer? mobileAdsInitializer,
+  }) : _mobileAdsInitializer =
+           mobileAdsInitializer ?? GoogleMobileAdsInitializer.plugin();
+
   final ValueNotifier<AdvertisingConsentState> _state = ValueNotifier(
     const AdvertisingConsentState(),
   );
+  final GoogleMobileAdsInitializer _mobileAdsInitializer;
 
   Future<void>? _gathering;
+  bool _mobileAdsPrepared = false;
   bool _mobileAdsInitialized = false;
 
   @override
@@ -30,6 +38,8 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
   Future<void> _gatherConsent() async {
     _state.value = _state.value.copyWith(isGathering: true);
     try {
+      await _mobileAdsInitializer.prepare();
+      _mobileAdsPrepared = true;
       await _requestConsentInformationUpdate();
       await _loadAndShowConsentFormIfRequired();
     } catch (_) {
@@ -86,14 +96,15 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
     final canRequestAds = await ConsentInformation.instance.canRequestAds();
     final privacyStatus = await ConsentInformation.instance
         .getPrivacyOptionsRequirementStatus();
+    final canSafelyRequestAds = canRequestAds && _mobileAdsPrepared;
     _state.value = _state.value.copyWith(
-      canRequestAds: canRequestAds,
+      canRequestAds: canSafelyRequestAds,
       privacyOptionsRequired:
           privacyStatus == PrivacyOptionsRequirementStatus.required,
     );
-    if (canRequestAds && !_mobileAdsInitialized) {
+    if (canSafelyRequestAds && !_mobileAdsInitialized) {
       _mobileAdsInitialized = true;
-      await MobileAds.instance.initialize();
+      await _mobileAdsInitializer.initialize();
     }
   }
 }
