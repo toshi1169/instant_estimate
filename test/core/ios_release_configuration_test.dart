@@ -36,6 +36,16 @@ void main() {
     },
   );
 
+  test('iOS uses the production AdMob application ID', () {
+    final infoPlist = File('ios/Runner/Info.plist').readAsStringSync();
+
+    expect(infoPlist, contains('ca-app-pub-5377462997619054~3650317961'));
+    expect(
+      infoPlist,
+      isNot(contains('ca-app-pub-3940256099942544~1458002511')),
+    );
+  });
+
   test('Launch Screen uses the adaptive background color without an image', () {
     final storyboard = File(
       'ios/Runner/Base.lproj/LaunchScreen.storyboard',

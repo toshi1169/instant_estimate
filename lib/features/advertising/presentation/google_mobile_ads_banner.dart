@@ -2,14 +2,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-abstract final class GoogleMobileAdsBannerTestIds {
-  static const android = 'ca-app-pub-3940256099942544/6300978111';
-  static const ios = 'ca-app-pub-3940256099942544/2934735716';
+abstract final class GoogleMobileAdsBannerIds {
+  static const androidTest = 'ca-app-pub-3940256099942544/6300978111';
+  static const iosTest = 'ca-app-pub-3940256099942544/2934735716';
+  static const iosProduction = 'ca-app-pub-5377462997619054/6124543262';
 
-  static String? forPlatform(TargetPlatform platform) {
+  static String? forPlatform(
+    TargetPlatform platform, {
+    bool useProductionIds = kReleaseMode,
+  }) {
     return switch (platform) {
-      TargetPlatform.android => android,
-      TargetPlatform.iOS => ios,
+      TargetPlatform.android => androidTest,
+      TargetPlatform.iOS => useProductionIds ? iosProduction : iosTest,
       _ => null,
     };
   }
@@ -17,7 +21,7 @@ abstract final class GoogleMobileAdsBannerTestIds {
 
 enum GoogleMobileAdsBannerFormat { standard, mediumRectangle }
 
-/// Google公式のテスト広告を表示するバナー。
+/// ReleaseではiOS本番広告、Debug/ProfileではGoogle公式テスト広告を表示するバナー。
 ///
 /// 広告の読み込み中・取得失敗時は [fallback] を維持し、無料版の画面に
 /// 不自然な空白ができないようにする。
@@ -49,7 +53,7 @@ class _GoogleMobileAdsBannerState extends State<GoogleMobileAdsBanner> {
 
   void _loadBanner() {
     if (kIsWeb) return;
-    final adUnitId = GoogleMobileAdsBannerTestIds.forPlatform(
+    final adUnitId = GoogleMobileAdsBannerIds.forPlatform(
       defaultTargetPlatform,
     );
     if (adUnitId == null) return;

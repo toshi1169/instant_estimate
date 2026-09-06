@@ -6,15 +6,17 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../application/rewarded_ad_access_controller.dart';
 import '../domain/rewarded_ad_policy.dart';
 
-/// Googleが公開している開発専用のリワード広告ID。
-/// 販売版ではAdMob管理画面で発行した本番IDへ差し替える。
-abstract final class RewardedAdTestIds {
-  static const android = 'ca-app-pub-3940256099942544/5224354917';
-  static const ios = 'ca-app-pub-3940256099942544/1712485313';
+abstract final class RewardedAdIds {
+  static const androidTest = 'ca-app-pub-3940256099942544/5224354917';
+  static const iosTest = 'ca-app-pub-3940256099942544/1712485313';
+  static const iosProduction = 'ca-app-pub-5377462997619054/4787410869';
 
-  static String? forPlatform(TargetPlatform platform) => switch (platform) {
-    TargetPlatform.android => android,
-    TargetPlatform.iOS => ios,
+  static String? forPlatform(
+    TargetPlatform platform, {
+    bool useProductionIds = kReleaseMode,
+  }) => switch (platform) {
+    TargetPlatform.android => androidTest,
+    TargetPlatform.iOS => useProductionIds ? iosProduction : iosTest,
     _ => null,
   };
 }
@@ -29,7 +31,7 @@ class GoogleMobileAdsRewardedAdPresenter implements RewardedAdPresenter {
   @override
   Future<RewardedAdResult> show(RewardedAdEntryPoint entryPoint) async {
     if (kIsWeb) return RewardedAdResult.unavailable;
-    final adUnitId = RewardedAdTestIds.forPlatform(defaultTargetPlatform);
+    final adUnitId = RewardedAdIds.forPlatform(defaultTargetPlatform);
     if (adUnitId == null) return RewardedAdResult.unavailable;
 
     final result = Completer<RewardedAdResult>();
