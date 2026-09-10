@@ -86,7 +86,7 @@ void main() {
     expect(sentDraft?.calculationBasis, contains('＝ 12m²'));
   });
 
-  testWidgets('見積数量には設定の丸めを適用し元の面積を保持する', (tester) async {
+  testWidgets('表示は設定で丸め見積へは丸め前の面積を送る', (tester) async {
     EstimateItemDraft? sentDraft;
     await tester.pumpWidget(
       MaterialApp(
@@ -118,7 +118,7 @@ void main() {
     await tester.tap(sendButton);
     await tester.pump();
 
-    expect(sentDraft?.quantity, 0.86);
+    expect(sentDraft?.quantity, closeTo(0.8660254038, 0.000000001));
     expect(sentDraft?.originalQuantity, closeTo(0.8660254038, 0.000000001));
   });
 

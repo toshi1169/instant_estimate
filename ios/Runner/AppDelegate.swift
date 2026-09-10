@@ -1,4 +1,5 @@
 import Flutter
+import StoreKit
 import UIKit
 
 @main
@@ -214,6 +215,53 @@ import UIKit
         result(nil)
       default:
         result(FlutterMethodNotImplemented)
+      }
+    }
+
+    let storeKitEntitlementsChannel = FlutterMethodChannel(
+      name: "com.matsumotoboundary.constructioncalc/storekit_entitlements",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    storeKitEntitlementsChannel.setMethodCallHandler { call, result in
+      guard call.method == "loadVerifiedEntitlementProductIds" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard #available(iOS 15.0, *) else {
+        result(
+          FlutterError(
+            code: "STOREKIT2_UNAVAILABLE",
+            message: "StoreKit 2 requires iOS 15 or later.",
+            details: nil
+          )
+        )
+        return
+      }
+
+      let arguments = call.arguments as? [String: Any]
+      let synchronize = arguments?["synchronize"] as? Bool ?? false
+      Task { @MainActor in
+        do {
+          if synchronize {
+            try await AppStore.sync()
+          }
+          var productIds = Set<String>()
+          for await entitlement in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = entitlement else {
+              continue
+            }
+            productIds.insert(transaction.productID)
+          }
+          result(Array(productIds).sorted())
+        } catch {
+          result(
+            FlutterError(
+              code: "STOREKIT_ENTITLEMENTS_FAILED",
+              message: "Verified StoreKit entitlements could not be loaded.",
+              details: error.localizedDescription
+            )
+          )
+        }
       }
     }
 

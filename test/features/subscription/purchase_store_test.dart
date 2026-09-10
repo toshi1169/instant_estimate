@@ -77,7 +77,8 @@ void main() {
     test('Store問い合わせ失敗を有効権利なしと区別する', () async {
       final store = InAppPurchaseStore(
         purchaseStream: const Stream<List<PurchaseDetails>>.empty(),
-        restorePurchases: () => Future<void>.error(Exception('offline')),
+        loadVerifiedEntitlements: ({required synchronize}) =>
+            Future<Set<String>>.error(Exception('offline')),
       );
       addTearDown(store.dispose);
 
@@ -87,11 +88,13 @@ void main() {
       expect(result.isVerified, isFalse);
     });
 
-    test('購入直後のfullを購入イベントとして付与する', () async {
+    test('verificationDataが非空でもverified entitlementが無ければ付与しない', () async {
       final updates = StreamController<List<PurchaseDetails>>.broadcast();
+      final completed = <PurchaseDetails>[];
       final store = InAppPurchaseStore(
         purchaseStream: updates.stream,
-        restorePurchases: () async {},
+        loadVerifiedEntitlements: ({required synchronize}) async => const {},
+        completePurchase: (purchase) async => completed.add(purchase),
       );
       addTearDown(() async {
         store.dispose();
@@ -99,15 +102,116 @@ void main() {
       });
 
       await store.refreshEntitlements();
-      final purchasedPlan = store.entitlementChanges.first;
+      final snapshotFuture = store.entitlementSnapshots.first;
+      final purchase = _purchaseDetails(
+        PurchaseProductIds.fullMonthly,
+        PurchaseStatus.purchased,
+        pendingCompletePurchase: true,
+      );
+      updates.add([purchase]);
+
+      final snapshot = await snapshotFuture;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(snapshot.effectivePlan, AppAccessPlan.free);
+      expect(completed, isEmpty);
+      expect(store.state.value.operation, PurchaseOperation.error);
+    });
+
+    test('購入直後はStoreKit verified entitlementだけを付与して完了する', () async {
+      final updates = StreamController<List<PurchaseDetails>>.broadcast();
+      final completed = <PurchaseDetails>[];
+      final store = InAppPurchaseStore(
+        purchaseStream: updates.stream,
+        loadVerifiedEntitlements: ({required synchronize}) async => {
+          PurchaseProductIds.fullMonthly,
+        },
+        completePurchase: (purchase) async => completed.add(purchase),
+      );
+      addTearDown(() async {
+        store.dispose();
+        await updates.close();
+      });
+
+      await store.refreshEntitlements();
+      final snapshotFuture = store.entitlementSnapshots.first;
+      final purchase = _purchaseDetails(
+        PurchaseProductIds.fullMonthly,
+        PurchaseStatus.purchased,
+        pendingCompletePurchase: true,
+      );
+      updates.add([purchase]);
+
+      final snapshot = await snapshotFuture;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(snapshot.activePlans, {AppAccessPlan.full});
+      expect(snapshot.effectivePlan, AppAccessPlan.full);
+      expect(completed, [purchase]);
+      expect(store.state.value.operation, PurchaseOperation.completed);
+    });
+
+    test('pending・cancelled・errorでは権利確認も付与も完了もしない', () async {
+      final updates = StreamController<List<PurchaseDetails>>.broadcast();
+      var loadCount = 0;
+      final completed = <PurchaseDetails>[];
+      final store = InAppPurchaseStore(
+        purchaseStream: updates.stream,
+        loadVerifiedEntitlements: ({required synchronize}) async {
+          loadCount += 1;
+          return {PurchaseProductIds.fullMonthly};
+        },
+        completePurchase: (purchase) async => completed.add(purchase),
+      );
+      addTearDown(() async {
+        store.dispose();
+        await updates.close();
+      });
+
+      await store.refreshEntitlements();
+      loadCount = 0;
       updates.add([
         _purchaseDetails(
           PurchaseProductIds.fullMonthly,
-          PurchaseStatus.purchased,
+          PurchaseStatus.pending,
+          pendingCompletePurchase: true,
+        ),
+        _purchaseDetails(
+          PurchaseProductIds.fullMonthly,
+          PurchaseStatus.canceled,
+          pendingCompletePurchase: true,
+        ),
+        _purchaseDetails(
+          PurchaseProductIds.fullMonthly,
+          PurchaseStatus.error,
+          pendingCompletePurchase: true,
         ),
       ]);
+      await Future<void>.delayed(Duration.zero);
 
-      expect(await purchasedPlan, AppAccessPlan.full);
+      expect(loadCount, 0);
+      expect(completed, isEmpty);
+      expect(store.state.value.operation, PurchaseOperation.error);
+    });
+
+    test('復元はStore同期後のverified current entitlementsで確定する', () async {
+      bool? synchronizeArgument;
+      final store = InAppPurchaseStore(
+        purchaseStream: const Stream<List<PurchaseDetails>>.empty(),
+        loadVerifiedEntitlements: ({required synchronize}) async {
+          synchronizeArgument = synchronize;
+          return {PurchaseProductIds.adFree};
+        },
+      );
+      addTearDown(store.dispose);
+
+      final snapshotFuture = store.entitlementSnapshots.first;
+      await store.restorePurchases();
+      final snapshot = await snapshotFuture;
+
+      expect(synchronizeArgument, isTrue);
+      expect(snapshot.effectivePlan, AppAccessPlan.adFree);
+      expect(store.state.value.operation, PurchaseOperation.ready);
     });
   });
 
@@ -288,8 +392,6 @@ class _FakePurchaseStore implements PurchaseStore {
     : _state = ValueNotifier(initialState);
 
   final ValueNotifier<PurchaseStoreState> _state;
-  final StreamController<AppAccessPlan> _entitlements =
-      StreamController<AppAccessPlan>.broadcast();
   final StreamController<PurchaseEntitlementSnapshot> _snapshots =
       StreamController<PurchaseEntitlementSnapshot>.broadcast();
 
@@ -298,9 +400,6 @@ class _FakePurchaseStore implements PurchaseStore {
 
   @override
   ValueListenable<PurchaseStoreState> get state => _state;
-
-  @override
-  Stream<AppAccessPlan> get entitlementChanges => _entitlements.stream;
 
   @override
   Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots =>
@@ -327,7 +426,6 @@ class _FakePurchaseStore implements PurchaseStore {
   @override
   void dispose() {
     _state.dispose();
-    _entitlements.close();
     _snapshots.close();
   }
 }
@@ -335,28 +433,24 @@ class _FakePurchaseStore implements PurchaseStore {
 Future<PurchaseEntitlementSnapshot> _refreshWithProducts(
   List<String> productIds,
 ) async {
-  final updates = StreamController<List<PurchaseDetails>>.broadcast();
   final store = InAppPurchaseStore(
-    purchaseStream: updates.stream,
-    restorePurchases: () async {
-      if (productIds.isNotEmpty) {
-        updates.add([
-          for (final productId in productIds)
-            _purchaseDetails(productId, PurchaseStatus.restored),
-        ]);
-      }
-    },
+    purchaseStream: const Stream<List<PurchaseDetails>>.empty(),
+    loadVerifiedEntitlements: ({required synchronize}) async =>
+        productIds.toSet(),
   );
   try {
     return await store.refreshEntitlements();
   } finally {
     store.dispose();
-    await updates.close();
   }
 }
 
-PurchaseDetails _purchaseDetails(String productId, PurchaseStatus status) {
-  return PurchaseDetails(
+PurchaseDetails _purchaseDetails(
+  String productId,
+  PurchaseStatus status, {
+  bool pendingCompletePurchase = false,
+}) {
+  final purchase = PurchaseDetails(
     productID: productId,
     verificationData: PurchaseVerificationData(
       localVerificationData: 'verified',
@@ -366,4 +460,6 @@ PurchaseDetails _purchaseDetails(String productId, PurchaseStatus status) {
     transactionDate: '0',
     status: status,
   );
+  purchase.pendingCompletePurchase = pendingCompletePurchase;
+  return purchase;
 }

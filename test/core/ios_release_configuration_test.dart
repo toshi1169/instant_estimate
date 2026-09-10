@@ -23,6 +23,11 @@ void main() {
       ).allMatches(project),
       hasLength(3),
     );
+    expect(
+      RegExp(r'IPHONEOS_DEPLOYMENT_TARGET = 15\.0;').allMatches(project),
+      hasLength(3),
+    );
+    expect(project, isNot(contains('IPHONEOS_DEPLOYMENT_TARGET = 13.0;')));
   });
 
   test(
@@ -44,6 +49,19 @@ void main() {
       infoPlist,
       isNot(contains('ca-app-pub-3940256099942544~1458002511')),
     );
+  });
+
+  test('StoreKit権利はcurrentEntitlementsのverifiedだけを返す', () {
+    final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
+
+    expect(
+      appDelegate,
+      contains('com.matsumotoboundary.constructioncalc/storekit_entitlements'),
+    );
+    expect(appDelegate, contains('Transaction.currentEntitlements'));
+    expect(appDelegate, contains('case .verified(let transaction)'));
+    expect(appDelegate, contains('try await AppStore.sync()'));
+    expect(appDelegate, isNot(contains('unsafePayloadValue')));
   });
 
   test('iOS declares the complete AdMob SKAdNetwork identifier set', () {

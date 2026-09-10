@@ -77,7 +77,6 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   late AdvertisingConsentState _advertisingConsentState =
       widget.advertisingConsentManager?.state.value ??
       const AdvertisingConsentState(canRequestAds: true);
-  StreamSubscription<AppAccessPlan>? _purchaseEntitlementSubscription;
   StreamSubscription<PurchaseEntitlementSnapshot>?
   _purchaseEntitlementSnapshotSubscription;
 
@@ -103,7 +102,6 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
     widget.advertisingConsentManager?.state.removeListener(
       _handleAdvertisingConsentChanged,
     );
-    unawaited(_purchaseEntitlementSubscription?.cancel());
     unawaited(_purchaseEntitlementSnapshotSubscription?.cancel());
     widget.purchaseStore?.dispose();
     super.dispose();
@@ -113,28 +111,11 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
     await _loadAccessState();
     final purchaseStore = widget.purchaseStore;
     if (purchaseStore == null) return;
-    _purchaseEntitlementSubscription = purchaseStore.entitlementChanges.listen(
-      (plan) => unawaited(_applyPurchasedPlan(plan)),
-    );
     _purchaseEntitlementSnapshotSubscription = purchaseStore
         .entitlementSnapshots
         .listen((snapshot) => unawaited(_applyEntitlementSnapshot(snapshot)));
     await purchaseStore.initialize();
     await purchaseStore.refreshEntitlements();
-  }
-
-  Future<void> _applyPurchasedPlan(AppAccessPlan purchasedPlan) async {
-    final currentPlan = _accessState.effectivePlan();
-    final effectivePlan =
-        _planPriority(purchasedPlan) >= _planPriority(currentPlan)
-        ? purchasedPlan
-        : currentPlan;
-    final updatedState = _accessState.copyWith(
-      plan: effectivePlan,
-      lastVerifiedAt: DateTime.now(),
-      clearTrialEndsAt: true,
-    );
-    await _saveAndApplyAccessState(updatedState);
   }
 
   Future<void> _applyEntitlementSnapshot(
@@ -164,12 +145,6 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       _rewardedAdAccessController.updateState(updatedState);
     });
   }
-
-  int _planPriority(AppAccessPlan plan) => switch (plan) {
-    AppAccessPlan.free => 0,
-    AppAccessPlan.adFree => 1,
-    AppAccessPlan.full => 2,
-  };
 
   void _handleAdvertisingConsentChanged() {
     if (!mounted) return;

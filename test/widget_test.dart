@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -20,6 +23,7 @@ import 'package:instant_estimate/features/settings/domain/company_profile.dart';
 import 'package:instant_estimate/features/settings/presentation/settings_screen.dart';
 import 'package:instant_estimate/features/subscription/data/app_access_state_store.dart';
 import 'package:instant_estimate/features/subscription/domain/app_access_state.dart';
+import 'package:instant_estimate/features/subscription/domain/purchase_store.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_document.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
@@ -112,6 +116,43 @@ class FakeAppAccessStateStore implements AppAccessStateStore {
   @override
   Future<void> save(AppAccessState state) async {
     this.state = state;
+  }
+}
+
+class FakeFailedEntitlementPurchaseStore implements PurchaseStore {
+  final ValueNotifier<PurchaseStoreState> _state = ValueNotifier(
+    const PurchaseStoreState(operation: PurchaseOperation.ready),
+  );
+  final StreamController<PurchaseEntitlementSnapshot> _snapshots =
+      StreamController<PurchaseEntitlementSnapshot>.broadcast();
+
+  @override
+  ValueListenable<PurchaseStoreState> get state => _state;
+
+  @override
+  Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots =>
+      _snapshots.stream;
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<void> purchase(AppAccessPlan plan) async {}
+
+  @override
+  Future<PurchaseEntitlementSnapshot> refreshEntitlements() async {
+    const snapshot = PurchaseEntitlementSnapshot.failed('offline');
+    _snapshots.add(snapshot);
+    return snapshot;
+  }
+
+  @override
+  Future<void> restorePurchases() async {}
+
+  @override
+  void dispose() {
+    _state.dispose();
+    _snapshots.close();
   }
 }
 
@@ -1108,6 +1149,28 @@ void main() {
     await tester.tap(find.bySemanticsLabel('メニュー'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('sideMenuAdArea')), findsNothing);
+  });
+
+  testWidgets('Store権利取得失敗では保存済み契約を削除しない', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final accessStore = FakeAppAccessStateStore(
+      const AppAccessState(plan: AppAccessPlan.adFree),
+    );
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessStateStore: accessStore,
+        purchaseStore: FakeFailedEntitlementPurchaseStore(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(accessStore.state.plan, AppAccessPlan.adFree);
+    expect(find.byKey(const Key('calculatorAdBanner')), findsNothing);
   });
 
   testWidgets('無料版の上部広告から広告なし版の案内を開ける', (tester) async {

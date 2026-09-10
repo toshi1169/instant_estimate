@@ -102,7 +102,7 @@ void main() {
     expect(savedSettings?.customDensityMaterials.single.density, 1.65);
   });
 
-  testWidgets('設定の小数桁と丸め方法を表示と見積数量へ反映する', (tester) async {
+  testWidgets('設定の丸めを表示に適用し見積へは丸め前重量を送る', (tester) async {
     EstimateItemDraft? sentDraft;
     await tester.pumpWidget(
       MaterialApp(
@@ -130,7 +130,7 @@ void main() {
     await tester.tap(sendButton);
     await tester.pump();
 
-    expect(sentDraft?.quantity, 1.23);
+    expect(sentDraft?.quantity, 1.239);
     expect(sentDraft?.originalQuantity, 1.239);
     expect(sentDraft?.calculationBasis, '1 × 1.239 ＝ 1.239t');
   });

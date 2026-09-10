@@ -111,7 +111,6 @@ class PurchaseEntitlementSnapshot {
 
 abstract interface class PurchaseStore {
   ValueListenable<PurchaseStoreState> get state;
-  Stream<AppAccessPlan> get entitlementChanges;
   Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots;
 
   Future<void> initialize();

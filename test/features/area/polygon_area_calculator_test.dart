@@ -96,7 +96,7 @@ void main() {
     expect(find.byKey(const Key('polygonDiagonal2')), findsOneWidget);
   });
 
-  testWidgets('見積数量には設定の丸めを適用し元の面積を保持する', (tester) async {
+  testWidgets('表示は設定で丸め見積へは丸め前の面積を送る', (tester) async {
     EstimateItemDraft? sentDraft;
     await tester.pumpWidget(
       MaterialApp(
@@ -136,7 +136,7 @@ void main() {
     await tester.tap(sendButton);
     await tester.pump();
 
-    expect(sentDraft?.quantity, 1.29);
+    expect(sentDraft?.quantity, closeTo(1.2990381057, 0.000000001));
     expect(sentDraft?.originalQuantity, closeTo(1.2990381057, 0.000000001));
   });
 

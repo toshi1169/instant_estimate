@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
+import 'core/domain/app_access_plan.dart';
 import 'core/platform/app_orientation.dart';
 import 'features/advertising/data/google_mobile_ads_consent_manager.dart';
 import 'features/advertising/data/google_mobile_ads_rewarded_ad_presenter.dart';
@@ -18,6 +20,7 @@ import 'features/backup/data/backup_restore_journal_store.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await configureAppOrientation();
+  const profileScreenshotFullAccess = kProfileMode;
   final onboardingPreferences = PlatformOnboardingPreferences();
   final calculationHistoryStore = PlatformCalculationHistoryStore();
   final appSettingsStore = PlatformAppSettingsStore();
@@ -46,11 +49,22 @@ Future<void> main() async {
       estimateItemStore: estimateItemStore,
       productivityRecordStore: productivityRecordStore,
       backupRestoreCoordinator: restoreCoordinator,
-      accessStateStore: PlatformAppAccessStateStore(),
-      rewardedAdPresenter: const GoogleMobileAdsRewardedAdPresenter(),
-      advertisingConsentManager: GoogleMobileAdsConsentManager(),
-      enableGoogleMobileAds: true,
-      purchaseStore: InAppPurchaseStore(),
+      accessStateStore: profileScreenshotFullAccess
+          ? null
+          : PlatformAppAccessStateStore(),
+      rewardedAdPresenter: profileScreenshotFullAccess
+          ? null
+          : const GoogleMobileAdsRewardedAdPresenter(),
+      advertisingConsentManager: profileScreenshotFullAccess
+          ? null
+          : GoogleMobileAdsConsentManager(),
+      enableGoogleMobileAds: !profileScreenshotFullAccess,
+      purchaseStore: profileScreenshotFullAccess
+          ? null
+          : InAppPurchaseStore(),
+      accessPlan: profileScreenshotFullAccess
+          ? AppAccessPlan.full
+          : AppAccessPlan.free,
     ),
   );
 }

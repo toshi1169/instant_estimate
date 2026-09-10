@@ -5,42 +5,42 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../core/domain/app_access_plan.dart';
 import '../domain/purchase_store.dart';
+import 'storekit_verified_entitlement_source.dart';
+
+typedef PurchaseCompleter = Future<void> Function(PurchaseDetails purchase);
 
 class InAppPurchaseStore implements PurchaseStore {
   InAppPurchaseStore({
     InAppPurchase? inAppPurchase,
     Stream<List<PurchaseDetails>>? purchaseStream,
-    Future<void> Function()? restorePurchases,
+    VerifiedEntitlementLoader? loadVerifiedEntitlements,
+    PurchaseCompleter? completePurchase,
   }) : _inAppPurchase =
            inAppPurchase ??
-           (purchaseStream == null || restorePurchases == null
-               ? InAppPurchase.instance
-               : null) {
+           (purchaseStream == null ? InAppPurchase.instance : null) {
     _purchaseStream = purchaseStream ?? _inAppPurchase!.purchaseStream;
-    _restorePurchases = restorePurchases ?? _inAppPurchase!.restorePurchases;
+    _loadVerifiedEntitlements =
+        loadVerifiedEntitlements ?? StoreKitVerifiedEntitlementSource().load;
+    _completePurchase =
+        completePurchase ?? _inAppPurchase?.completePurchase ?? (_) async {};
   }
 
   final InAppPurchase? _inAppPurchase;
   late final Stream<List<PurchaseDetails>> _purchaseStream;
-  late final Future<void> Function() _restorePurchases;
+  late final VerifiedEntitlementLoader _loadVerifiedEntitlements;
+  late final PurchaseCompleter _completePurchase;
   final ValueNotifier<PurchaseStoreState> _state = ValueNotifier(
     const PurchaseStoreState(),
   );
-  final StreamController<AppAccessPlan> _entitlementChanges =
-      StreamController<AppAccessPlan>.broadcast();
   final StreamController<PurchaseEntitlementSnapshot> _entitlementSnapshots =
       StreamController<PurchaseEntitlementSnapshot>.broadcast();
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
   Map<String, ProductDetails> _productDetails = const {};
   bool _initialized = false;
-  Set<AppAccessPlan>? _refreshingPlans;
   Future<PurchaseEntitlementSnapshot>? _refreshingEntitlements;
 
   @override
   ValueListenable<PurchaseStoreState> get state => _state;
-
-  @override
-  Stream<AppAccessPlan> get entitlementChanges => _entitlementChanges.stream;
 
   @override
   Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots =>
@@ -137,72 +137,87 @@ class InAppPurchaseStore implements PurchaseStore {
   @override
   Future<void> restorePurchases() async {
     _setState(PurchaseOperation.restoring);
-    await refreshEntitlements();
+    await _refreshEntitlements(synchronize: true);
   }
 
   @override
   Future<PurchaseEntitlementSnapshot> refreshEntitlements() {
+    return _refreshEntitlements(synchronize: false);
+  }
+
+  Future<PurchaseEntitlementSnapshot> _refreshEntitlements({
+    required bool synchronize,
+  }) {
     final pending = _refreshingEntitlements;
     if (pending != null) return pending;
-    final refresh = _refreshCurrentEntitlements();
+    final refresh = _refreshCurrentEntitlements(synchronize: synchronize);
     _refreshingEntitlements = refresh;
     return refresh.whenComplete(() => _refreshingEntitlements = null);
   }
 
-  Future<PurchaseEntitlementSnapshot> _refreshCurrentEntitlements() async {
+  Future<PurchaseEntitlementSnapshot> _refreshCurrentEntitlements({
+    required bool synchronize,
+  }) async {
     _ensurePurchaseListener();
-    _refreshingPlans = <AppAccessPlan>{};
     PurchaseEntitlementSnapshot snapshot;
     try {
-      await _restorePurchases();
-      // StoreKit sends restored transactions before completing the restore
-      // method call. Yield once so the purchase stream can deliver them.
-      await Future<void>.delayed(Duration.zero);
-      snapshot = PurchaseEntitlementSnapshot.verified(_refreshingPlans!);
+      final productIds = await _loadVerifiedEntitlements(
+        synchronize: synchronize,
+      );
+      snapshot = PurchaseEntitlementSnapshot.verified(
+        productIds.map(PurchaseProductIds.planFor).whereType<AppAccessPlan>(),
+      );
       if (_state.value.operation == PurchaseOperation.restoring) {
         _setState(PurchaseOperation.ready);
       }
     } catch (error) {
       snapshot = PurchaseEntitlementSnapshot.failed(error.toString());
       _setState(PurchaseOperation.error, message: error.toString());
-    } finally {
-      _refreshingPlans = null;
     }
     _entitlementSnapshots.add(snapshot);
     return snapshot;
   }
 
   Future<void> _handlePurchaseUpdates(List<PurchaseDetails> purchases) async {
-    var granted = false;
+    final completedPurchases = purchases
+        .where(
+          (purchase) =>
+              purchase.status == PurchaseStatus.purchased ||
+              purchase.status == PurchaseStatus.restored,
+        )
+        .where(
+          (purchase) => PurchaseProductIds.planFor(purchase.productID) != null,
+        )
+        .toList(growable: false);
+
     for (final purchase in purchases) {
-      if (purchase.status == PurchaseStatus.purchased ||
-          purchase.status == PurchaseStatus.restored) {
-        // This is the replaceable verification boundary. Before store release,
-        // verificationData must be validated by the app's purchase backend.
-        final hasVerificationData =
-            purchase.verificationData.serverVerificationData.isNotEmpty ||
-            purchase.verificationData.localVerificationData.isNotEmpty;
-        final plan = PurchaseProductIds.planFor(purchase.productID);
-        if (hasVerificationData && plan != null) {
-          final refreshingPlans = _refreshingPlans;
-          if (refreshingPlans != null) {
-            refreshingPlans.add(plan);
-          } else {
-            _entitlementChanges.add(plan);
-          }
-          granted = true;
-        }
-      } else if (purchase.status == PurchaseStatus.error) {
+      if (purchase.status == PurchaseStatus.error) {
         _setState(PurchaseOperation.error, message: purchase.error?.message);
       } else if (purchase.status == PurchaseStatus.canceled) {
         _setState(PurchaseOperation.ready);
       }
+    }
 
+    if (completedPurchases.isEmpty) return;
+
+    final snapshot = await refreshEntitlements();
+    if (!snapshot.isVerified) return;
+
+    var granted = false;
+    for (final purchase in completedPurchases) {
+      final plan = PurchaseProductIds.planFor(purchase.productID)!;
+      if (!snapshot.activePlans.contains(plan)) continue;
+      granted = true;
       if (purchase.pendingCompletePurchase) {
-        await _inAppPurchase!.completePurchase(purchase);
+        try {
+          await _completePurchase(purchase);
+        } catch (error) {
+          _setState(PurchaseOperation.error, message: error.toString());
+          return;
+        }
       }
     }
-    if (granted) _setState(PurchaseOperation.completed);
+    _setState(granted ? PurchaseOperation.completed : PurchaseOperation.error);
   }
 
   void _setState(PurchaseOperation operation, {String? message}) {
@@ -216,7 +231,6 @@ class InAppPurchaseStore implements PurchaseStore {
   @override
   void dispose() {
     unawaited(_purchaseSubscription?.cancel());
-    unawaited(_entitlementChanges.close());
     unawaited(_entitlementSnapshots.close());
     _state.dispose();
   }
