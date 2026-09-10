@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/domain/app_access_plan.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../domain/purchase_store.dart';
+
+const privacyPolicyUrl = 'https://matsumotoboundary.com/privacy/';
+const termsOfUseUrl =
+    'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+
+typedef ExternalUrlLauncher = Future<bool> Function(Uri uri);
 
 class AccessPlanScreen extends StatelessWidget {
   const AccessPlanScreen({
     required this.plan,
     this.currentPlan = AppAccessPlan.free,
     this.purchaseStore,
+    this.externalUrlLauncher,
     super.key,
   });
 
   final AppAccessPlan plan;
   final AppAccessPlan currentPlan;
   final PurchaseStore? purchaseStore;
+  final ExternalUrlLauncher? externalUrlLauncher;
 
   @override
   Widget build(BuildContext context) {
@@ -273,10 +282,48 @@ class AccessPlanScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 4,
+              runSpacing: 0,
+              children: [
+                TextButton(
+                  key: const Key('privacyPolicyLink'),
+                  onPressed: () =>
+                      _openExternalUrl(context, Uri.parse(privacyPolicyUrl)),
+                  child: Text(l10n.privacyPolicy),
+                ),
+                TextButton(
+                  key: const Key('termsOfUseLink'),
+                  onPressed: () =>
+                      _openExternalUrl(context, Uri.parse(termsOfUseUrl)),
+                  child: Text(l10n.termsOfUse),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _openExternalUrl(BuildContext context, Uri uri) async {
+    var opened = false;
+    try {
+      opened =
+          await (externalUrlLauncher?.call(uri) ??
+              launchUrl(uri, mode: LaunchMode.externalApplication));
+    } on Object {
+      opened = false;
+    }
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).externalLinkOpenFailed),
+        ),
+      );
+    }
   }
 
   String _purchaseStatusText(AppLocalizations l10n, PurchaseStoreState? state) {

@@ -970,6 +970,36 @@ class AppLocalizations {
     filipino: 'Disclaimer at mga paalala sa paggamit',
     myanmar: 'တာဝန်ကန့်သတ်ချက်နှင့် အသုံးပြုမှုသတိပြုရန်',
   );
+  String get privacyPolicy => _pick(
+    japanese: 'プライバシーポリシー',
+    english: 'Privacy Policy',
+    simplifiedChinese: '隐私政策',
+    traditionalChinese: '隱私權政策',
+    vietnamese: 'Chính sách quyền riêng tư',
+    indonesian: 'Kebijakan Privasi',
+    filipino: 'Patakaran sa Privacy',
+    myanmar: 'ကိုယ်ရေးအချက်အလက် မူဝါဒ',
+  );
+  String get termsOfUse => _pick(
+    japanese: '利用規約',
+    english: 'Terms of Use',
+    simplifiedChinese: '使用条款',
+    traditionalChinese: '使用條款',
+    vietnamese: 'Điều khoản sử dụng',
+    indonesian: 'Ketentuan Penggunaan',
+    filipino: 'Mga Tuntunin ng Paggamit',
+    myanmar: 'အသုံးပြုမှု စည်းမျဉ်းများ',
+  );
+  String get externalLinkOpenFailed => _pick(
+    japanese: 'リンクを開けませんでした',
+    english: 'Could not open the link.',
+    simplifiedChinese: '无法打开链接。',
+    traditionalChinese: '無法開啟連結。',
+    vietnamese: 'Không thể mở liên kết.',
+    indonesian: 'Tautan tidak dapat dibuka.',
+    filipino: 'Hindi mabuksan ang link.',
+    myanmar: 'လင့်ခ်ကို ဖွင့်မရပါ။',
+  );
   String get disclaimerSettingsSubtitle => _pick(
     japanese: '計算・見積・帳票を利用する前に確認してください',
     english: 'Review before using calculations, estimates or documents',

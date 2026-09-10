@@ -6,12 +6,42 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:instant_estimate/core/domain/app_access_plan.dart';
+import 'package:instant_estimate/core/localization/app_language.dart';
 import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/subscription/data/in_app_purchase_store.dart';
 import 'package:instant_estimate/features/subscription/domain/purchase_store.dart';
 import 'package:instant_estimate/features/subscription/presentation/access_plan_screen.dart';
 
 void main() {
+  test('購入画面の法的リンク文言を8言語で直接取得できる', () {
+    const expected = <AppLanguage, (String, String)>{
+      AppLanguage.japanese: ('プライバシーポリシー', '利用規約'),
+      AppLanguage.english: ('Privacy Policy', 'Terms of Use'),
+      AppLanguage.simplifiedChinese: ('隐私政策', '使用条款'),
+      AppLanguage.traditionalChinese: ('隱私權政策', '使用條款'),
+      AppLanguage.vietnamese: (
+        'Chính sách quyền riêng tư',
+        'Điều khoản sử dụng',
+      ),
+      AppLanguage.indonesian: ('Kebijakan Privasi', 'Ketentuan Penggunaan'),
+      AppLanguage.filipino: (
+        'Patakaran sa Privacy',
+        'Mga Tuntunin ng Paggamit',
+      ),
+      AppLanguage.myanmar: (
+        'ကိုယ်ရေးအချက်အလက် မူဝါဒ',
+        'အသုံးပြုမှု စည်းမျဉ်းများ',
+      ),
+    };
+
+    for (final entry in expected.entries) {
+      final strings = AppLocalizations(entry.key);
+      expect(strings.privacyPolicy, entry.value.$1);
+      expect(strings.termsOfUse, entry.value.$2);
+      expect(strings.externalLinkOpenFailed, isNotEmpty);
+    }
+  });
+
   test('商品IDとプランを相互に変換できる', () {
     expect(
       PurchaseProductIds.forPlan(AppAccessPlan.adFree),
@@ -384,6 +414,86 @@ void main() {
 
     expect(find.text('购买'), findsOneWidget);
     expect(find.text('恢复购买记录'), findsOneWidget);
+  });
+
+  testWidgets('完全版画面の法的リンクは正しいURLを開き購入・復元を開始しない', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = _FakePurchaseStore(
+      const PurchaseStoreState(operation: PurchaseOperation.ready),
+    );
+    addTearDown(store.dispose);
+    final openedUris = <Uri>[];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        locale: const Locale('ja'),
+        home: AccessPlanScreen(
+          plan: AppAccessPlan.full,
+          purchaseStore: store,
+          externalUrlLauncher: (uri) async {
+            openedUris.add(uri);
+            return true;
+          },
+        ),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('termsOfUseLink')),
+      200,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('プライバシーポリシー'), findsOneWidget);
+    expect(find.text('利用規約'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('privacyPolicyLink')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('termsOfUseLink')));
+    await tester.pump();
+
+    expect(openedUris, [Uri.parse(privacyPolicyUrl), Uri.parse(termsOfUseUrl)]);
+    expect(store.purchasedPlan, isNull);
+    expect(store.restoreCount, 0);
+  });
+
+  testWidgets('法的リンクの起動失敗ではクラッシュせず案内を表示する', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('ja'), Locale('en')],
+        locale: const Locale('ja'),
+        home: AccessPlanScreen(
+          plan: AppAccessPlan.full,
+          externalUrlLauncher: (_) async => false,
+        ),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('privacyPolicyLink')),
+      200,
+    );
+    await tester.tap(find.byKey(const Key('privacyPolicyLink')));
+    await tester.pump();
+
+    expect(find.text('リンクを開けませんでした'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 
