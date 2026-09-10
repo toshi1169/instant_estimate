@@ -9,13 +9,33 @@ import 'google_mobile_ads_initializer.dart';
 class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
   GoogleMobileAdsConsentManager({
     GoogleMobileAdsInitializer? mobileAdsInitializer,
+    Future<void> Function()? requestConsentInformationUpdate,
+    Future<void> Function()? loadAndShowConsentFormIfRequired,
+    Future<bool> Function()? canRequestAds,
+    Future<PrivacyOptionsRequirementStatus> Function()? privacyOptionsStatus,
   }) : _mobileAdsInitializer =
-           mobileAdsInitializer ?? GoogleMobileAdsInitializer.plugin();
+           mobileAdsInitializer ?? GoogleMobileAdsInitializer.plugin(),
+       _requestConsentInformationUpdate =
+           requestConsentInformationUpdate ??
+           _pluginRequestConsentInformationUpdate,
+       _loadAndShowConsentFormIfRequired =
+           loadAndShowConsentFormIfRequired ??
+           _pluginLoadAndShowConsentFormIfRequired,
+       _canRequestAds =
+           canRequestAds ?? ConsentInformation.instance.canRequestAds,
+       _privacyOptionsStatus =
+           privacyOptionsStatus ??
+           ConsentInformation.instance.getPrivacyOptionsRequirementStatus;
 
   final ValueNotifier<AdvertisingConsentState> _state = ValueNotifier(
     const AdvertisingConsentState(),
   );
   final GoogleMobileAdsInitializer _mobileAdsInitializer;
+  final Future<void> Function() _requestConsentInformationUpdate;
+  final Future<void> Function() _loadAndShowConsentFormIfRequired;
+  final Future<bool> Function() _canRequestAds;
+  final Future<PrivacyOptionsRequirementStatus> Function()
+  _privacyOptionsStatus;
 
   Future<void>? _gathering;
   bool _mobileAdsPrepared = false;
@@ -54,7 +74,7 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
     }
   }
 
-  Future<void> _requestConsentInformationUpdate() {
+  static Future<void> _pluginRequestConsentInformationUpdate() {
     final completer = Completer<void>();
     ConsentInformation.instance.requestConsentInfoUpdate(
       ConsentRequestParameters(),
@@ -64,7 +84,7 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
     return completer.future.timeout(const Duration(seconds: 15));
   }
 
-  Future<void> _loadAndShowConsentFormIfRequired() {
+  static Future<void> _pluginLoadAndShowConsentFormIfRequired() {
     final completer = Completer<void>();
     ConsentForm.loadAndShowConsentFormIfRequired((error) {
       if (error == null) {
@@ -93,9 +113,8 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
 
   Future<void> _refreshState() async {
     if (!_isSupportedPlatform) return;
-    final canRequestAds = await ConsentInformation.instance.canRequestAds();
-    final privacyStatus = await ConsentInformation.instance
-        .getPrivacyOptionsRequirementStatus();
+    final canRequestAds = await _canRequestAds();
+    final privacyStatus = await _privacyOptionsStatus();
     final canSafelyRequestAds = canRequestAds && _mobileAdsPrepared;
     _state.value = _state.value.copyWith(
       canRequestAds: canSafelyRequestAds,

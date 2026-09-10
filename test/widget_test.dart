@@ -13,8 +13,10 @@ import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
+import 'package:instant_estimate/features/advertising/application/advertising_consent_manager.dart';
 import 'package:instant_estimate/features/advertising/application/rewarded_ad_access_controller.dart';
 import 'package:instant_estimate/features/advertising/domain/rewarded_ad_policy.dart';
+import 'package:instant_estimate/features/advertising/presentation/google_mobile_ads_banner.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 import 'package:instant_estimate/features/onboarding/domain/occupation.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
@@ -117,6 +119,38 @@ class FakeAppAccessStateStore implements AppAccessStateStore {
   Future<void> save(AppAccessState state) async {
     this.state = state;
   }
+}
+
+class DelayedAppAccessStateStore implements AppAccessStateStore {
+  final Completer<AppAccessState> loadCompleter = Completer<AppAccessState>();
+
+  @override
+  Future<AppAccessState> load() => loadCompleter.future;
+
+  @override
+  Future<void> save(AppAccessState state) async {}
+}
+
+class FakeAdvertisingConsentManager implements AdvertisingConsentManager {
+  final ValueNotifier<AdvertisingConsentState> _state = ValueNotifier(
+    const AdvertisingConsentState(),
+  );
+  int gatherCalls = 0;
+
+  @override
+  ValueListenable<AdvertisingConsentState> get state => _state;
+
+  @override
+  Future<void> gatherConsent() async {
+    gatherCalls += 1;
+  }
+
+  void allowAds() {
+    _state.value = const AdvertisingConsentState(canRequestAds: true);
+  }
+
+  @override
+  Future<void> showPrivacyOptions() async {}
 }
 
 class FakeFailedEntitlementPurchaseStore implements PurchaseStore {
@@ -1067,6 +1101,80 @@ void main() {
     expect(find.text('初回のみ7日間無料体験'), findsOneWidget);
     expect(find.text('見積の保存件数を無制限に拡張'), findsOneWidget);
   });
+
+  testWidgets('無料版はAccessState確定後にだけUMP広告フローを開始する', (tester) async {
+    final accessStore = DelayedAppAccessStateStore();
+    final consentManager = FakeAdvertisingConsentManager();
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessStateStore: accessStore,
+        advertisingConsentManager: consentManager,
+        enableGoogleMobileAds: true,
+      ),
+    );
+    await tester.pump();
+
+    expect(consentManager.gatherCalls, 0);
+
+    accessStore.loadCompleter.complete(const AppAccessState());
+    await tester.pumpAndSettle();
+
+    expect(consentManager.gatherCalls, 1);
+    expect(find.byType(GoogleMobileAdsBanner), findsNothing);
+
+    consentManager.allowAds();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GoogleMobileAdsBanner), findsOneWidget);
+  });
+
+  testWidgets('広告同意未完了ではRewardedをロードせず既存fail-openで利用できる', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final consentManager = FakeAdvertisingConsentManager();
+    final presenter = FakeCompletedRewardedAdPresenter();
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        advertisingConsentManager: consentManager,
+        rewardedAdPresenter: presenter,
+        enableGoogleMobileAds: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sideMenuInstantEstimate')));
+    await tester.pumpAndSettle();
+
+    expect(presenter.calls, isEmpty);
+    expect(find.byType(EstimateDocumentsScreen), findsOneWidget);
+  });
+
+  for (final plan in [AppAccessPlan.adFree, AppAccessPlan.full]) {
+    testWidgets('$planではATT・UMP広告フローを開始しない', (tester) async {
+      final consentManager = FakeAdvertisingConsentManager();
+
+      await tester.pumpWidget(
+        InstantEstimateApp(
+          onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+          accessPlan: plan,
+          advertisingConsentManager: consentManager,
+          enableGoogleMobileAds: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(consentManager.gatherCalls, 0);
+      expect(find.byKey(const Key('calculatorAdBanner')), findsNothing);
+    });
+  }
 
   testWidgets('広告なし版では電卓上部と左メニューの広告枠を表示しない', (tester) async {
     tester.view.physicalSize = const Size(390, 844);

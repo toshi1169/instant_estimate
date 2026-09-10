@@ -79,6 +79,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       const AdvertisingConsentState(canRequestAds: true);
   StreamSubscription<PurchaseEntitlementSnapshot>?
   _purchaseEntitlementSnapshotSubscription;
+  bool _advertisingStarted = false;
 
   @override
   void initState() {
@@ -92,9 +93,6 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       unawaited(_recoverAndLoadSettings());
     }
     unawaited(_initializeAccessAndPurchases());
-    if (widget.enableGoogleMobileAds) {
-      unawaited(widget.advertisingConsentManager?.gatherConsent());
-    }
   }
 
   @override
@@ -110,12 +108,17 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   Future<void> _initializeAccessAndPurchases() async {
     await _loadAccessState();
     final purchaseStore = widget.purchaseStore;
-    if (purchaseStore == null) return;
+    if (purchaseStore == null) {
+      _startAdvertisingIfNeeded();
+      return;
+    }
     _purchaseEntitlementSnapshotSubscription = purchaseStore
         .entitlementSnapshots
         .listen((snapshot) => unawaited(_applyEntitlementSnapshot(snapshot)));
     await purchaseStore.initialize();
-    await purchaseStore.refreshEntitlements();
+    final snapshot = await purchaseStore.refreshEntitlements();
+    await _applyEntitlementSnapshot(snapshot);
+    _startAdvertisingIfNeeded();
   }
 
   Future<void> _applyEntitlementSnapshot(
@@ -127,6 +130,17 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
       verifiedAt: DateTime.now(),
     );
     await _saveAndApplyAccessState(updatedState);
+    _startAdvertisingIfNeeded();
+  }
+
+  void _startAdvertisingIfNeeded() {
+    if (_advertisingStarted ||
+        !widget.enableGoogleMobileAds ||
+        !_accessPlan.showsAds) {
+      return;
+    }
+    _advertisingStarted = true;
+    unawaited(widget.advertisingConsentManager?.gatherConsent());
   }
 
   Future<void> _saveAndApplyAccessState(AppAccessState updatedState) async {

@@ -51,6 +51,41 @@ void main() {
     );
   });
 
+  test('iOS links ATT and provides the tracking purpose in all 8 languages', () {
+    final infoPlist = File('ios/Runner/Info.plist').readAsStringSync();
+    final project = File(
+      'ios/Runner.xcodeproj/project.pbxproj',
+    ).readAsStringSync();
+    const descriptions = <String, String>{
+      'ja': '端末識別子は、広告の表示と広告効果の測定に使用される場合があります。',
+      'en':
+          'Your device identifier may be used to show ads and measure advertising performance.',
+      'zh-Hans': '设备标识符可能用于展示广告和衡量广告效果。',
+      'zh-Hant': '裝置識別碼可能用於顯示廣告及衡量廣告成效。',
+      'vi':
+          'Mã nhận dạng thiết bị có thể được dùng để hiển thị quảng cáo và đo lường hiệu quả quảng cáo.',
+      'id':
+          'Pengenal perangkat dapat digunakan untuk menampilkan iklan dan mengukur performa iklan.',
+      'fil':
+          'Maaaring gamitin ang identifier ng device upang magpakita ng mga ad at sukatin ang performance ng advertising.',
+      'my':
+          'စက်ပစ္စည်းအမှတ်အသားကို ကြော်ငြာများပြသရန်နှင့် ကြော်ငြာထိရောက်မှုကို တိုင်းတာရန် အသုံးပြုနိုင်ပါသည်။',
+    };
+
+    expect(infoPlist, contains('<key>NSUserTrackingUsageDescription</key>'));
+    expect(infoPlist, contains('<string>${descriptions['en']}</string>'));
+    expect(project, contains('AppTrackingTransparency.framework'));
+
+    for (final entry in descriptions.entries) {
+      final strings = File(
+        'ios/Runner/${entry.key}.lproj/InfoPlist.strings',
+      ).readAsStringSync();
+      expect(strings, contains('"NSUserTrackingUsageDescription"'));
+      expect(strings, contains(entry.value));
+      expect(project, contains('${entry.key}.lproj/InfoPlist.strings'));
+    }
+  });
+
   test('StoreKit権利はcurrentEntitlementsのverifiedだけを返す', () {
     final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
 
