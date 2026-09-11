@@ -171,6 +171,9 @@ class FakeFailedEntitlementPurchaseStore implements PurchaseStore {
   Future<void> initialize() async {}
 
   @override
+  Future<void> refreshProducts() async {}
+
+  @override
   Future<void> purchase(AppAccessPlan plan) async {}
 
   @override
@@ -209,6 +212,9 @@ class FakeEntitlementPurchaseStore implements PurchaseStore {
 
   @override
   Future<void> initialize() async {}
+
+  @override
+  Future<void> refreshProducts() async {}
 
   @override
   Future<void> purchase(AppAccessPlan plan) async {}
@@ -1132,14 +1138,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sideMenuAdFree')));
     await tester.pumpAndSettle();
-    expect(find.text('¥300（買い切り）'), findsOneWidget);
+    expect(find.text('—'), findsOneWidget);
+    expect(find.text('買い切り'), findsOneWidget);
     expect(find.text('見積は5件まで保存'), findsOneWidget);
 
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sideMenuFull')));
     await tester.pumpAndSettle();
-    expect(find.text('¥500／月'), findsOneWidget);
+    expect(find.text('—'), findsOneWidget);
+    expect(find.text('月額'), findsOneWidget);
     expect(find.text('初回のみ7日間無料体験'), findsOneWidget);
     expect(find.text('見積の保存件数を無制限に拡張'), findsOneWidget);
   });
@@ -1392,7 +1400,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('広告なし版'), findsWidgets);
-    expect(find.text('¥300（買い切り）'), findsOneWidget);
+    expect(find.text('—'), findsOneWidget);
+    expect(find.text('買い切り'), findsOneWidget);
   });
 
   testWidgets('左メニューから単位変換を開き換算できる', (tester) async {

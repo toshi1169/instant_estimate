@@ -282,13 +282,119 @@ void main() {
     );
 
     expect(find.text('￥320'), findsOneWidget);
+    expect(find.text('買い切り'), findsOneWidget);
+    await tester.pump();
+    expect(store.refreshProductsCount, 1);
     await tester.tap(find.byKey(const Key('purchasePlanButton')));
     await tester.pump();
     expect(store.purchasedPlan, AppAccessPlan.adFree);
 
+    await tester.ensureVisible(find.byKey(const Key('restorePurchasesButton')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('restorePurchasesButton')));
     await tester.pump();
     expect(store.restoreCount, 1);
+  });
+
+  testWidgets('StoreKitのドル・ユーロ価格を加工せず表示する', (tester) async {
+    for (final value in const ['\$3.99', '€2.49']) {
+      final store = _FakePurchaseStore(
+        PurchaseStoreState(
+          operation: PurchaseOperation.ready,
+          products: [
+            PurchaseProduct(
+              id: PurchaseProductIds.fullMonthly,
+              plan: AppAccessPlan.full,
+              displayPrice: value,
+            ),
+          ],
+        ),
+      );
+      addTearDown(store.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizationsDelegate(),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('ja')],
+          home: AccessPlanScreen(
+            plan: AppAccessPlan.full,
+            purchaseStore: store,
+          ),
+        ),
+      );
+
+      expect(find.text(value), findsOneWidget);
+      expect(find.text('月額'), findsOneWidget);
+      expect(find.text('初回のみ7日間無料体験'), findsOneWidget);
+    }
+  });
+
+  testWidgets('商品取得中と取得失敗では固定円価格を表示しない', (tester) async {
+    for (final operation in const [
+      PurchaseOperation.loading,
+      PurchaseOperation.unavailable,
+    ]) {
+      final store = _FakePurchaseStore(
+        PurchaseStoreState(operation: operation),
+      );
+      addTearDown(store.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizationsDelegate(),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('ja')],
+          home: AccessPlanScreen(
+            plan: AppAccessPlan.adFree,
+            purchaseStore: store,
+          ),
+        ),
+      );
+
+      expect(find.text('¥300（買い切り）'), findsNothing);
+      expect(find.text('¥500／月'), findsNothing);
+      expect(
+        find.text(operation == PurchaseOperation.loading ? '価格を取得中…' : '—'),
+        findsOneWidget,
+      );
+      expect(find.text('買い切り'), findsOneWidget);
+    }
+  });
+
+  testWidgets('商品画面を開き直すたび商品情報を再取得する', (tester) async {
+    final store = _FakePurchaseStore(
+      const PurchaseStoreState(operation: PurchaseOperation.unavailable),
+    );
+    addTearDown(store.dispose);
+
+    Widget screen() => MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizationsDelegate(),
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('ja')],
+      home: AccessPlanScreen(plan: AppAccessPlan.adFree, purchaseStore: store),
+    );
+
+    await tester.pumpWidget(screen());
+    await tester.pump();
+    expect(store.refreshProductsCount, 1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(screen());
+    await tester.pump();
+    expect(store.refreshProductsCount, 2);
   });
 
   testWidgets('現在のプランは再購入できない', (tester) async {
@@ -324,6 +430,8 @@ void main() {
       ),
     );
 
+    expect(find.text('￥500'), findsOneWidget);
+    expect(find.text('月額'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byKey(const Key('purchasePlanButton')),
       200,
@@ -507,6 +615,7 @@ class _FakePurchaseStore implements PurchaseStore {
 
   AppAccessPlan? purchasedPlan;
   int restoreCount = 0;
+  int refreshProductsCount = 0;
 
   @override
   ValueListenable<PurchaseStoreState> get state => _state;
@@ -517,6 +626,11 @@ class _FakePurchaseStore implements PurchaseStore {
 
   @override
   Future<void> initialize() async {}
+
+  @override
+  Future<void> refreshProducts() async {
+    refreshProductsCount += 1;
+  }
 
   @override
   Future<void> purchase(AppAccessPlan plan) async {

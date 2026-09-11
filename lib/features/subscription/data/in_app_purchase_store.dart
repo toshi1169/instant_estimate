@@ -37,6 +37,7 @@ class InAppPurchaseStore implements PurchaseStore {
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
   Map<String, ProductDetails> _productDetails = const {};
   bool _initialized = false;
+  Future<void>? _refreshingProducts;
   Future<PurchaseEntitlementSnapshot>? _refreshingEntitlements;
 
   @override
@@ -51,13 +52,7 @@ class InAppPurchaseStore implements PurchaseStore {
     if (_initialized) return;
     _initialized = true;
     _ensurePurchaseListener();
-    _setState(PurchaseOperation.loading);
-
-    try {
-      await _loadProducts();
-    } catch (error) {
-      _setState(PurchaseOperation.error, message: error.toString());
-    }
+    await refreshProducts();
   }
 
   void _ensurePurchaseListener() {
@@ -73,17 +68,16 @@ class InAppPurchaseStore implements PurchaseStore {
   Future<void> purchase(AppAccessPlan plan) async {
     try {
       final productId = PurchaseProductIds.forPlan(plan);
-      var product = productId == null ? null : _productDetails[productId];
-      if (product == null && productId != null) {
-        _setState(PurchaseOperation.loading);
-        await _loadProducts();
-        product = _productDetails[productId];
-      }
+      await refreshProducts();
+      final product = productId == null ? null : _productDetails[productId];
       if (product == null) {
-        _setState(
-          PurchaseOperation.unavailable,
-          message: 'Store product could not be loaded.',
-        );
+        if (_state.value.operation != PurchaseOperation.error &&
+            _state.value.operation != PurchaseOperation.unavailable) {
+          _setState(
+            PurchaseOperation.unavailable,
+            message: 'Store product could not be loaded.',
+          );
+        }
         return;
       }
       _setState(PurchaseOperation.purchasing);
@@ -93,6 +87,25 @@ class InAppPurchaseStore implements PurchaseStore {
       if (!started) {
         _setState(PurchaseOperation.error);
       }
+    } catch (error) {
+      _setState(PurchaseOperation.error, message: error.toString());
+    }
+  }
+
+  @override
+  Future<void> refreshProducts() {
+    final pending = _refreshingProducts;
+    if (pending != null) return pending;
+    final refresh = _refreshProductDetails();
+    _refreshingProducts = refresh;
+    return refresh.whenComplete(() => _refreshingProducts = null);
+  }
+
+  Future<void> _refreshProductDetails() async {
+    _productDetails = const {};
+    _setState(PurchaseOperation.loading, products: const []);
+    try {
+      await _loadProducts();
     } catch (error) {
       _setState(PurchaseOperation.error, message: error.toString());
     }
@@ -220,10 +233,14 @@ class InAppPurchaseStore implements PurchaseStore {
     _setState(granted ? PurchaseOperation.completed : PurchaseOperation.error);
   }
 
-  void _setState(PurchaseOperation operation, {String? message}) {
+  void _setState(
+    PurchaseOperation operation, {
+    String? message,
+    List<PurchaseProduct>? products,
+  }) {
     _state.value = PurchaseStoreState(
       operation: operation,
-      products: _state.value.products,
+      products: products ?? _state.value.products,
       message: message,
     );
   }

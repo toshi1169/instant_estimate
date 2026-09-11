@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -98,36 +100,14 @@ class AccessPlanScreen extends StatelessWidget {
       filipino: isFull ? 'Kumpletong bersyon' : 'Bersyong walang ad',
       myanmar: isFull ? 'အပြည့်အစုံဗားရှင်း' : 'ကြော်ငြာမပါဗားရှင်း',
     );
-    final fallbackPriceLabel = switch (plan) {
-      AppAccessPlan.free => l10n.choose(
-        japanese: '無料',
-        english: 'Free',
-        simplifiedChinese: '免费',
-        traditionalChinese: '免費',
-      ),
-      AppAccessPlan.adFree => l10n.choose(
-        japanese: '¥300（買い切り）',
-        english: '¥300 (one-time purchase)',
-        simplifiedChinese: '¥300（一次性购买）',
-        traditionalChinese: '¥300（一次性購買）',
-      ),
-      AppAccessPlan.full => l10n.choose(
-        japanese: '¥500／月',
-        english: '¥500 / month',
-        simplifiedChinese: '¥500／月',
-        traditionalChinese: '¥500／月',
-      ),
-    };
-
     final store = purchaseStore;
     if (store != null) {
-      return AnimatedBuilder(
-        animation: store.state,
-        builder: (context, _) => _buildScreen(
+      return _PurchaseStoreBuilder(
+        store: store,
+        builder: (context) => _buildScreen(
           context,
           planName: planName,
           benefits: benefits,
-          fallbackPriceLabel: fallbackPriceLabel,
           isFull: isFull,
           store: store,
         ),
@@ -137,7 +117,6 @@ class AccessPlanScreen extends StatelessWidget {
       context,
       planName: planName,
       benefits: benefits,
-      fallbackPriceLabel: fallbackPriceLabel,
       isFull: isFull,
     );
   }
@@ -146,14 +125,47 @@ class AccessPlanScreen extends StatelessWidget {
     BuildContext context, {
     required String planName,
     required List<String> benefits,
-    required String fallbackPriceLabel,
     required bool isFull,
     PurchaseStore? store,
   }) {
     final l10n = AppLocalizations.of(context);
     final purchaseState = store?.state.value;
     final product = purchaseState?.productFor(plan);
-    final priceLabel = product?.displayPrice ?? fallbackPriceLabel;
+    final priceLabel =
+        product?.displayPrice ??
+        (purchaseState?.operation == PurchaseOperation.loading
+            ? l10n.choose(
+                japanese: '価格を取得中…',
+                english: 'Loading price…',
+                simplifiedChinese: '正在获取价格…',
+                traditionalChinese: '正在取得價格…',
+                vietnamese: 'Đang tải giá…',
+                indonesian: 'Memuat harga…',
+                filipino: 'Kinukuha ang presyo…',
+                myanmar: 'ဈေးနှုန်း ရယူနေသည်…',
+              )
+            : '—');
+    final billingLabel = isFull
+        ? l10n.choose(
+            japanese: '月額',
+            english: 'Monthly',
+            simplifiedChinese: '月付',
+            traditionalChinese: '月費',
+            vietnamese: 'Hàng tháng',
+            indonesian: 'Bulanan',
+            filipino: 'Buwanan',
+            myanmar: 'လစဉ်',
+          )
+        : l10n.choose(
+            japanese: '買い切り',
+            english: 'One-time purchase',
+            simplifiedChinese: '一次性购买',
+            traditionalChinese: '一次性購買',
+            vietnamese: 'Mua một lần',
+            indonesian: 'Pembelian satu kali',
+            filipino: 'Isang beses na pagbili',
+            myanmar: 'တစ်ကြိမ်တည်း ဝယ်ယူမှု',
+          );
     final isCurrentPlan = currentPlan == plan;
     final canPurchase =
         store != null && !isCurrentPlan && !(purchaseState?.isBusy ?? false);
@@ -190,6 +202,8 @@ class AccessPlanScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(billingLabel),
                     if (plan.hasSevenDayTrial) ...[
                       const SizedBox(height: 6),
                       Text(
@@ -371,5 +385,33 @@ class AccessPlanScreen extends StatelessWidget {
         traditionalChinese: '價格和免費試用期限以商店顯示內容為準。',
       ),
     };
+  }
+}
+
+class _PurchaseStoreBuilder extends StatefulWidget {
+  const _PurchaseStoreBuilder({required this.store, required this.builder});
+
+  final PurchaseStore store;
+  final WidgetBuilder builder;
+
+  @override
+  State<_PurchaseStoreBuilder> createState() => _PurchaseStoreBuilderState();
+}
+
+class _PurchaseStoreBuilderState extends State<_PurchaseStoreBuilder> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(widget.store.refreshProducts());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.store.state,
+      builder: (context, _) => widget.builder(context),
+    );
   }
 }

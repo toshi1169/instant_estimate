@@ -114,6 +114,7 @@ abstract interface class PurchaseStore {
   Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots;
 
   Future<void> initialize();
+  Future<void> refreshProducts();
   Future<void> purchase(AppAccessPlan plan);
   Future<PurchaseEntitlementSnapshot> refreshEntitlements();
   Future<void> restorePurchases();
