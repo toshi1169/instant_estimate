@@ -190,6 +190,48 @@ class FakeFailedEntitlementPurchaseStore implements PurchaseStore {
   }
 }
 
+class FakeEntitlementPurchaseStore implements PurchaseStore {
+  FakeEntitlementPurchaseStore(this.currentSnapshot);
+
+  final ValueNotifier<PurchaseStoreState> _state = ValueNotifier(
+    const PurchaseStoreState(operation: PurchaseOperation.ready),
+  );
+  final StreamController<PurchaseEntitlementSnapshot> _snapshots =
+      StreamController<PurchaseEntitlementSnapshot>.broadcast();
+  PurchaseEntitlementSnapshot currentSnapshot;
+
+  @override
+  ValueListenable<PurchaseStoreState> get state => _state;
+
+  @override
+  Stream<PurchaseEntitlementSnapshot> get entitlementSnapshots =>
+      _snapshots.stream;
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<void> purchase(AppAccessPlan plan) async {}
+
+  @override
+  Future<PurchaseEntitlementSnapshot> refreshEntitlements() async =>
+      currentSnapshot;
+
+  void emitVerified(Iterable<AppAccessPlan> activePlans) {
+    currentSnapshot = PurchaseEntitlementSnapshot.verified(activePlans);
+    _snapshots.add(currentSnapshot);
+  }
+
+  @override
+  Future<void> restorePurchases() async {}
+
+  @override
+  void dispose() {
+    _state.dispose();
+    _snapshots.close();
+  }
+}
+
 class FakeCompletedRewardedAdPresenter implements RewardedAdPresenter {
   final List<RewardedAdEntryPoint> calls = [];
 
@@ -1235,6 +1277,57 @@ void main() {
     expect(find.byKey(const Key('purchaseStatusFull')), findsOneWidget);
     expect(find.text('完全版特典で有効'), findsOneWidget);
     expect(find.text('契約中'), findsOneWidget);
+  });
+
+  testWidgets('起動後のverified Full権利更新で見積5件制限を即時解除する', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final estimateStore = FakeEstimateItemStore();
+    final seedController = EstimateController(store: estimateStore);
+    await seedController.load();
+    for (var day = 2; day <= 5; day++) {
+      await seedController.createEstimate(
+        EstimateInfo.initial(DateTime(2026, 8, day)),
+      );
+    }
+    seedController.dispose();
+    final purchaseStore = FakeEntitlementPurchaseStore(
+      PurchaseEntitlementSnapshot.verified(const []),
+    );
+
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        estimateItemStore: estimateStore,
+        purchaseStore: purchaseStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('メニュー'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sideMenuInstantEstimate')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('5 / 5件'), findsOneWidget);
+    expect(find.text('現在の保存上限：5件'), findsOneWidget);
+
+    purchaseStore.emitVerified(const [AppAccessPlan.full]);
+    await tester.pumpAndSettle();
+
+    expect(find.text('5 / 5件'), findsNothing);
+    expect(find.text('現在の保存上限：5件'), findsNothing);
+    expect(find.text('無料版では見積を5件まで保存できます'), findsNothing);
+    expect(find.text('完全版：件数制限なし'), findsOneWidget);
+
+    purchaseStore.emitVerified(const []);
+    await tester.pumpAndSettle();
+
+    expect(find.text('5 / 5件'), findsOneWidget);
+    expect(find.text('現在の保存上限：5件'), findsOneWidget);
+    expect(find.byType(EstimateDocumentsScreen), findsOneWidget);
   });
 
   testWidgets('端末に保存した広告なし版を起動時に復元する', (tester) async {

@@ -14,12 +14,14 @@ import '../domain/unit_price_master.dart';
 class EstimateController extends ChangeNotifier {
   EstimateController({
     this.store,
-    this.accessPlan = AppAccessPlan.free,
+    AppAccessPlan accessPlan = AppAccessPlan.free,
     DateTime? now,
-  }) : _info = EstimateInfo.initial(now ?? DateTime.now());
+  }) : _info = EstimateInfo.initial(now ?? DateTime.now()) {
+    _accessPlan = accessPlan;
+  }
 
   final EstimateItemStore? store;
-  final AppAccessPlan accessPlan;
+  late AppAccessPlan _accessPlan;
   final List<EstimateItem> _items = [];
   final List<EstimateDocument> _estimates = [];
   final List<UnitPriceMaster> _unitPriceMasters = [];
@@ -32,6 +34,7 @@ class EstimateController extends ChangeNotifier {
   List<UnitPriceMaster> get unitPriceMasters =>
       List.unmodifiable(_unitPriceMasters);
   bool get isLoaded => _loaded;
+  AppAccessPlan get accessPlan => _accessPlan;
   int? get estimateLimit => accessPlan.estimateLimit;
   int? get unitPriceMasterLimit => accessPlan.unitPriceMasterLimit;
   bool get canCreateEstimate =>
@@ -41,6 +44,13 @@ class EstimateController extends ChangeNotifier {
       _unitPriceMasters.length < unitPriceMasterLimit!;
   double get totalAmount =>
       _items.fold(0, (total, item) => total + (item.amount ?? 0));
+
+  void updateAccessPlan(AppAccessPlan accessPlan) {
+    if (_accessPlan == accessPlan) return;
+    _accessPlan = accessPlan;
+    notifyListeners();
+  }
+
   int get subtotalAmount => estimateSubtotal(_items);
   int get taxAmount => estimateTax(subtotalAmount);
   int get grandTotalAmount => subtotalAmount + taxAmount;

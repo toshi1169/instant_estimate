@@ -150,6 +150,13 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   void didUpdateWidget(CalculatorScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.settings != widget.settings) _applyDisplaySettings();
+    if (oldWidget.accessPlan != widget.accessPlan) {
+      final accessPlan = widget.accessPlan;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || widget.accessPlan != accessPlan) return;
+        _estimateController.updateAccessPlan(accessPlan);
+      });
+    }
   }
 
   void _applyDisplaySettings() {

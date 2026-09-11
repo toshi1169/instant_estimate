@@ -324,6 +324,39 @@ void main() {
     expect(controller.estimateLimit, isNull);
   });
 
+  test('購入権利の更新を読み込み済み見積に反映し、保存データは維持する', () async {
+    final controller = EstimateController();
+    await controller.load();
+    for (var day = 2; day <= 5; day++) {
+      await controller.createEstimate(
+        EstimateInfo.initial(DateTime(2026, 8, day)),
+      );
+    }
+    final idsBeforePlanChange = controller.estimates
+        .map((estimate) => estimate.info.id)
+        .toList();
+
+    expect(controller.estimates, hasLength(5));
+    expect(controller.canCreateEstimate, isFalse);
+
+    controller.updateAccessPlan(AppAccessPlan.full);
+
+    expect(controller.estimateLimit, isNull);
+    expect(controller.canCreateEstimate, isTrue);
+    expect(
+      controller.estimates.map((estimate) => estimate.info.id),
+      idsBeforePlanChange,
+    );
+    await controller.createEstimate(EstimateInfo.initial(DateTime(2026, 8, 6)));
+    expect(controller.estimates, hasLength(6));
+
+    controller.updateAccessPlan(AppAccessPlan.adFree);
+
+    expect(controller.estimateLimit, 5);
+    expect(controller.canCreateEstimate, isFalse);
+    expect(controller.estimates, hasLength(6));
+  });
+
   test('無料版の単価マスタは10件まで、完全版は無制限に追加できる', () async {
     final free = EstimateController();
     await free.load();
