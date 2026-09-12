@@ -489,6 +489,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         builder: (_) => EstimateItemsScreen(
           controller: _estimateController,
           settings: widget.settings,
+          onSettingsChanged: widget.onSettingsChanged,
           onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
         ),
       ),

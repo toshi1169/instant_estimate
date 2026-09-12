@@ -185,6 +185,7 @@ class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
             builder: (_) => EstimateItemsScreen(
               controller: widget.controller,
               settings: _settings,
+              onSettingsChanged: _applySettings,
               onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
             ),
           ),
@@ -278,6 +279,7 @@ class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
         builder: (_) => EstimateItemsScreen(
           controller: widget.controller,
           settings: _settings,
+          onSettingsChanged: _applySettings,
           onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
         ),
       ),
@@ -306,6 +308,7 @@ class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
         builder: (_) => EstimateItemsScreen(
           controller: widget.controller,
           settings: _settings,
+          onSettingsChanged: _applySettings,
           onRequestRewardedAdAccess: widget.onRequestRewardedAdAccess,
         ),
       ),
@@ -324,6 +327,11 @@ class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
         builder: (_) => UnitPriceMasterScreen(controller: widget.controller),
       ),
     );
+  }
+
+  void _applySettings(AppSettings settings) {
+    if (mounted) setState(() => _settings = settings);
+    widget.onSettingsChanged?.call(settings);
   }
 }
 

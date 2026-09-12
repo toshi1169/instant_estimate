@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../settings/domain/company_profile.dart';
+import '../../settings/presentation/company_profile_editor_screen.dart';
 import '../application/estimate_controller.dart';
 import '../application/estimate_export_file_name.dart';
-import '../application/estimate_excel_export.dart';
 import '../application/estimate_pdf_export.dart';
 import '../application/estimate_pdf_share.dart';
-import '../application/estimate_print.dart';
 import '../application/estimate_table_export.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
@@ -23,49 +22,69 @@ import 'merge_estimate_quantity_dialog.dart';
 
 enum _EstimateItemAction { duplicate, edit, delete }
 
-enum _EstimateOutputAction { print, pdf, saveOrShareExcel }
-
-class EstimateItemsScreen extends StatelessWidget {
+class EstimateItemsScreen extends StatefulWidget {
   const EstimateItemsScreen({
     required this.controller,
     this.settings = const AppSettings(),
+    this.onSettingsChanged,
     this.onRequestRewardedAdAccess,
-    this.printPdfBytes = printEstimatePdfBytes,
     this.sharePdfBytes = shareEstimatePdfBytes,
     super.key,
   });
 
   final EstimateController controller;
   final AppSettings settings;
+  final ValueChanged<AppSettings>? onSettingsChanged;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
-  final EstimatePdfBytesPrinter printPdfBytes;
   final EstimatePdfBytesSharer sharePdfBytes;
+
+  @override
+  State<EstimateItemsScreen> createState() => _EstimateItemsScreenState();
+}
+
+class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
+  late AppSettings _settings = widget.settings;
+
+  EstimateController get controller => widget.controller;
+  AppSettings get settings => _settings;
+  Future<bool> Function(RewardedAdEntryPoint)? get onRequestRewardedAdAccess =>
+      widget.onRequestRewardedAdAccess;
+  EstimatePdfBytesSharer get sharePdfBytes => widget.sharePdfBytes;
+
+  @override
+  void didUpdateWidget(EstimateItemsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.settings != widget.settings) _settings = widget.settings;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: ListenableBuilder(
-          listenable: controller,
-          builder: (_, _) => Text(
-            l10n.text(controller.info.displayName),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
         actions: [
-          TextButton.icon(
+          TextButton(
             key: const Key('estimateOutputButton'),
             style: TextButton.styleFrom(
               foregroundColor: IconTheme.of(context).color,
-              minimumSize: const Size(68, 48),
+              minimumSize: const Size(86, 48),
               padding: const EdgeInsets.symmetric(horizontal: 4),
               tapTargetSize: MaterialTapTargetSize.padded,
             ),
-            onPressed: () => _showOutputOptions(context),
-            icon: const _EstimateOutputIcon(),
-            label: Text(l10n.estimateOutput, maxLines: 1),
+            onPressed: () => _shareEstimatePdf(context),
+            child: SizedBox(
+              width: 78,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  children: [
+                    const _EstimateOutputIcon(),
+                    const SizedBox(width: 5),
+                    Text(l10n.estimateOutput, maxLines: 1),
+                  ],
+                ),
+              ),
+            ),
           ),
           IconButton(
             key: const Key('copyEstimateTable'),
@@ -78,6 +97,12 @@ class EstimateItemsScreen extends StatelessWidget {
             tooltip: l10n.text('見積基本情報'),
             onPressed: () => _editInfo(context),
             icon: const Icon(Icons.edit_note_outlined),
+          ),
+          IconButton(
+            key: const Key('editCompanyProfileFromEstimateItems'),
+            tooltip: l10n.companyProfile,
+            onPressed: () => _editCompanyProfile(context),
+            icon: const Icon(Icons.business_outlined),
           ),
         ],
       ),
@@ -96,8 +121,10 @@ class EstimateItemsScreen extends StatelessWidget {
             }
             return Column(
               children: [
-                if (_hasSupplementaryInfo(controller.info))
-                  _EstimateInfoSummary(info: controller.info),
+                _EstimateInfoSummary(
+                  info: controller.info,
+                  onTap: () => _editInfo(context),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
                   child: _EstimateTotalsSummary(
@@ -143,104 +170,6 @@ class EstimateItemsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showOutputOptions(BuildContext context) async {
-    final l10n = AppLocalizations.of(context);
-    final action = await showModalBottomSheet<_EstimateOutputAction>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          key: const Key('estimateOutputSheet'),
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.estimateOutputMethods,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-            ),
-            ListTile(
-              key: const Key('printEstimatePdf'),
-              leading: const Icon(Icons.print_outlined),
-              title: Text(
-                l10n.printA4Landscape,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () => Navigator.pop(context, _EstimateOutputAction.print),
-            ),
-            ListTile(
-              key: const Key('shareEstimatePdf'),
-              leading: const Icon(Icons.picture_as_pdf_outlined),
-              title: Text(
-                l10n.formalPdf,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () => Navigator.pop(context, _EstimateOutputAction.pdf),
-            ),
-            ListTile(
-              key: const Key('exportEstimateExcel'),
-              leading: const Icon(Icons.file_download_outlined),
-              title: Text(
-                l10n.saveOrShareExcel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () => Navigator.pop(
-                context,
-                _EstimateOutputAction.saveOrShareExcel,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (action == null || !context.mounted) return;
-    switch (action) {
-      case _EstimateOutputAction.print:
-        await _printEstimate(context);
-      case _EstimateOutputAction.pdf:
-        await _shareEstimatePdf(context);
-      case _EstimateOutputAction.saveOrShareExcel:
-        await _exportExcel(context);
-    }
-  }
-
-  Future<void> _printEstimate(BuildContext context) async {
-    if (controller.items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).text('印刷する明細がありません')),
-        ),
-      );
-      return;
-    }
-    if (!await _requestOutputAccess(RewardedAdEntryPoint.printOutput)) return;
-    if (!context.mounted) return;
-    try {
-      final pdfBytes = await _buildFormalPdf();
-      await printPdfBytes(
-        bytes: pdfBytes,
-        name: formalEstimatePdfFileName(controller.info.displayName),
-      );
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).text('印刷用PDFを作成できませんでした'),
-            ),
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _shareEstimatePdf(BuildContext context) async {
     if (controller.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -281,54 +210,6 @@ class EstimateItemsScreen extends StatelessWidget {
     companyProfile: settings.companyProfile,
     estimateDecimalPlaces: settings.estimateDecimalPlaces,
   );
-
-  Future<void> _exportExcel(BuildContext context) async {
-    if (controller.items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).text('出力する明細がありません')),
-        ),
-      );
-      return;
-    }
-    if (!await _requestOutputAccess(RewardedAdEntryPoint.excelExport)) return;
-    if (!context.mounted) return;
-    try {
-      final file = await createEstimateWorkbookFile(
-        info: controller.info,
-        items: controller.items,
-        companyProfile: settings.companyProfile,
-        estimateDecimalPlaces: settings.estimateDecimalPlaces,
-      );
-      if (!context.mounted) return;
-      final box = context.findRenderObject() as RenderBox?;
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [
-            XFile(
-              file.path,
-              mimeType:
-                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ),
-          ],
-          subject: controller.info.displayName,
-          sharePositionOrigin: box == null
-              ? null
-              : box.localToGlobal(Offset.zero) & box.size,
-        ),
-      );
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).text('Excelファイルを作成できませんでした'),
-            ),
-          ),
-        );
-      }
-    }
-  }
 
   Future<void> _copyTable(BuildContext context) async {
     if (controller.items.isEmpty) {
@@ -514,6 +395,20 @@ class EstimateItemsScreen extends StatelessWidget {
         );
       }
     }
+  }
+
+  Future<void> _editCompanyProfile(BuildContext context) async {
+    final profile = await Navigator.of(context).push<CompanyProfile>(
+      MaterialPageRoute<CompanyProfile>(
+        builder: (_) => CompanyProfileEditorScreen(
+          initialProfile: _settings.companyProfile,
+        ),
+      ),
+    );
+    if (profile == null || !mounted) return;
+    final updated = _settings.copyWith(companyProfile: profile);
+    setState(() => _settings = updated);
+    widget.onSettingsChanged?.call(updated);
   }
 
   Future<void> _handleAction(
@@ -820,9 +715,10 @@ class _EstimateTotalsSummary extends StatelessWidget {
 }
 
 class _EstimateInfoSummary extends StatelessWidget {
-  const _EstimateInfoSummary({required this.info});
+  const _EstimateInfoSummary({required this.info, required this.onTap});
 
   final EstimateInfo info;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -831,24 +727,35 @@ class _EstimateInfoSummary extends StatelessWidget {
     return Card(
       key: const Key('estimateInfoSummary'),
       margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(details.join('　')),
-            if (info.notes.isNotEmpty) ...[
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: const Key('editEstimateInfoFromSummary'),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.text(info.displayName),
+                key: const Key('estimateInfoSummaryName'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 4),
-              Text('${l10n.text('備考')}：${info.notes}'),
+              Text(details.join('　')),
+              if (info.notes.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text('${l10n.text('備考')}：${info.notes}'),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 }
-
-bool _hasSupplementaryInfo(EstimateInfo info) => info.notes.isNotEmpty;
 
 String _date(DateTime date) =>
     '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';

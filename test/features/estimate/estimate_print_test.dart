@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:instant_estimate/features/advertising/domain/rewarded_ad_policy.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_export_file_name.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_print.dart';
@@ -108,21 +107,18 @@ void main() {
 
     expect(find.byKey(const Key('estimateOutputButton')), findsOneWidget);
     expect(find.text('出力'), findsOneWidget);
-    expect(find.byKey(const Key('shareEstimatePdf')), findsNothing);
-    expect(find.byKey(const Key('printEstimatePdf')), findsNothing);
-    expect(find.byKey(const Key('exportEstimateExcel')), findsNothing);
+    expect(find.byKey(const Key('estimateOutputSheet')), findsNothing);
     expect(find.byKey(const Key('copyEstimateTable')), findsOneWidget);
     expect(find.byKey(const Key('editEstimateInfo')), findsOneWidget);
+    expect(
+      find.byKey(const Key('editCompanyProfileFromEstimateItems')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.byKey(const Key('estimateOutputButton')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('estimateOutputSheet')), findsOneWidget);
-    expect(find.byKey(const Key('shareEstimatePdf')), findsOneWidget);
-    expect(find.byKey(const Key('printEstimatePdf')), findsOneWidget);
-    expect(find.byKey(const Key('exportEstimateExcel')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('shareEstimatePdf')));
-    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('estimateOutputSheet')), findsNothing);
 
     expect(sharedBytes, isNotNull);
     expect(ascii.decode(sharedBytes!.take(4).toList()), '%PDF');
@@ -131,44 +127,6 @@ void main() {
     expect(controller.info.toJson(), beforeInfo);
     expect(controller.items.map((item) => item.toJson()).toList(), beforeItems);
     expect(find.text('PDFファイルを作成できませんでした'), findsNothing);
-  });
-
-  testWidgets('正式PDFと印刷は同じ生成処理と見積内容を使用する', (tester) async {
-    final controller = await _controllerWithItem();
-    Uint8List? sharedBytes;
-    Uint8List? printedBytes;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: EstimateItemsScreen(
-          controller: controller,
-          onRequestRewardedAdAccess: (_) async => true,
-          sharePdfBytes:
-              ({
-                required bytes,
-                required fileName,
-                required subject,
-                sharePositionOrigin,
-              }) async {
-                sharedBytes = bytes;
-              },
-          printPdfBytes: ({required bytes, required name}) async {
-            printedBytes = bytes;
-            return true;
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _selectOutput(tester, const Key('shareEstimatePdf'));
-    await _selectOutput(tester, const Key('printEstimatePdf'));
-
-    expect(sharedBytes, isNotNull);
-    expect(printedBytes, isNotNull);
-    expect(ascii.decode(sharedBytes!.take(4).toList()), '%PDF');
-    expect(ascii.decode(printedBytes!.take(4).toList()), '%PDF');
-    expect(sharedBytes!.length, printedBytes!.length);
   });
 
   testWidgets('空の見積名でも安全な正式PDFファイル名で共有する', (tester) async {
@@ -195,7 +153,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await _selectOutput(tester, const Key('shareEstimatePdf'));
+    await _selectOutput(tester);
 
     expect(sharedFileName, '名称未設定の見積_正式見積書.pdf');
   });
@@ -224,99 +182,16 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await _selectOutput(tester, const Key('shareEstimatePdf'));
+    await _selectOutput(tester);
 
     expect(find.text('PDFファイルを作成できませんでした'), findsOneWidget);
     expect(controller.info.toJson(), beforeInfo);
     expect(controller.items.map((item) => item.toJson()).toList(), beforeItems);
   });
-
-  testWidgets('印刷ボタンは現在の実データから正式PDFを生成して印刷へ渡す', (tester) async {
-    final controller = await _controllerWithItem();
-    final beforeInfo = controller.info.toJson();
-    final beforeItems = controller.items.map((item) => item.toJson()).toList();
-    Uint8List? printedBytes;
-    String? printedName;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: EstimateItemsScreen(
-          controller: controller,
-          settings: const AppSettings(
-            estimateDecimalPlaces: 3,
-            companyProfile: CompanyProfile(companyName: '松本建設'),
-          ),
-          onRequestRewardedAdAccess: (_) async => true,
-          printPdfBytes: ({required bytes, required name}) async {
-            printedBytes = bytes;
-            printedName = name;
-            return false;
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _selectOutput(tester, const Key('printEstimatePdf'));
-
-    expect(printedBytes, isNotNull);
-    expect(printedBytes!.length, greaterThan(1000));
-    expect(ascii.decode(printedBytes!.take(4).toList()), '%PDF');
-    expect(printedName, '${controller.info.displayName}_正式見積書.pdf');
-    expect(controller.info.toJson(), beforeInfo);
-    expect(controller.items.map((item) => item.toJson()).toList(), beforeItems);
-    expect(find.text('印刷用PDFを作成できませんでした'), findsNothing);
-  });
-
-  testWidgets('印刷失敗を通知して見積データを変更しない', (tester) async {
-    final controller = await _controllerWithItem();
-    final beforeItems = controller.items.map((item) => item.toJson()).toList();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: EstimateItemsScreen(
-          controller: controller,
-          onRequestRewardedAdAccess: (_) async => true,
-          printPdfBytes: ({required bytes, required name}) async {
-            throw StateError('printer unavailable');
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _selectOutput(tester, const Key('printEstimatePdf'));
-
-    expect(find.text('印刷用PDFを作成できませんでした'), findsOneWidget);
-    expect(controller.items.map((item) => item.toJson()).toList(), beforeItems);
-  });
-
-  testWidgets('保存／共有は既存Excel出力経路を選択する', (tester) async {
-    final controller = await _controllerWithItem();
-    RewardedAdEntryPoint? requestedEntryPoint;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: EstimateItemsScreen(
-          controller: controller,
-          onRequestRewardedAdAccess: (entryPoint) async {
-            requestedEntryPoint = entryPoint;
-            return false;
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await _selectOutput(tester, const Key('exportEstimateExcel'));
-
-    expect(requestedEntryPoint, RewardedAdEntryPoint.excelExport);
-  });
 }
 
-Future<void> _selectOutput(WidgetTester tester, Key optionKey) async {
+Future<void> _selectOutput(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('estimateOutputButton')));
-  await tester.pumpAndSettle();
-  await tester.tap(find.byKey(optionKey));
   await tester.pumpAndSettle();
 }
 
