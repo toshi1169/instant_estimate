@@ -223,10 +223,6 @@ import UIKit
       binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     storeKitEntitlementsChannel.setMethodCallHandler { call, result in
-      guard call.method == "loadVerifiedEntitlementProductIds" else {
-        result(FlutterMethodNotImplemented)
-        return
-      }
       guard #available(iOS 15.0, *) else {
         result(
           FlutterError(
@@ -238,30 +234,71 @@ import UIKit
         return
       }
 
-      let arguments = call.arguments as? [String: Any]
-      let synchronize = arguments?["synchronize"] as? Bool ?? false
-      Task { @MainActor in
-        do {
-          if synchronize {
-            try await AppStore.sync()
+      switch call.method {
+      case "loadVerifiedEntitlementProductIds":
+        let arguments = call.arguments as? [String: Any]
+        let synchronize = arguments?["synchronize"] as? Bool ?? false
+        Task { @MainActor in
+          do {
+            if synchronize {
+              try await AppStore.sync()
+            }
+            var productIds = Set<String>()
+            for await entitlement in Transaction.currentEntitlements {
+              guard case .verified(let transaction) = entitlement else {
+                continue
+              }
+              productIds.insert(transaction.productID)
+            }
+            result(Array(productIds).sorted())
+          } catch {
+            result(
+              FlutterError(
+                code: "STOREKIT_ENTITLEMENTS_FAILED",
+                message: "Verified StoreKit entitlements could not be loaded.",
+                details: error.localizedDescription
+              )
+            )
           }
-          var productIds = Set<String>()
+        }
+      case "loadStoreKitDiagnostics":
+        Task { @MainActor in
+          let targetProductIds = Set([
+            "instant_estimate_ad_free",
+            "instant_estimate_full_monthly",
+          ])
+          let storefront = await Storefront.current
+          var entries = [[String: Any]]()
           for await entitlement in Transaction.currentEntitlements {
-            guard case .verified(let transaction) = entitlement else {
+            let transaction: Transaction
+            let verification: String
+            switch entitlement {
+            case .verified(let verifiedTransaction):
+              transaction = verifiedTransaction
+              verification = "verified"
+            case .unverified(let unverifiedTransaction, _):
+              transaction = unverifiedTransaction
+              verification = "unverified"
+            }
+            guard targetProductIds.contains(transaction.productID) else {
               continue
             }
-            productIds.insert(transaction.productID)
+            entries.append([
+              "productId": transaction.productID,
+              "verification": verification,
+              "productType": transaction.productType.rawValue,
+              "hasExpirationDate": transaction.expirationDate != nil,
+              "isExpired": transaction.expirationDate.map { $0 <= Date() } ?? false,
+              "isRevoked": transaction.revocationDate != nil,
+            ])
           }
-          result(Array(productIds).sorted())
-        } catch {
-          result(
-            FlutterError(
-              code: "STOREKIT_ENTITLEMENTS_FAILED",
-              message: "Verified StoreKit entitlements could not be loaded.",
-              details: error.localizedDescription
-            )
-          )
+          result([
+            "storefrontCountryCode": storefront?.countryCode ?? "",
+            "entitlements": entries,
+          ])
         }
+      default:
+        result(FlutterMethodNotImplemented)
       }
     }
 
