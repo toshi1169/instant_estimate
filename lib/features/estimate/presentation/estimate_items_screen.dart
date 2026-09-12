@@ -23,6 +23,8 @@ import 'merge_estimate_quantity_dialog.dart';
 
 enum _EstimateItemAction { duplicate, edit, delete }
 
+enum _EstimateOutputAction { print, pdf, saveOrShareExcel }
+
 class EstimateItemsScreen extends StatelessWidget {
   const EstimateItemsScreen({
     required this.controller,
@@ -46,26 +48,24 @@ class EstimateItemsScreen extends StatelessWidget {
       appBar: AppBar(
         title: ListenableBuilder(
           listenable: controller,
-          builder: (_, _) => Text(l10n.text(controller.info.displayName)),
+          builder: (_, _) => Text(
+            l10n.text(controller.info.displayName),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         actions: [
-          IconButton(
-            key: const Key('printEstimatePdf'),
-            tooltip: l10n.printA4Landscape,
-            onPressed: () => _printEstimate(context),
-            icon: const Icon(Icons.print_outlined),
-          ),
-          IconButton(
-            key: const Key('shareEstimatePdf'),
-            tooltip: l10n.formalPdf,
-            onPressed: () => _shareEstimatePdf(context),
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-          ),
-          IconButton(
-            key: const Key('exportEstimateExcel'),
-            tooltip: l10n.exportA4LandscapeExcel,
-            onPressed: () => _exportExcel(context),
-            icon: const Icon(Icons.file_download_outlined),
+          TextButton.icon(
+            key: const Key('estimateOutputButton'),
+            style: TextButton.styleFrom(
+              foregroundColor: IconTheme.of(context).color,
+              minimumSize: const Size(68, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              tapTargetSize: MaterialTapTargetSize.padded,
+            ),
+            onPressed: () => _showOutputOptions(context),
+            icon: const _EstimateOutputIcon(),
+            label: Text(l10n.estimateOutput, maxLines: 1),
           ),
           IconButton(
             key: const Key('copyEstimateTable'),
@@ -141,6 +141,74 @@ class EstimateItemsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showOutputOptions(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final action = await showModalBottomSheet<_EstimateOutputAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          key: const Key('estimateOutputSheet'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  l10n.estimateOutputMethods,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ),
+            ListTile(
+              key: const Key('printEstimatePdf'),
+              leading: const Icon(Icons.print_outlined),
+              title: Text(
+                l10n.printA4Landscape,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onTap: () => Navigator.pop(context, _EstimateOutputAction.print),
+            ),
+            ListTile(
+              key: const Key('shareEstimatePdf'),
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: Text(
+                l10n.formalPdf,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onTap: () => Navigator.pop(context, _EstimateOutputAction.pdf),
+            ),
+            ListTile(
+              key: const Key('exportEstimateExcel'),
+              leading: const Icon(Icons.file_download_outlined),
+              title: Text(
+                l10n.saveOrShareExcel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onTap: () => Navigator.pop(
+                context,
+                _EstimateOutputAction.saveOrShareExcel,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !context.mounted) return;
+    switch (action) {
+      case _EstimateOutputAction.print:
+        await _printEstimate(context);
+      case _EstimateOutputAction.pdf:
+        await _shareEstimatePdf(context);
+      case _EstimateOutputAction.saveOrShareExcel:
+        await _exportExcel(context);
+    }
   }
 
   Future<void> _printEstimate(BuildContext context) async {
@@ -644,6 +712,36 @@ class EstimateItemsScreen extends StatelessWidget {
         ),
       );
   }
+}
+
+class _EstimateOutputIcon extends StatelessWidget {
+  const _EstimateOutputIcon();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    width: 27,
+    height: 24,
+    child: Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          left: 0,
+          bottom: 0,
+          child: Icon(Icons.print_outlined, size: 19),
+        ),
+        Positioned(
+          right: 0,
+          top: 0,
+          child: Icon(Icons.picture_as_pdf_outlined, size: 15),
+        ),
+        Positioned(
+          right: 0,
+          bottom: -1,
+          child: Icon(Icons.arrow_downward_rounded, size: 13),
+        ),
+      ],
+    ),
+  );
 }
 
 String _displayQuantity(double? value) {

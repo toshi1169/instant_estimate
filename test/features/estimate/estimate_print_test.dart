@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:instant_estimate/features/advertising/domain/rewarded_ad_policy.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_export_file_name.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_print.dart';
@@ -105,13 +106,21 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('shareEstimatePdf')), findsOneWidget);
-    expect(find.byTooltip('正式PDF'), findsOneWidget);
-    expect(find.byKey(const Key('printEstimatePdf')), findsOneWidget);
-    expect(find.byKey(const Key('exportEstimateExcel')), findsOneWidget);
+    expect(find.byKey(const Key('estimateOutputButton')), findsOneWidget);
+    expect(find.text('出力'), findsOneWidget);
+    expect(find.byKey(const Key('shareEstimatePdf')), findsNothing);
+    expect(find.byKey(const Key('printEstimatePdf')), findsNothing);
+    expect(find.byKey(const Key('exportEstimateExcel')), findsNothing);
     expect(find.byKey(const Key('copyEstimateTable')), findsOneWidget);
+    expect(find.byKey(const Key('editEstimateInfo')), findsOneWidget);
     expect(tester.takeException(), isNull);
 
+    await tester.tap(find.byKey(const Key('estimateOutputButton')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('estimateOutputSheet')), findsOneWidget);
+    expect(find.byKey(const Key('shareEstimatePdf')), findsOneWidget);
+    expect(find.byKey(const Key('printEstimatePdf')), findsOneWidget);
+    expect(find.byKey(const Key('exportEstimateExcel')), findsOneWidget);
     await tester.tap(find.byKey(const Key('shareEstimatePdf')));
     await tester.pumpAndSettle();
 
@@ -152,10 +161,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('shareEstimatePdf')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('printEstimatePdf')));
-    await tester.pumpAndSettle();
+    await _selectOutput(tester, const Key('shareEstimatePdf'));
+    await _selectOutput(tester, const Key('printEstimatePdf'));
 
     expect(sharedBytes, isNotNull);
     expect(printedBytes, isNotNull);
@@ -188,8 +195,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('shareEstimatePdf')));
-    await tester.pumpAndSettle();
+    await _selectOutput(tester, const Key('shareEstimatePdf'));
 
     expect(sharedFileName, '名称未設定の見積_正式見積書.pdf');
   });
@@ -218,8 +224,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('shareEstimatePdf')));
-    await tester.pumpAndSettle();
+    await _selectOutput(tester, const Key('shareEstimatePdf'));
 
     expect(find.text('PDFファイルを作成できませんでした'), findsOneWidget);
     expect(controller.info.toJson(), beforeInfo);
@@ -252,8 +257,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('printEstimatePdf')));
-    await tester.pumpAndSettle();
+    await _selectOutput(tester, const Key('printEstimatePdf'));
 
     expect(printedBytes, isNotNull);
     expect(printedBytes!.length, greaterThan(1000));
@@ -281,12 +285,39 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('printEstimatePdf')));
-    await tester.pumpAndSettle();
+    await _selectOutput(tester, const Key('printEstimatePdf'));
 
     expect(find.text('印刷用PDFを作成できませんでした'), findsOneWidget);
     expect(controller.items.map((item) => item.toJson()).toList(), beforeItems);
   });
+
+  testWidgets('保存／共有は既存Excel出力経路を選択する', (tester) async {
+    final controller = await _controllerWithItem();
+    RewardedAdEntryPoint? requestedEntryPoint;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EstimateItemsScreen(
+          controller: controller,
+          onRequestRewardedAdAccess: (entryPoint) async {
+            requestedEntryPoint = entryPoint;
+            return false;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _selectOutput(tester, const Key('exportEstimateExcel'));
+
+    expect(requestedEntryPoint, RewardedAdEntryPoint.excelExport);
+  });
+}
+
+Future<void> _selectOutput(WidgetTester tester, Key optionKey) async {
+  await tester.tap(find.byKey(const Key('estimateOutputButton')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(optionKey));
+  await tester.pumpAndSettle();
 }
 
 Future<EstimateController> _controllerWithItem() async {

@@ -2748,6 +2748,10 @@ class AppLocalizations {
     english: 'Print in A4 landscape',
     simplifiedChinese: '以A4横向打印',
     traditionalChinese: '以A4橫向列印',
+    vietnamese: 'In ngang khổ A4',
+    indonesian: 'Cetak A4 lanskap',
+    filipino: 'I-print sa A4 landscape',
+    myanmar: 'A4 အလျားလိုက်ဖြင့် ပရင့်ထုတ်ရန်',
   );
 
   String get formalPdf => _pick(
@@ -2777,6 +2781,39 @@ class AppLocalizations {
     english: 'Export A4 landscape Excel',
     simplifiedChinese: '导出A4横向Excel',
     traditionalChinese: '匯出A4橫向Excel',
+  );
+
+  String get estimateOutput => _pick(
+    japanese: '出力',
+    english: 'Export',
+    simplifiedChinese: '导出',
+    traditionalChinese: '輸出',
+    vietnamese: 'Xuất',
+    indonesian: 'Ekspor',
+    filipino: 'I-export',
+    myanmar: 'ထုတ်ရန်',
+  );
+
+  String get estimateOutputMethods => _pick(
+    japanese: '見積書の出力方法',
+    english: 'Choose an export method',
+    simplifiedChinese: '选择估价单的导出方式',
+    traditionalChinese: '選擇估價單的輸出方式',
+    vietnamese: 'Chọn cách xuất báo giá',
+    indonesian: 'Pilih metode ekspor estimasi',
+    filipino: 'Piliin ang paraan ng pag-export',
+    myanmar: 'ခန့်မှန်းစာရွက် ထုတ်ယူနည်းကို ရွေးပါ',
+  );
+
+  String get saveOrShareExcel => _pick(
+    japanese: '保存／共有（Excel）',
+    english: 'Save / Share (Excel)',
+    simplifiedChinese: '保存／共享（Excel）',
+    traditionalChinese: '儲存／分享（Excel）',
+    vietnamese: 'Lưu / Chia sẻ (Excel)',
+    indonesian: 'Simpan / Bagikan (Excel)',
+    filipino: 'I-save / Ibahagi (Excel)',
+    myanmar: 'သိမ်းရန် / မျှဝေရန် (Excel)',
   );
 
   String get copyTableForExcel => _pick(
