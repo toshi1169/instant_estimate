@@ -384,6 +384,55 @@ void main() {
     expect(full.unitPriceMasterLimit, isNull);
   });
 
+  test('上限超過バックアップ相当の復元後はデータを保持し追加だけを制限する', () async {
+    final store = _MemoryEstimateItemStore();
+    final full = EstimateController(
+      store: store,
+      accessPlan: AppAccessPlan.full,
+    );
+    await full.load();
+    for (var day = 2; day <= 7; day++) {
+      await full.createEstimate(EstimateInfo.initial(DateTime(2026, 8, day)));
+    }
+    for (var index = 0; index < 11; index++) {
+      await full.addUnitPriceMaster(
+        UnitPriceMasterDraft(name: '項目$index', unitPrice: index + 1),
+      );
+    }
+
+    final restored = EstimateController(store: store);
+    await restored.load();
+    expect(restored.estimates, hasLength(7));
+    expect(restored.unitPriceMasters, hasLength(11));
+    expect(restored.canCreateEstimate, isFalse);
+    expect(restored.canAddUnitPriceMaster, isFalse);
+    await expectLater(
+      restored.createEstimate(EstimateInfo.initial(DateTime(2026, 8, 8))),
+      throwsStateError,
+    );
+    await expectLater(
+      restored.duplicateEstimate(restored.info.id),
+      throwsStateError,
+    );
+    await expectLater(
+      restored.addUnitPriceMaster(
+        const UnitPriceMasterDraft(name: '追加', unitPrice: 1),
+      ),
+      throwsStateError,
+    );
+
+    await restored.deleteEstimate(restored.estimates.last.info.id);
+    await restored.deleteEstimate(restored.estimates.last.info.id);
+    expect(restored.canCreateEstimate, isFalse);
+    await restored.deleteEstimate(restored.estimates.last.info.id);
+    expect(restored.canCreateEstimate, isTrue);
+
+    await restored.deleteUnitPriceMaster(restored.unitPriceMasters.last.id);
+    expect(restored.canAddUnitPriceMaster, isFalse);
+    await restored.deleteUnitPriceMaster(restored.unitPriceMasters.last.id);
+    expect(restored.canAddUnitPriceMaster, isTrue);
+  });
+
   test('見積全体を別IDで複製してコピーを追加先にできる', () async {
     final store = _MemoryEstimateItemStore();
     final controller = EstimateController(store: store);

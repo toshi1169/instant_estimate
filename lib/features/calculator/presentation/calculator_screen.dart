@@ -155,6 +155,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || widget.accessPlan != accessPlan) return;
         _estimateController.updateAccessPlan(accessPlan);
+        _productivityController.updateAccessPlan(accessPlan);
       });
     }
   }
@@ -278,8 +279,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Future<void> _reloadRestoredData() async {
     await Future.wait([
       _controller.loadHistory(),
-      _estimateController.load(),
-      _productivityController.load(),
+      _estimateController.reload(),
+      _productivityController.reload(),
     ]);
   }
 

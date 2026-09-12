@@ -111,6 +111,38 @@ void main() {
     );
     expect(full.recordLimit, 100);
   });
+
+  test('完全版失効後は既存実績を保持し現在プランの上限を適用する', () async {
+    final controller = ProductivityController(
+      store: MemoryProductivityRecordStore(),
+      accessPlan: AppAccessPlan.full,
+    );
+    await controller.load();
+    for (var index = 0; index < 6; index++) {
+      await controller.add(_record('$index', 0.05, 20));
+    }
+
+    controller.updateAccessPlan(AppAccessPlan.free);
+    expect(controller.recordLimit, 5);
+    expect(controller.records, hasLength(6));
+    expect(controller.canAdd, isFalse);
+    await expectLater(
+      controller.add(_record('6', 0.05, 20)),
+      throwsA(isA<ProductivityLimitException>()),
+    );
+
+    await controller.delete('5');
+    expect(controller.canAdd, isFalse);
+    await controller.delete('4');
+    expect(controller.canAdd, isTrue);
+    await controller.add(_record('6', 0.05, 20));
+
+    controller.updateAccessPlan(AppAccessPlan.adFree);
+    expect(controller.recordLimit, 5);
+    controller.updateAccessPlan(AppAccessPlan.full);
+    expect(controller.recordLimit, 100);
+    expect(controller.canAdd, isTrue);
+  });
 }
 
 ProductivityRecord _record(

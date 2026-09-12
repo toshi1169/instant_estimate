@@ -21,6 +21,7 @@ import 'package:instant_estimate/features/backup/presentation/backup_screen.dart
 import 'package:instant_estimate/features/calculator/data/calculation_history_store.dart';
 import 'package:instant_estimate/features/density/domain/weight_calculator.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
+import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_document.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
@@ -30,6 +31,7 @@ import 'package:instant_estimate/features/estimate/domain/unit_price_master.dart
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 import 'package:instant_estimate/features/onboarding/domain/occupation.dart';
 import 'package:instant_estimate/features/productivity/data/productivity_record_store.dart';
+import 'package:instant_estimate/features/productivity/application/productivity_controller.dart';
 import 'package:instant_estimate/features/productivity/domain/productivity_record.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
@@ -225,15 +227,44 @@ void main() {
 
     test('大量バックアップを削除・並べ替えせず復元する', () async {
       final harness = _Harness(previous: _snapshot('previous'));
-      final large = _snapshot('large', estimateCount: 100, itemCount: 20);
+      final large = _snapshot(
+        'large',
+        estimateCount: 100,
+        itemCount: 20,
+        unitPriceMasterCount: 11,
+        productivityRecordCount: 6,
+      );
       await harness.coordinator.restore(large);
       expect(harness.estimate.workspace.estimates, hasLength(100));
       expect(harness.estimate.workspace.estimates.first.items, hasLength(20));
+      expect(harness.estimate.workspace.unitPriceMasters, hasLength(11));
+      expect(harness.productivity.records, hasLength(6));
       expect(
         harness.estimate.workspace.activeEstimateId,
         large.data.estimateWorkspace.activeEstimateId,
       );
       expect(harness.currentData(), large.data.toJson());
+
+      final estimates = EstimateController(store: harness.estimate);
+      final productivity = ProductivityController(store: harness.productivity);
+      await estimates.load();
+      await productivity.load();
+      expect(estimates.canCreateEstimate, isFalse);
+      expect(estimates.canAddUnitPriceMaster, isFalse);
+      expect(productivity.canAdd, isFalse);
+
+      while (estimates.estimates.length >= estimates.estimateLimit!) {
+        await estimates.deleteEstimate(estimates.estimates.last.info.id);
+      }
+      expect(estimates.canCreateEstimate, isTrue);
+      await estimates.deleteUnitPriceMaster(estimates.unitPriceMasters.last.id);
+      expect(estimates.canAddUnitPriceMaster, isFalse);
+      await estimates.deleteUnitPriceMaster(estimates.unitPriceMasters.last.id);
+      expect(estimates.canAddUnitPriceMaster, isTrue);
+      await productivity.delete(productivity.records.last.id);
+      expect(productivity.canAdd, isFalse);
+      await productivity.delete(productivity.records.last.id);
+      expect(productivity.canAdd, isTrue);
     });
 
     test('各保存段階の単発障害でpreviousへ完全rollbackする', () async {
@@ -729,6 +760,8 @@ BackupSnapshot _snapshot(
   String prefix, {
   int estimateCount = 2,
   int itemCount = 2,
+  int unitPriceMasterCount = 1,
+  int productivityRecordCount = 1,
   bool empty = false,
 }) {
   final estimates = empty
@@ -826,43 +859,45 @@ BackupSnapshot _snapshot(
         unitPriceMasters: empty
             ? const []
             : [
-                UnitPriceMaster(
-                  id: '$prefix-master',
-                  createdAt: DateTime.utc(2026, 8, 1),
-                  trade: 'Exterior',
-                  name: 'Master',
-                  specification: 'Specification',
-                  unit: 'm',
-                  unitPrice: 2000,
-                  description: 'Description',
-                ),
+                for (var index = 0; index < unitPriceMasterCount; index++)
+                  UnitPriceMaster(
+                    id: '$prefix-master-$index',
+                    createdAt: DateTime.utc(2026, 8, 1),
+                    trade: 'Exterior',
+                    name: 'Master $index',
+                    specification: 'Specification',
+                    unit: 'm',
+                    unitPrice: 2000,
+                    description: 'Description',
+                  ),
               ],
       ),
       productivityRecords: empty
           ? const []
           : [
-              ProductivityRecord(
-                id: '$prefix-record',
-                createdAt: DateTime.utc(2026, 8, 1),
-                trade: 'Exterior',
-                taskName: 'Task',
-                siteName: 'Site',
-                workDate: DateTime.utc(2026, 8, 1),
-                quantity: 10,
-                unit: 'm',
-                workers: 2,
-                workDays: 1,
-                actualWorkHours: 8,
-                actualLabor: 2,
-                standardLaborRate: 0.25,
-                standardProductivity: 4,
-                actualLaborRate: 0.2,
-                productivityPerLabor: 5,
-                totalPersonHours: 16,
-                hourlyProductivity: 0.625,
-                productivityDifferencePercent: 25,
-                conditions: 'Clear',
-              ),
+              for (var index = 0; index < productivityRecordCount; index++)
+                ProductivityRecord(
+                  id: '$prefix-record-$index',
+                  createdAt: DateTime.utc(2026, 8, 1),
+                  trade: 'Exterior',
+                  taskName: 'Task',
+                  siteName: 'Site',
+                  workDate: DateTime.utc(2026, 8, 1),
+                  quantity: 10,
+                  unit: 'm',
+                  workers: 2,
+                  workDays: 1,
+                  actualWorkHours: 8,
+                  actualLabor: 2,
+                  standardLaborRate: 0.25,
+                  standardProductivity: 4,
+                  actualLaborRate: 0.2,
+                  productivityPerLabor: 5,
+                  totalPersonHours: 16,
+                  hourlyProductivity: 0.625,
+                  productivityDifferencePercent: 25,
+                  conditions: 'Clear',
+                ),
             ],
     ),
   );

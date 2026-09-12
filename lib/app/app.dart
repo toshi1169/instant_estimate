@@ -57,7 +57,8 @@ class InstantEstimateApp extends StatefulWidget {
   State<InstantEstimateApp> createState() => _InstantEstimateAppState();
 }
 
-class _InstantEstimateAppState extends State<InstantEstimateApp> {
+class _InstantEstimateAppState extends State<InstantEstimateApp>
+    with WidgetsBindingObserver {
   final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   AppSettings _settings = const AppSettings();
   late AppAccessPlan _accessPlan = widget.accessPlan;
@@ -84,6 +85,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.advertisingConsentManager?.state.addListener(
       _handleAdvertisingConsentChanged,
     );
@@ -97,12 +99,32 @@ class _InstantEstimateAppState extends State<InstantEstimateApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.advertisingConsentManager?.state.removeListener(
       _handleAdvertisingConsentChanged,
     );
     unawaited(_purchaseEntitlementSnapshotSubscription?.cancel());
     widget.purchaseStore?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshEntitlementsAfterResume());
+    }
+  }
+
+  Future<void> _refreshEntitlementsAfterResume() async {
+    final purchaseStore = widget.purchaseStore;
+    if (purchaseStore == null) return;
+    PurchaseEntitlementSnapshot snapshot;
+    try {
+      snapshot = await purchaseStore.refreshEntitlements();
+    } catch (_) {
+      return;
+    }
+    await _applyEntitlementSnapshot(snapshot);
   }
 
   Future<void> _initializeAccessAndPurchases() async {

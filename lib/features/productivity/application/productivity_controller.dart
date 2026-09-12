@@ -9,18 +9,31 @@ class ProductivityLimitException implements Exception {
 }
 
 class ProductivityController extends ChangeNotifier {
-  ProductivityController({
+  factory ProductivityController({
     ProductivityRecordStore? store,
-    this.accessPlan = AppAccessPlan.free,
-  }) : store = store ?? MemoryProductivityRecordStore();
+    AppAccessPlan accessPlan = AppAccessPlan.free,
+  }) => ProductivityController._(
+    store ?? MemoryProductivityRecordStore(),
+    accessPlan,
+  );
+
+  ProductivityController._(this.store, this._accessPlan);
   final ProductivityRecordStore store;
-  final AppAccessPlan accessPlan;
+  AppAccessPlan _accessPlan;
   final List<ProductivityRecord> _records = [];
   bool _loaded = false;
+  AppAccessPlan get accessPlan => _accessPlan;
   int get recordLimit => accessPlan.productivityRecordLimit;
   bool get canAdd => _records.length < recordLimit;
   bool get isLoaded => _loaded;
   List<ProductivityRecord> get records => List.unmodifiable(_records);
+
+  void updateAccessPlan(AppAccessPlan accessPlan) {
+    if (_accessPlan == accessPlan) return;
+    _accessPlan = accessPlan;
+    notifyListeners();
+  }
+
   List<ProductivitySummary> get summaries {
     final grouped = <String, List<ProductivityRecord>>{};
     for (final record in _records) {
@@ -35,6 +48,15 @@ class ProductivityController extends ChangeNotifier {
     _records
       ..clear()
       ..addAll(await store.load());
+    _loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> reload() async {
+    final records = await store.load();
+    _records
+      ..clear()
+      ..addAll(records);
     _loaded = true;
     notifyListeners();
   }

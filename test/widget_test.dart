@@ -19,6 +19,8 @@ import 'package:instant_estimate/features/advertising/domain/rewarded_ad_policy.
 import 'package:instant_estimate/features/advertising/presentation/google_mobile_ads_banner.dart';
 import 'package:instant_estimate/features/onboarding/data/onboarding_preferences.dart';
 import 'package:instant_estimate/features/onboarding/domain/occupation.dart';
+import 'package:instant_estimate/features/productivity/application/productivity_controller.dart';
+import 'package:instant_estimate/features/productivity/data/productivity_record_store.dart';
 import 'package:instant_estimate/features/settings/data/app_settings_store.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 import 'package:instant_estimate/features/settings/domain/company_profile.dart';
@@ -159,6 +161,7 @@ class FakeFailedEntitlementPurchaseStore implements PurchaseStore {
   );
   final StreamController<PurchaseEntitlementSnapshot> _snapshots =
       StreamController<PurchaseEntitlementSnapshot>.broadcast();
+  int refreshCount = 0;
 
   @override
   ValueListenable<PurchaseStoreState> get state => _state;
@@ -178,6 +181,7 @@ class FakeFailedEntitlementPurchaseStore implements PurchaseStore {
 
   @override
   Future<PurchaseEntitlementSnapshot> refreshEntitlements() async {
+    refreshCount += 1;
     const snapshot = PurchaseEntitlementSnapshot.failed('offline');
     _snapshots.add(snapshot);
     return snapshot;
@@ -202,6 +206,7 @@ class FakeEntitlementPurchaseStore implements PurchaseStore {
   final StreamController<PurchaseEntitlementSnapshot> _snapshots =
       StreamController<PurchaseEntitlementSnapshot>.broadcast();
   PurchaseEntitlementSnapshot currentSnapshot;
+  int refreshCount = 0;
 
   @override
   ValueListenable<PurchaseStoreState> get state => _state;
@@ -220,8 +225,10 @@ class FakeEntitlementPurchaseStore implements PurchaseStore {
   Future<void> purchase(AppAccessPlan plan) async {}
 
   @override
-  Future<PurchaseEntitlementSnapshot> refreshEntitlements() async =>
-      currentSnapshot;
+  Future<PurchaseEntitlementSnapshot> refreshEntitlements() async {
+    refreshCount += 1;
+    return currentSnapshot;
+  }
 
   void emitVerified(Iterable<AppAccessPlan> activePlans) {
     currentSnapshot = PurchaseEntitlementSnapshot.verified(activePlans);
@@ -1338,6 +1345,34 @@ void main() {
     expect(find.byType(EstimateDocumentsScreen), findsOneWidget);
   });
 
+  testWidgets('画面のプラン更新を歩掛・生産性上限へ同期する', (tester) async {
+    final productivity = ProductivityController(
+      store: MemoryProductivityRecordStore(),
+      accessPlan: AppAccessPlan.full,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalculatorScreen(
+          productivityController: productivity,
+          accessPlan: AppAccessPlan.full,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(productivity.recordLimit, 100);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalculatorScreen(
+          productivityController: productivity,
+          accessPlan: AppAccessPlan.free,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(productivity.recordLimit, 5);
+  });
+
   testWidgets('端末に保存した広告なし版を起動時に復元する', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -1379,6 +1414,90 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(accessStore.state.plan, AppAccessPlan.adFree);
+    expect(find.byKey(const Key('calculatorAdBanner')), findsNothing);
+  });
+
+  testWidgets('アプリ復帰時のverified再確認でFullからFreeへ戻り広告を再表示する', (tester) async {
+    final accessStore = FakeAppAccessStateStore(
+      const AppAccessState(plan: AppAccessPlan.full),
+    );
+    final purchaseStore = FakeEntitlementPurchaseStore(
+      PurchaseEntitlementSnapshot.verified(const [AppAccessPlan.full]),
+    );
+    final consent = FakeAdvertisingConsentManager()..allowAds();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessStateStore: accessStore,
+        purchaseStore: purchaseStore,
+        advertisingConsentManager: consent,
+        enableGoogleMobileAds: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(purchaseStore.refreshCount, 1);
+    expect(find.byKey(const Key('calculatorAdBanner')), findsNothing);
+
+    purchaseStore.currentSnapshot = PurchaseEntitlementSnapshot.verified(
+      const [],
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(purchaseStore.refreshCount, 2);
+    expect(accessStore.state.plan, AppAccessPlan.free);
+    expect(find.byKey(const Key('calculatorAdBanner')), findsOneWidget);
+  });
+
+  testWidgets('アプリ復帰時のverified再確認でFullからAdFreeへ戻る', (tester) async {
+    final accessStore = FakeAppAccessStateStore(
+      const AppAccessState(plan: AppAccessPlan.full),
+    );
+    final purchaseStore = FakeEntitlementPurchaseStore(
+      PurchaseEntitlementSnapshot.verified(const [AppAccessPlan.full]),
+    );
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessStateStore: accessStore,
+        purchaseStore: purchaseStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    purchaseStore.currentSnapshot = PurchaseEntitlementSnapshot.verified(const [
+      AppAccessPlan.adFree,
+    ]);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(accessStore.state.plan, AppAccessPlan.adFree);
+    expect(find.byKey(const Key('calculatorAdBanner')), findsNothing);
+  });
+
+  testWidgets('アプリ復帰時の権利取得失敗では既存Fullを保持する', (tester) async {
+    final accessStore = FakeAppAccessStateStore(
+      const AppAccessState(plan: AppAccessPlan.full),
+    );
+    final purchaseStore = FakeFailedEntitlementPurchaseStore();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        accessStateStore: accessStore,
+        purchaseStore: purchaseStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(purchaseStore.refreshCount, 1);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(purchaseStore.refreshCount, 2);
+    expect(accessStore.state.plan, AppAccessPlan.full);
     expect(find.byKey(const Key('calculatorAdBanner')), findsNothing);
   });
 

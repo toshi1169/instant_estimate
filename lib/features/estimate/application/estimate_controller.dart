@@ -117,6 +117,11 @@ class EstimateController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> reload() async {
+    _loaded = false;
+    await load();
+  }
+
   Future<EstimateItem> add(EstimateItemDraft draft) async {
     final now = DateTime.now();
     final resolvedDraft = _resolveConstructionLocation(draft);
