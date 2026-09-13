@@ -49,19 +49,23 @@ class StoreKitDiagnosticReport {
   const StoreKitDiagnosticReport({
     required this.storefrontCountryCode,
     required this.products,
+    required this.nativeProducts,
     required this.notFoundProductIds,
     required this.entitlements,
     required this.adoptedPlan,
     this.productError,
+    this.nativeProductError,
     this.nativeError,
   });
 
   final String? storefrontCountryCode;
   final List<StoreKitDiagnosticProduct> products;
+  final List<StoreKitDiagnosticProduct> nativeProducts;
   final List<String> notFoundProductIds;
   final List<StoreKitDiagnosticEntitlement> entitlements;
   final AppAccessPlan adoptedPlan;
   final String? productError;
+  final String? nativeProductError;
   final String? nativeError;
 
   bool get appleHasAdFree => entitlements.any(
@@ -116,11 +120,30 @@ class StoreKitDiagnosticsSource {
     }
 
     String? storefrontCountryCode;
+    var nativeProducts = const <StoreKitDiagnosticProduct>[];
     var entitlements = const <StoreKitDiagnosticEntitlement>[];
+    String? nativeProductError;
     String? nativeError;
     try {
       final native = await _loadNativeDiagnostics();
       storefrontCountryCode = native['storefrontCountryCode'] as String?;
+      nativeProducts = (native['nativeProducts'] as List<Object?>? ?? const [])
+          .whereType<Map<Object?, Object?>>()
+          .map(
+            (entry) => StoreKitDiagnosticProduct(
+              id: entry['productId'] as String? ?? '',
+              displayPrice: entry['displayPrice'] as String? ?? '',
+              rawPrice: (entry['rawPrice'] as num?)?.toDouble() ?? 0,
+              currencyCode: entry['currencyCode'] as String? ?? '',
+              currencySymbol: entry['currencySymbol'] as String? ?? '',
+            ),
+          )
+          .where((product) => PurchaseProductIds.all.contains(product.id))
+          .toList(growable: false);
+      final nativeProductErrorValue = native['nativeProductError'] as String?;
+      if (nativeProductErrorValue?.isNotEmpty ?? false) {
+        nativeProductError = nativeProductErrorValue;
+      }
       entitlements = (native['entitlements'] as List<Object?>? ?? const [])
           .whereType<Map<Object?, Object?>>()
           .map(
@@ -142,10 +165,12 @@ class StoreKitDiagnosticsSource {
     return StoreKitDiagnosticReport(
       storefrontCountryCode: storefrontCountryCode,
       products: products,
+      nativeProducts: nativeProducts,
       notFoundProductIds: notFoundProductIds,
       entitlements: entitlements,
       adoptedPlan: adoptedPlan,
       productError: productError,
+      nativeProductError: nativeProductError,
       nativeError: nativeError,
     );
   }

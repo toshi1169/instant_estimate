@@ -37,6 +37,22 @@ void main() {
       },
       loadNativeDiagnostics: () async => <String, Object?>{
         'storefrontCountryCode': 'JPN',
+        'nativeProducts': <Object?>[
+          <Object?, Object?>{
+            'productId': PurchaseProductIds.adFree,
+            'displayPrice': '¥300',
+            'rawPrice': 300,
+            'currencyCode': 'JPY',
+            'currencySymbol': '¥',
+          },
+          <Object?, Object?>{
+            'productId': PurchaseProductIds.fullMonthly,
+            'displayPrice': '¥500',
+            'rawPrice': 500.0,
+            'currencyCode': 'JPY',
+            'currencySymbol': '¥',
+          },
+        ],
         'entitlements': <Object?>[
           <Object?, Object?>{
             'productId': PurchaseProductIds.fullMonthly,
@@ -58,6 +74,12 @@ void main() {
     expect(report.products[0].currencyCode, 'USD');
     expect(report.products[1].id, PurchaseProductIds.fullMonthly);
     expect(report.products[1].displayPrice, '¥500');
+    expect(report.nativeProducts[0].id, PurchaseProductIds.adFree);
+    expect(report.nativeProducts[0].displayPrice, '¥300');
+    expect(report.nativeProducts[0].rawPrice, 300);
+    expect(report.nativeProducts[0].currencyCode, 'JPY');
+    expect(report.nativeProducts[1].id, PurchaseProductIds.fullMonthly);
+    expect(report.nativeProducts[1].displayPrice, '¥500');
     expect(report.appleHasAdFree, isFalse);
     expect(report.appleHasFull, isTrue);
     expect(report.adoptedPlan, AppAccessPlan.full);
@@ -94,6 +116,15 @@ void main() {
       ),
       loadNativeDiagnostics: () async => <String, Object?>{
         'storefrontCountryCode': 'JPN',
+        'nativeProducts': <Object?>[
+          <Object?, Object?>{
+            'productId': PurchaseProductIds.fullMonthly,
+            'displayPrice': '¥500',
+            'rawPrice': 500,
+            'currencyCode': 'JPY',
+            'currencySymbol': '¥',
+          },
+        ],
         'entitlements': const <Object?>[],
       },
     );
@@ -108,6 +139,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Storefront country: JPN'), findsOneWidget);
+    expect(find.text('Flutter in_app_purchase products'), findsOneWidget);
+    expect(find.text('Native StoreKit 2 products'), findsOneWidget);
+    expect(find.text('Native display price: ¥500'), findsOneWidget);
+    expect(find.text('Native raw price: 500.0'), findsOneWidget);
+    expect(find.text('Native currency code: JPY'), findsOneWidget);
     expect(find.text('Apple verified Full: No'), findsOneWidget);
     expect(find.text('App adopted plan: full'), findsOneWidget);
   });

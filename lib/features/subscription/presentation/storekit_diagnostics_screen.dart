@@ -62,11 +62,16 @@ class _StoreKitDiagnosticsScreenState extends State<StoreKitDiagnosticsScreen> {
                 _value('Apple verified Full', _yesNo(report.appleHasFull)),
                 if (report.productError != null)
                   _value('Product query error', report.productError),
+                if (report.nativeProductError != null)
+                  _value(
+                    'Native product query error',
+                    report.nativeProductError,
+                  ),
                 if (report.nativeError != null)
                   _value('Native query error', report.nativeError),
                 const Divider(height: 32),
                 const Text(
-                  'Products',
+                  'Flutter in_app_purchase products',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 for (final product in report.products) ...[
@@ -80,6 +85,21 @@ class _StoreKitDiagnosticsScreenState extends State<StoreKitDiagnosticsScreen> {
                 if (report.products.isEmpty) const Text('No products returned'),
                 if (report.notFoundProductIds.isNotEmpty)
                   _value('Not found IDs', report.notFoundProductIds.join(', ')),
+                const Divider(height: 32),
+                const Text(
+                  'Native StoreKit 2 products',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                for (final product in report.nativeProducts) ...[
+                  const SizedBox(height: 10),
+                  _value('Native Product ID', product.id),
+                  _value('Native display price', product.displayPrice),
+                  _value('Native raw price', product.rawPrice.toString()),
+                  _value('Native currency code', product.currencyCode),
+                  _value('Native currency symbol', product.currencySymbol),
+                ],
+                if (report.nativeProducts.isEmpty)
+                  const Text('No native StoreKit 2 products returned'),
                 const Divider(height: 32),
                 const Text(
                   'Current entitlements',

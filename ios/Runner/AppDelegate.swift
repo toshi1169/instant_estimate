@@ -268,6 +268,25 @@ import UIKit
             "instant_estimate_full_monthly",
           ])
           let storefront = await Storefront.current
+          var nativeProducts = [[String: Any]]()
+          var nativeProductError = ""
+          do {
+            let products = try await Product.products(for: targetProductIds)
+            nativeProducts = products
+              .sorted { $0.id < $1.id }
+              .map { product in
+                let locale = product.priceFormatStyle.locale
+                return [
+                  "productId": product.id,
+                  "displayPrice": product.displayPrice,
+                  "rawPrice": NSDecimalNumber(decimal: product.price).doubleValue,
+                  "currencyCode": locale.currencyCode ?? "",
+                  "currencySymbol": locale.currencySymbol ?? "",
+                ]
+              }
+          } catch {
+            nativeProductError = error.localizedDescription
+          }
           var entries = [[String: Any]]()
           for await entitlement in Transaction.currentEntitlements {
             let transaction: Transaction
@@ -294,6 +313,8 @@ import UIKit
           }
           result([
             "storefrontCountryCode": storefront?.countryCode ?? "",
+            "nativeProducts": nativeProducts,
+            "nativeProductError": nativeProductError,
             "entitlements": entries,
           ])
         }
