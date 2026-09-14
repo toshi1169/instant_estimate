@@ -12,6 +12,7 @@ import 'package:instant_estimate/core/localization/app_language.dart';
 import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/core/theme/app_theme.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
+import 'package:instant_estimate/features/calculator/data/calculation_history_store.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
 import 'package:instant_estimate/features/advertising/application/advertising_consent_manager.dart';
 import 'package:instant_estimate/features/advertising/application/rewarded_ad_access_controller.dart';
@@ -41,6 +42,21 @@ import 'package:instant_estimate/features/estimate/presentation/estimate_item_ed
 import 'package:instant_estimate/features/estimate/presentation/estimate_items_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_documents_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/unit_price_master_screen.dart';
+
+class MutableCalculationHistoryStore implements CalculationHistoryStore {
+  MutableCalculationHistoryStore([List<StoredCalculationHistoryEntry>? entries])
+    : entries = List.of(entries ?? const []);
+
+  List<StoredCalculationHistoryEntry> entries;
+
+  @override
+  Future<List<StoredCalculationHistoryEntry>> load() async => List.of(entries);
+
+  @override
+  Future<void> save(List<StoredCalculationHistoryEntry> entries) async {
+    this.entries = List.of(entries);
+  }
+}
 
 class FakeOnboardingPreferences implements OnboardingPreferences {
   FakeOnboardingPreferences({required this.hasSelected, this.savedOccupation});
@@ -3377,6 +3393,40 @@ void main() {
     expect(find.text('1.5'), findsOneWidget);
     expect(find.text('3/2'), findsOneWidget);
     expect(find.text('1 1/2'), findsOneWidget);
+  });
+
+  testWidgets('復元後reloadHistoryで履歴パネルと履歴一覧が38件へ更新される', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = MutableCalculationHistoryStore();
+    final controller = CalculatorController(historyStore: store);
+    await controller.loadHistory();
+    await tester.pumpWidget(
+      MaterialApp(home: CalculatorScreen(controller: controller)),
+    );
+    await tester.pump();
+
+    store.entries = List.generate(
+      38,
+      (index) => StoredCalculationHistoryEntry(
+        expression: '$index + 1',
+        result: '${index + 1}',
+        decimalResult: '${index + 1}',
+        createdAt: DateTime(2026, 9, 14, 12, index),
+      ),
+    );
+    await controller.reloadHistory();
+    await tester.pump();
+
+    expect(controller.history, hasLength(38));
+    expect(find.byKey(const Key('historyPanel')), findsOneWidget);
+    await tester.longPress(find.byKey(const Key('historyPanel')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('historyCount')), findsOneWidget);
+    expect(find.text('38件'), findsOneWidget);
   });
 
   testWidgets('履歴全体画面で式と解を検索できる', (tester) async {

@@ -278,7 +278,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   Future<void> _reloadRestoredData() async {
     await Future.wait([
-      _controller.loadHistory(),
+      _controller.reloadHistory(),
       _estimateController.reload(),
       _productivityController.reload(),
     ]);

@@ -459,6 +459,32 @@ class CalculatorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> reloadHistory() async {
+    final store = historyStore;
+    if (store == null) return;
+    final stored = await store.load();
+    final limitedStored = stored.length > 50
+        ? stored.sublist(stored.length - 50)
+        : stored;
+    _history
+      ..clear()
+      ..addAll(
+        limitedStored.map(
+          (entry) => CalculationHistoryEntry(
+            expression: entry.expression,
+            result: entry.result,
+            decimalResult: entry.decimalResult,
+            improperFractionResult: entry.improperFractionResult,
+            mixedFractionResult: entry.mixedFractionResult,
+            createdAt: entry.createdAt,
+          ),
+        ),
+      );
+    _historyLoaded = true;
+    _historyLoadComplete = true;
+    notifyListeners();
+  }
+
   void _saveHistory() {
     final store = historyStore;
     if (store == null || !_historyLoadComplete) return;

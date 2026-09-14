@@ -1203,6 +1203,32 @@ void main() {
       expect(controller.history.single.createdAt, createdAt);
     });
 
+    test('reloadHistoryで復元済み履歴38件へ即時更新する', () async {
+      final store = FakeCalculationHistoryStore();
+      final controller = CalculatorController(historyStore: store);
+      await controller.loadHistory();
+      expect(controller.history, isEmpty);
+
+      store.entries = List.generate(
+        38,
+        (index) => StoredCalculationHistoryEntry(
+          expression: '$index + 1',
+          result: '${index + 1}',
+          decimalResult: '${index + 1}',
+          createdAt: DateTime(2026, 9, 14, 12, index),
+        ),
+      );
+      var notificationCount = 0;
+      controller.addListener(() => notificationCount++);
+
+      await controller.reloadHistory();
+
+      expect(controller.history, hasLength(38));
+      expect(controller.history.first.expression, '0 + 1');
+      expect(controller.history.last.expression, '37 + 1');
+      expect(notificationCount, 1);
+    });
+
     test('履歴削除を端末保存用ストアへ反映する', () async {
       final store = FakeCalculationHistoryStore([
         StoredCalculationHistoryEntry(
