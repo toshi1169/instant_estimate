@@ -299,6 +299,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _openSourceLicenses(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    showLicensePage(context: context, applicationName: strings.appTitle);
+  }
+
   Future<void> _openBackup(BuildContext context) {
     final factory = widget.backupSnapshotFactory;
     if (factory == null) return Future.value();
@@ -654,6 +659,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: Text(strings.disclaimerSettingsSubtitle),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _openDisclaimer(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              key: const Key('openSourceLicensesSetting'),
+              leading: const Icon(Icons.article_outlined),
+              title: Text(strings.openSourceLicenses),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openSourceLicenses(context),
             ),
           ),
         ],

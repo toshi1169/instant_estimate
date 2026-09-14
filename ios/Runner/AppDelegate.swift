@@ -261,63 +261,6 @@ import UIKit
             )
           }
         }
-      case "loadStoreKitDiagnostics":
-        Task { @MainActor in
-          let targetProductIds = Set([
-            "instant_estimate_ad_free",
-            "instant_estimate_full_monthly",
-          ])
-          let storefront = await Storefront.current
-          var nativeProducts = [[String: Any]]()
-          var nativeProductError = ""
-          do {
-            let products = try await Product.products(for: targetProductIds)
-            nativeProducts = products
-              .sorted { $0.id < $1.id }
-              .map { product in
-                let locale = product.priceFormatStyle.locale
-                return [
-                  "productId": product.id,
-                  "displayPrice": product.displayPrice,
-                  "rawPrice": NSDecimalNumber(decimal: product.price).doubleValue,
-                  "currencyCode": locale.currencyCode ?? "",
-                  "currencySymbol": locale.currencySymbol ?? "",
-                ]
-              }
-          } catch {
-            nativeProductError = error.localizedDescription
-          }
-          var entries = [[String: Any]]()
-          for await entitlement in Transaction.currentEntitlements {
-            let transaction: Transaction
-            let verification: String
-            switch entitlement {
-            case .verified(let verifiedTransaction):
-              transaction = verifiedTransaction
-              verification = "verified"
-            case .unverified(let unverifiedTransaction, _):
-              transaction = unverifiedTransaction
-              verification = "unverified"
-            }
-            guard targetProductIds.contains(transaction.productID) else {
-              continue
-            }
-            entries.append([
-              "productId": transaction.productID,
-              "verification": verification,
-              "productType": transaction.productType.rawValue,
-              "hasExpirationDate": transaction.expirationDate != nil,
-              "isExpired": transaction.expirationDate.map { $0 <= Date() } ?? false,
-              "isRevoked": transaction.revocationDate != nil,
-            ])
-          }
-          result([
-            "storefrontCountryCode": storefront?.countryCode ?? "",
-            "nativeProducts": nativeProducts,
-            "nativeProductError": nativeProductError,
-            "entitlements": entries,
-          ])
-        }
       default:
         result(FlutterMethodNotImplemented)
       }

@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/domain/app_access_plan.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../domain/purchase_store.dart';
-import 'storekit_diagnostics_screen.dart';
 
 const privacyPolicyUrl = 'https://matsumotoboundary.com/privacy/';
 const termsOfUseUrl =
@@ -172,23 +171,7 @@ class AccessPlanScreen extends StatelessWidget {
         store != null && !isCurrentPlan && !(purchaseState?.isBusy ?? false);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(planName),
-        actions: [
-          if (store != null)
-            IconButton(
-              key: const Key('openStoreKitDiagnostics'),
-              tooltip: 'StoreKit diagnostics',
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) =>
-                      StoreKitDiagnosticsScreen(adoptedPlan: currentPlan),
-                ),
-              ),
-              icon: const Icon(Icons.bug_report_outlined),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: Text(planName)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),

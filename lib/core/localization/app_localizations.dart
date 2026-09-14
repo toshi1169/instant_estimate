@@ -1092,6 +1092,16 @@ class AppLocalizations {
     simplifiedChinese: '广告区域',
     traditionalChinese: '廣告區域',
   );
+  String get openSourceLicenses => _pick(
+    japanese: 'オープンソースライセンス',
+    english: 'Open source licenses',
+    simplifiedChinese: '开源许可证',
+    traditionalChinese: '開放原始碼授權',
+    vietnamese: 'Giấy phép mã nguồn mở',
+    indonesian: 'Lisensi sumber terbuka',
+    filipino: 'Mga lisensyang open source',
+    myanmar: 'အခမဲ့ရင်းမြစ် လိုင်စင်များ',
+  );
 
   String text(String japanese) {
     if (isJapanese) return japanese;

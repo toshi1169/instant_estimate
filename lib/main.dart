@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'app/app.dart';
 import 'core/domain/app_access_plan.dart';
 import 'core/platform/app_orientation.dart';
+import 'core/licenses/third_party_licenses.dart';
 import 'features/advertising/data/google_mobile_ads_consent_manager.dart';
 import 'features/advertising/data/google_mobile_ads_rewarded_ad_presenter.dart';
 import 'features/calculator/data/calculation_history_store.dart';
@@ -19,6 +20,7 @@ import 'features/backup/data/backup_restore_journal_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerThirdPartyLicenses();
   await configureAppOrientation();
   const profileScreenshotFullAccess = kProfileMode;
   final onboardingPreferences = PlatformOnboardingPreferences();
@@ -59,9 +61,7 @@ Future<void> main() async {
           ? null
           : GoogleMobileAdsConsentManager(),
       enableGoogleMobileAds: !profileScreenshotFullAccess,
-      purchaseStore: profileScreenshotFullAccess
-          ? null
-          : InAppPurchaseStore(),
+      purchaseStore: profileScreenshotFullAccess ? null : InAppPurchaseStore(),
       accessPlan: profileScreenshotFullAccess
           ? AppAccessPlan.full
           : AppAccessPlan.free,
