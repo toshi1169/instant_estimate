@@ -29,6 +29,7 @@ import 'package:instant_estimate/features/settings/presentation/settings_screen.
 import 'package:instant_estimate/features/subscription/data/app_access_state_store.dart';
 import 'package:instant_estimate/features/subscription/domain/app_access_state.dart';
 import 'package:instant_estimate/features/subscription/domain/purchase_store.dart';
+import 'package:instant_estimate/features/subscription/presentation/access_plan_screen.dart';
 import 'package:instant_estimate/features/estimate/data/estimate_item_store.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_document.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
@@ -756,6 +757,62 @@ void main() {
 
     expect(settings.language, AppLanguage.myanmar);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('iPhone・iPad幅と全プランで設定の購入行から既存購入画面を開ける', (tester) async {
+    final purchaseStore = FakeEntitlementPurchaseStore(
+      PurchaseEntitlementSnapshot.verified(const []),
+    );
+    addTearDown(purchaseStore.dispose);
+
+    for (final size in const [Size(390, 844), Size(834, 1194)]) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      for (final currentPlan in AppAccessPlan.values) {
+        for (final target in const [
+          (Key('purchaseStatusAdFree'), AppAccessPlan.adFree),
+          (Key('purchaseStatusFull'), AppAccessPlan.full),
+        ]) {
+          await tester.pumpWidget(
+            MaterialApp(
+              locale: const Locale('ja'),
+              localizationsDelegates: const [
+                AppLocalizationsDelegate(),
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [Locale('ja'), Locale('en')],
+              home: SettingsScreen(
+                settings: const AppSettings(),
+                accessPlan: currentPlan,
+                purchaseStore: purchaseStore,
+                onSettingsChanged: (_) {},
+                onClearHistory: () async {},
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final purchaseTile = find.byKey(target.$1);
+          await tester.scrollUntilVisible(purchaseTile, 250);
+          await tester.tap(purchaseTile);
+          await tester.pumpAndSettle();
+
+          final screen = tester.widget<AccessPlanScreen>(
+            find.byType(AccessPlanScreen),
+          );
+          expect(screen.plan, target.$2);
+          expect(screen.currentPlan, currentPlan);
+          expect(screen.purchaseStore, same(purchaseStore));
+          expect(tester.takeException(), isNull);
+          await tester.tap(find.byType(BackButton));
+          await tester.pumpAndSettle();
+        }
+      }
+    }
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
   });
 
   testWidgets('設定画面で関数電卓と独立した見積数量設定を変更できる', (tester) async {

@@ -252,6 +252,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         builder: (_) => SettingsScreen(
           settings: widget.settings,
           accessPlan: widget.accessPlan,
+          purchaseStore: widget.purchaseStore,
           onSettingsChanged: widget.onSettingsChanged ?? (_) {},
           onClearHistory: _controller.clearHistory,
           onShowAdvertisingPrivacyOptions:

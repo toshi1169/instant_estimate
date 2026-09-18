@@ -11,6 +11,8 @@ import '../../onboarding/data/onboarding_preferences.dart';
 import '../../onboarding/domain/occupation.dart';
 import '../../onboarding/presentation/occupation_selection_screen.dart';
 import '../../help/presentation/disclaimer_screen.dart';
+import '../../subscription/domain/purchase_store.dart';
+import '../../subscription/presentation/access_plan_screen.dart';
 import '../../backup/application/backup_snapshot_factory.dart';
 import '../../backup/application/backup_restore_coordinator.dart';
 import '../../backup/presentation/backup_screen.dart';
@@ -24,6 +26,7 @@ class SettingsScreen extends StatefulWidget {
     required this.onClearHistory,
     this.onboardingPreferences,
     this.accessPlan = AppAccessPlan.free,
+    this.purchaseStore,
     this.onShowAdvertisingPrivacyOptions,
     this.backupSnapshotFactory,
     this.backupRestoreCoordinator,
@@ -36,6 +39,7 @@ class SettingsScreen extends StatefulWidget {
   final Future<void> Function() onClearHistory;
   final OnboardingPreferences? onboardingPreferences;
   final AppAccessPlan accessPlan;
+  final PurchaseStore? purchaseStore;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
   final BackupSnapshotFactory? backupSnapshotFactory;
   final BackupRestoreCoordinator? backupRestoreCoordinator;
@@ -547,6 +551,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: strings.adFreePlan,
                   status: _adFreeStatus(widget.accessPlan, strings),
                   active: widget.accessPlan != AppAccessPlan.free,
+                  onTap: () => _openAccessPlan(context, AppAccessPlan.adFree),
                 ),
                 const Divider(height: 1),
                 _PurchaseStatusTile(
@@ -555,6 +560,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: strings.fullPlan,
                   status: _fullPlanStatus(widget.accessPlan, strings),
                   active: widget.accessPlan == AppAccessPlan.full,
+                  onTap: () => _openAccessPlan(context, AppAccessPlan.full),
                 ),
               ],
             ),
@@ -676,6 +682,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+
+  Future<void> _openAccessPlan(BuildContext context, AppAccessPlan plan) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AccessPlanScreen(
+          plan: plan,
+          currentPlan: widget.accessPlan,
+          purchaseStore: widget.purchaseStore,
+        ),
+      ),
+    );
+  }
 }
 
 String _themeLabel(AppThemeSelection value, AppLocalizations strings) =>
@@ -699,6 +717,7 @@ class _PurchaseStatusTile extends StatelessWidget {
     required this.title,
     required this.status,
     required this.active,
+    required this.onTap,
     super.key,
   });
 
@@ -706,6 +725,7 @@ class _PurchaseStatusTile extends StatelessWidget {
   final String title;
   final String status;
   final bool active;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -724,6 +744,7 @@ class _PurchaseStatusTile extends StatelessWidget {
         active ? Icons.check_circle : Icons.remove_circle_outline,
         color: active ? colors.primary : colors.onSurfaceVariant,
       ),
+      onTap: onTap,
     );
   }
 }
