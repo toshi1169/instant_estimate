@@ -75,6 +75,17 @@ void main() {
     expect(infoPlist, contains('<key>NSUserTrackingUsageDescription</key>'));
     expect(infoPlist, contains('<string>${descriptions['en']}</string>'));
     expect(project, contains('AppTrackingTransparency.framework'));
+    final appDelegate = File('ios/Runner/AppDelegate.swift').readAsStringSync();
+    expect(
+      appDelegate,
+      contains('ATTrackingManager.trackingAuthorizationStatus'),
+    );
+    expect(
+      appDelegate,
+      contains('ATTrackingManager.requestTrackingAuthorization'),
+    );
+    expect(appDelegate, contains('UIApplication.didBecomeActiveNotification'));
+    expect(appDelegate, contains('requestInFlight'));
 
     for (final entry in descriptions.entries) {
       final strings = File(

@@ -1,9 +1,77 @@
+import AppTrackingTransparency
 import Flutter
 import StoreKit
 import UIKit
 
+private final class TrackingAuthorizationCoordinator {
+  private var pendingResults: [FlutterResult] = []
+  private var didBecomeActiveObserver: NSObjectProtocol?
+  private var requestInFlight = false
+
+  func status() -> String {
+    switch ATTrackingManager.trackingAuthorizationStatus {
+    case .notDetermined: "notDetermined"
+    case .restricted: "restricted"
+    case .denied: "denied"
+    case .authorized: "authorized"
+    @unknown default: "restricted"
+    }
+  }
+
+  func requestAuthorization(result: @escaping FlutterResult) {
+    guard ATTrackingManager.trackingAuthorizationStatus == .notDetermined else {
+      result(status())
+      return
+    }
+
+    pendingResults.append(result)
+    continueRequestWhenActive()
+  }
+
+  private func continueRequestWhenActive() {
+    guard !requestInFlight else { return }
+    guard UIApplication.shared.applicationState == .active else {
+      guard didBecomeActiveObserver == nil else { return }
+      didBecomeActiveObserver = NotificationCenter.default.addObserver(
+        forName: UIApplication.didBecomeActiveNotification,
+        object: nil,
+        queue: .main
+      ) { [weak self] _ in
+        self?.stopObservingActivation()
+        self?.continueRequestWhenActive()
+      }
+      return
+    }
+
+    requestInFlight = true
+    ATTrackingManager.requestTrackingAuthorization { [weak self] _ in
+      DispatchQueue.main.async {
+        self?.finishRequest()
+      }
+    }
+  }
+
+  private func stopObservingActivation() {
+    guard let observer = didBecomeActiveObserver else { return }
+    NotificationCenter.default.removeObserver(observer)
+    didBecomeActiveObserver = nil
+  }
+
+  private func finishRequest() {
+    stopObservingActivation()
+    requestInFlight = false
+    let resolvedStatus = status()
+    let results = pendingResults
+    pendingResults.removeAll()
+    results.forEach { $0(resolvedStatus) }
+  }
+}
+
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private let trackingAuthorizationCoordinator =
+    TrackingAuthorizationCoordinator()
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -13,6 +81,31 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    let trackingAuthorizationChannel = FlutterMethodChannel(
+      name: "com.matsumotoboundary.constructioncalc/tracking_authorization",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    trackingAuthorizationChannel.setMethodCallHandler { [weak self] call, result in
+      guard let self else {
+        result(
+          FlutterError(
+            code: "ATT_UNAVAILABLE",
+            message: "Tracking authorization is unavailable.",
+            details: nil
+          )
+        )
+        return
+      }
+      switch call.method {
+      case "status":
+        result(self.trackingAuthorizationCoordinator.status())
+      case "requestAuthorization":
+        self.trackingAuthorizationCoordinator.requestAuthorization(result: result)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
 
     let channel = FlutterMethodChannel(
       name: "jp.instant_estimate/onboarding_preferences",

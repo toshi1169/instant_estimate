@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../application/advertising_consent_manager.dart';
+import 'app_tracking_transparency_manager.dart';
 import 'google_mobile_ads_initializer.dart';
 
 class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
@@ -13,6 +14,8 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
     Future<void> Function()? loadAndShowConsentFormIfRequired,
     Future<bool> Function()? canRequestAds,
     Future<PrivacyOptionsRequirementStatus> Function()? privacyOptionsStatus,
+    TrackingAuthorizationManager? trackingAuthorizationManager,
+    TargetPlatform? platform,
   }) : _mobileAdsInitializer =
            mobileAdsInitializer ?? GoogleMobileAdsInitializer.plugin(),
        _requestConsentInformationUpdate =
@@ -25,7 +28,11 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
            canRequestAds ?? ConsentInformation.instance.canRequestAds,
        _privacyOptionsStatus =
            privacyOptionsStatus ??
-           ConsentInformation.instance.getPrivacyOptionsRequirementStatus;
+           ConsentInformation.instance.getPrivacyOptionsRequirementStatus,
+       _trackingAuthorizationManager =
+           trackingAuthorizationManager ??
+           const PlatformTrackingAuthorizationManager(),
+       _platform = platform ?? defaultTargetPlatform;
 
   final ValueNotifier<AdvertisingConsentState> _state = ValueNotifier(
     const AdvertisingConsentState(),
@@ -36,10 +43,13 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
   final Future<bool> Function() _canRequestAds;
   final Future<PrivacyOptionsRequirementStatus> Function()
   _privacyOptionsStatus;
+  final TrackingAuthorizationManager _trackingAuthorizationManager;
+  final TargetPlatform _platform;
 
   Future<void>? _gathering;
   bool _mobileAdsPrepared = false;
   bool _mobileAdsInitialized = false;
+  bool _trackingAuthorizationResolved = false;
 
   @override
   ValueListenable<AdvertisingConsentState> get state => _state;
@@ -66,12 +76,30 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
       // 前回までに有効な同意が保存されていれば、その状態で広告を続行する。
     } finally {
       try {
+        await _resolveTrackingAuthorization();
+      } catch (_) {
+        // ATT状態を確認できない場合は広告を開始せず、次回起動で再試行する。
+      }
+      try {
         await _refreshState();
       } catch (_) {
         // 同意SDK自体が利用できない場合も、アプリ本体は継続して使えるようにする。
       }
       _state.value = _state.value.copyWith(isGathering: false);
     }
+  }
+
+  Future<void> _resolveTrackingAuthorization() async {
+    if (_platform != TargetPlatform.iOS) {
+      _trackingAuthorizationResolved = true;
+      return;
+    }
+    var status = await _trackingAuthorizationManager.status();
+    if (status == TrackingAuthorizationStatus.notDetermined) {
+      status = await _trackingAuthorizationManager.requestAuthorization();
+    }
+    _trackingAuthorizationResolved =
+        status != TrackingAuthorizationStatus.notDetermined;
   }
 
   static Future<void> _pluginRequestConsentInformationUpdate() {
@@ -115,7 +143,10 @@ class GoogleMobileAdsConsentManager implements AdvertisingConsentManager {
     if (!_isSupportedPlatform) return;
     final canRequestAds = await _canRequestAds();
     final privacyStatus = await _privacyOptionsStatus();
-    final canSafelyRequestAds = canRequestAds && _mobileAdsPrepared;
+    final canSafelyRequestAds =
+        canRequestAds &&
+        _mobileAdsPrepared &&
+        (_platform != TargetPlatform.iOS || _trackingAuthorizationResolved);
     _state.value = _state.value.copyWith(
       canRequestAds: canSafelyRequestAds,
       privacyOptionsRequired:
