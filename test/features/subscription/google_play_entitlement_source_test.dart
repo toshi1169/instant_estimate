@@ -16,10 +16,7 @@ void main() {
 
     final result = await source.load(synchronize: false);
 
-    expect(result, {
-      PurchaseProductIds.adFree,
-      PurchaseProductIds.fullMonthly,
-    });
+    expect(result, {PurchaseProductIds.adFree, PurchaseProductIds.fullMonthly});
   });
 
   test('購入トークンまたは購入データが不足する商品は付与しない', () async {
@@ -67,15 +64,11 @@ void main() {
 
   test('Google Play照会失敗を権利なしとして扱わず呼び出し側へ返す', () async {
     final source = GooglePlayEntitlementSource(
-      queryPurchases: () => Future<List<PurchaseDetails>>.error(
-        Exception('offline'),
-      ),
+      queryPurchases: () =>
+          Future<List<PurchaseDetails>>.error(Exception('offline')),
     );
 
-    expect(
-      () => source.load(synchronize: false),
-      throwsA(isA<Exception>()),
-    );
+    expect(() => source.load(synchronize: false), throwsA(isA<Exception>()));
   });
 }
 
