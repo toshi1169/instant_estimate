@@ -1,4 +1,4 @@
-package com.example.instant_estimate
+package com.matsumotoboundary.constructioncalc
 
 import android.util.AtomicFile
 import io.flutter.embedding.android.FlutterActivity
