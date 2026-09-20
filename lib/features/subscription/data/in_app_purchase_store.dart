@@ -5,9 +5,11 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../core/domain/app_access_plan.dart';
 import '../domain/purchase_store.dart';
+import 'google_play_entitlement_source.dart';
 import 'storekit_verified_entitlement_source.dart';
 
 typedef PurchaseCompleter = Future<void> Function(PurchaseDetails purchase);
+typedef PurchaseRestorer = Future<void> Function();
 
 class InAppPurchaseStore implements PurchaseStore {
   InAppPurchaseStore({
@@ -15,20 +17,34 @@ class InAppPurchaseStore implements PurchaseStore {
     Stream<List<PurchaseDetails>>? purchaseStream,
     VerifiedEntitlementLoader? loadVerifiedEntitlements,
     PurchaseCompleter? completePurchase,
-  }) : _inAppPurchase =
+    PurchaseRestorer? restorePurchases,
+    GooglePlayPurchaseVerifier? googlePlayPurchaseVerifier,
+    TargetPlatform? targetPlatform,
+  }) : _targetPlatform = targetPlatform ?? defaultTargetPlatform,
+       _inAppPurchase =
            inAppPurchase ??
            (purchaseStream == null ? InAppPurchase.instance : null) {
     _purchaseStream = purchaseStream ?? _inAppPurchase!.purchaseStream;
     _loadVerifiedEntitlements =
-        loadVerifiedEntitlements ?? StoreKitVerifiedEntitlementSource().load;
+        loadVerifiedEntitlements ??
+        (_targetPlatform == TargetPlatform.android
+            ? GooglePlayEntitlementSource(
+                inAppPurchase: _inAppPurchase!,
+                verifyPurchase: googlePlayPurchaseVerifier,
+              ).load
+            : StoreKitVerifiedEntitlementSource().load);
     _completePurchase =
         completePurchase ?? _inAppPurchase?.completePurchase ?? (_) async {};
+    _restorePurchases =
+        restorePurchases ?? _inAppPurchase?.restorePurchases ?? () async {};
   }
 
+  final TargetPlatform _targetPlatform;
   final InAppPurchase? _inAppPurchase;
   late final Stream<List<PurchaseDetails>> _purchaseStream;
   late final VerifiedEntitlementLoader _loadVerifiedEntitlements;
   late final PurchaseCompleter _completePurchase;
+  late final PurchaseRestorer _restorePurchases;
   final ValueNotifier<PurchaseStoreState> _state = ValueNotifier(
     const PurchaseStoreState(),
   );
@@ -150,6 +166,16 @@ class InAppPurchaseStore implements PurchaseStore {
   @override
   Future<void> restorePurchases() async {
     _setState(PurchaseOperation.restoring);
+    if (_targetPlatform == TargetPlatform.android) {
+      try {
+        await _restorePurchases();
+      } catch (error) {
+        final snapshot = PurchaseEntitlementSnapshot.failed(error.toString());
+        _entitlementSnapshots.add(snapshot);
+        _setState(PurchaseOperation.error, message: error.toString());
+        return;
+      }
+    }
     await _refreshEntitlements(synchronize: true);
   }
 

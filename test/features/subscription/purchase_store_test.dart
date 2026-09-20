@@ -243,6 +243,50 @@ void main() {
       expect(snapshot.effectivePlan, AppAccessPlan.adFree);
       expect(store.state.value.operation, PurchaseOperation.ready);
     });
+
+    test('Android復元はGoogle Play復元後に現在権利を再照会する', () async {
+      final events = <String>[];
+      final store = InAppPurchaseStore(
+        targetPlatform: TargetPlatform.android,
+        purchaseStream: const Stream<List<PurchaseDetails>>.empty(),
+        restorePurchases: () async => events.add('restore'),
+        loadVerifiedEntitlements: ({required synchronize}) async {
+          events.add('load:$synchronize');
+          return {PurchaseProductIds.fullMonthly};
+        },
+      );
+      addTearDown(store.dispose);
+
+      final snapshotFuture = store.entitlementSnapshots.first;
+      await store.restorePurchases();
+      final snapshot = await snapshotFuture;
+
+      expect(events, ['restore', 'load:true']);
+      expect(snapshot.effectivePlan, AppAccessPlan.full);
+      expect(store.state.value.operation, PurchaseOperation.ready);
+    });
+
+    test('Android復元APIの失敗では権利を変更せずエラーにする', () async {
+      var entitlementLoadCount = 0;
+      final store = InAppPurchaseStore(
+        targetPlatform: TargetPlatform.android,
+        purchaseStream: const Stream<List<PurchaseDetails>>.empty(),
+        restorePurchases: () => Future<void>.error(Exception('offline')),
+        loadVerifiedEntitlements: ({required synchronize}) async {
+          entitlementLoadCount += 1;
+          return {PurchaseProductIds.fullMonthly};
+        },
+      );
+      addTearDown(store.dispose);
+
+      final snapshotFuture = store.entitlementSnapshots.first;
+      await store.restorePurchases();
+      final snapshot = await snapshotFuture;
+
+      expect(snapshot.isVerified, isFalse);
+      expect(entitlementLoadCount, 0);
+      expect(store.state.value.operation, PurchaseOperation.error);
+    });
   });
 
   testWidgets('ストア価格で購入し、購入履歴を復元できる', (tester) async {
