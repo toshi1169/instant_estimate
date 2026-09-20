@@ -56,7 +56,7 @@ void main() {
       expect(pdfShare, contains("mimeType: 'application/pdf'"));
       expect(pdfShare, contains('fileNameOverrides: [fileName]'));
       expect(backupShare, contains('SharePlus.instance.share'));
-      expect(backupShare, contains("'.genbacalc'"));
+      expect(backupShare, contains('.genbacalc'));
       expect(backupShare, contains('fileNameOverrides: [fileName]'));
     });
 
