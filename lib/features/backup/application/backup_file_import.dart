@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugPrint, defaultTargetPlatform, kDebugMode;
 
 import '../domain/backup_snapshot.dart';
 
@@ -64,7 +65,7 @@ Future<BackupSnapshot> readBackupFile(
     'READ start name=${file.name} path=${file.path} mimeType=${file.mimeType}',
   );
   _debugBackupImport('EXTENSION check start');
-  if (_hasDifferentExplicitExtension(file.name)) {
+  if (_hasDifferentExplicitExtension(file)) {
     _debugBackupImport('EXTENSION rejected name=${file.name}');
     throw const BackupImportException(BackupImportFailure.wrongFileType);
   }
@@ -146,9 +147,20 @@ void _debugBackupImport(String message) {
   if (kDebugMode) debugPrint('[BackupImport] $message');
 }
 
-bool _hasDifferentExplicitExtension(String name) {
-  final trimmed = name.trim().toLowerCase();
+bool _hasDifferentExplicitExtension(XFile file) {
+  final trimmed = file.name.trim().toLowerCase();
   final separator = trimmed.lastIndexOf('.');
   if (separator < 0 || separator == trimmed.length - 1) return false;
-  return trimmed.substring(separator + 1) != 'genbacalc';
+  final extension = trimmed.substring(separator + 1);
+  if (extension == 'genbacalc') return false;
+
+  // Android DocumentsUI can preserve the selected .genbacalc payload while
+  // file_selector copies it into the app cache with a .bin name derived from
+  // application/octet-stream. The payload still passes every format and data
+  // validation below before it can be restored.
+  final isAndroidPickerBinary =
+      defaultTargetPlatform == TargetPlatform.android &&
+      extension == 'bin' &&
+      file.mimeType?.trim().toLowerCase() == 'application/octet-stream';
+  return !isAndroidPickerBinary;
 }

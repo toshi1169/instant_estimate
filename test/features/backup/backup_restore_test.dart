@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/app/app.dart';
@@ -70,6 +72,50 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('Android pickerがoctet-streamを.binへ変えても内容検証へ進む', () async {
+      final previousPlatform = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
+      final snapshot = _snapshot('incoming');
+
+      final restored = await readBackupFile(
+        XFile.fromData(
+          snapshot.encodeUtf8(),
+          name: 'backup.bin',
+          mimeType: 'application/octet-stream',
+        ),
+      );
+
+      expect(restored.data.toJson(), snapshot.data.toJson());
+    });
+
+    test('Androidでも通常の別拡張子と偽装された.binは拒否する', () async {
+      final previousPlatform = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
+      final bytes = _snapshot('incoming').encodeUtf8();
+
+      for (final file in <XFile>[
+        XFile.fromData(
+          bytes,
+          name: 'backup.json',
+          mimeType: 'application/json',
+        ),
+        XFile.fromData(bytes, name: 'backup.bin', mimeType: 'application/json'),
+      ]) {
+        await expectLater(
+          readBackupFile(file),
+          throwsA(
+            isA<BackupImportException>().having(
+              (error) => error.failure,
+              'failure',
+              BackupImportFailure.wrongFileType,
+            ),
+          ),
+        );
+      }
     });
 
     test('ローカルパスとiOS管理下へコピー済み相当のパスから読み込める', () async {
