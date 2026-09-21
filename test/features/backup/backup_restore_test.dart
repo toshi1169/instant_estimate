@@ -79,13 +79,17 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
       final snapshot = _snapshot('incoming');
+      final temporaryDirectory = await Directory.systemTemp.createTemp(
+        'genbacalc-android-bin-test-',
+      );
+      addTearDown(() => temporaryDirectory.delete(recursive: true));
+      final binaryFile = File(
+        '${temporaryDirectory.path}${Platform.pathSeparator}backup.bin',
+      );
+      await binaryFile.writeAsBytes(snapshot.encodeUtf8(), flush: true);
 
       final restored = await readBackupFile(
-        XFile.fromData(
-          snapshot.encodeUtf8(),
-          name: 'backup.bin',
-          mimeType: 'application/octet-stream',
-        ),
+        XFile(binaryFile.path, mimeType: 'application/octet-stream'),
       );
 
       expect(restored.data.toJson(), snapshot.data.toJson());
@@ -96,14 +100,22 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       addTearDown(() => debugDefaultTargetPlatformOverride = previousPlatform);
       final bytes = _snapshot('incoming').encodeUtf8();
+      final temporaryDirectory = await Directory.systemTemp.createTemp(
+        'genbacalc-android-rejection-test-',
+      );
+      addTearDown(() => temporaryDirectory.delete(recursive: true));
+      final jsonFile = File(
+        '${temporaryDirectory.path}${Platform.pathSeparator}backup.json',
+      );
+      final disguisedBinaryFile = File(
+        '${temporaryDirectory.path}${Platform.pathSeparator}backup.bin',
+      );
+      await jsonFile.writeAsBytes(bytes, flush: true);
+      await disguisedBinaryFile.writeAsBytes(bytes, flush: true);
 
       for (final file in <XFile>[
-        XFile.fromData(
-          bytes,
-          name: 'backup.json',
-          mimeType: 'application/json',
-        ),
-        XFile.fromData(bytes, name: 'backup.bin', mimeType: 'application/json'),
+        XFile(jsonFile.path, mimeType: 'application/json'),
+        XFile(disguisedBinaryFile.path, mimeType: 'application/json'),
       ]) {
         await expectLater(
           readBackupFile(file),
