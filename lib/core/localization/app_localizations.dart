@@ -2775,6 +2775,17 @@ class AppLocalizations {
     myanmar: 'တရားဝင် PDF',
   );
 
+  String get formalExcelXlsx => _pick(
+    japanese: '正式Excel（XLSX）',
+    english: 'Formal Excel (XLSX)',
+    simplifiedChinese: '正式Excel（XLSX）',
+    traditionalChinese: '正式Excel（XLSX）',
+    vietnamese: 'Excel chính thức (XLSX)',
+    indonesian: 'Excel resmi (XLSX)',
+    filipino: 'Opisyal na Excel (XLSX)',
+    myanmar: 'တရားဝင် Excel (XLSX)',
+  );
+
   String get pdfFileCreationFailed => _pick(
     japanese: 'PDFファイルを作成できませんでした',
     english: 'Could not create the PDF file',

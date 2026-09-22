@@ -7,9 +7,12 @@ import '../../settings/domain/app_settings.dart';
 import '../../settings/domain/company_profile.dart';
 import '../../settings/presentation/company_profile_editor_screen.dart';
 import '../application/estimate_controller.dart';
+import '../application/estimate_excel_export.dart';
+import '../application/estimate_excel_share.dart';
 import '../application/estimate_export_file_name.dart';
 import '../application/estimate_pdf_export.dart';
 import '../application/estimate_pdf_share.dart';
+import '../application/estimate_print.dart';
 import '../application/estimate_table_export.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
@@ -22,13 +25,18 @@ import 'merge_estimate_quantity_dialog.dart';
 
 enum _EstimateItemAction { duplicate, edit, delete }
 
+enum _EstimateOutputAction { print, pdf, excel }
+
 class EstimateItemsScreen extends StatefulWidget {
   const EstimateItemsScreen({
     required this.controller,
     this.settings = const AppSettings(),
     this.onSettingsChanged,
     this.onRequestRewardedAdAccess,
+    this.printPdfBytes = printEstimatePdfBytes,
     this.sharePdfBytes = shareEstimatePdfBytes,
+    this.createWorkbookFile = createEstimateWorkbookFile,
+    this.shareWorkbookFile = shareEstimateWorkbookFile,
     super.key,
   });
 
@@ -36,7 +44,10 @@ class EstimateItemsScreen extends StatefulWidget {
   final AppSettings settings;
   final ValueChanged<AppSettings>? onSettingsChanged;
   final Future<bool> Function(RewardedAdEntryPoint)? onRequestRewardedAdAccess;
+  final EstimatePdfBytesPrinter printPdfBytes;
   final EstimatePdfBytesSharer sharePdfBytes;
+  final EstimateWorkbookFileCreator createWorkbookFile;
+  final EstimateWorkbookFileSharer shareWorkbookFile;
 
   @override
   State<EstimateItemsScreen> createState() => _EstimateItemsScreenState();
@@ -49,7 +60,11 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
   AppSettings get settings => _settings;
   Future<bool> Function(RewardedAdEntryPoint)? get onRequestRewardedAdAccess =>
       widget.onRequestRewardedAdAccess;
+  EstimatePdfBytesPrinter get printPdfBytes => widget.printPdfBytes;
   EstimatePdfBytesSharer get sharePdfBytes => widget.sharePdfBytes;
+  EstimateWorkbookFileCreator get createWorkbookFile =>
+      widget.createWorkbookFile;
+  EstimateWorkbookFileSharer get shareWorkbookFile => widget.shareWorkbookFile;
 
   @override
   void didUpdateWidget(EstimateItemsScreen oldWidget) {
@@ -71,7 +86,7 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               tapTargetSize: MaterialTapTargetSize.padded,
             ),
-            onPressed: () => _shareEstimatePdf(context),
+            onPressed: () => _showOutputOptions(context),
             child: SizedBox(
               width: 78,
               child: FittedBox(
@@ -170,6 +185,107 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
     );
   }
 
+  Future<void> _showOutputOptions(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final action = await showModalBottomSheet<_EstimateOutputAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            key: const Key('estimateOutputSheet'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l10n.estimateOutputMethods,
+                    style: Theme.of(sheetContext).textTheme.titleMedium,
+                  ),
+                ),
+              ),
+              ListTile(
+                key: const Key('printEstimatePdf'),
+                leading: const Icon(Icons.print_outlined),
+                title: Text(
+                  l10n.printA4Landscape,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () =>
+                    Navigator.pop(sheetContext, _EstimateOutputAction.print),
+              ),
+              ListTile(
+                key: const Key('shareEstimatePdf'),
+                leading: const Icon(Icons.picture_as_pdf_outlined),
+                title: Text(
+                  l10n.formalPdf,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () =>
+                    Navigator.pop(sheetContext, _EstimateOutputAction.pdf),
+              ),
+              ListTile(
+                key: const Key('exportEstimateExcel'),
+                leading: const Icon(Icons.file_download_outlined),
+                title: Text(
+                  l10n.formalExcelXlsx,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () =>
+                    Navigator.pop(sheetContext, _EstimateOutputAction.excel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (action == null || !context.mounted) return;
+    switch (action) {
+      case _EstimateOutputAction.print:
+        await _printEstimate(context);
+      case _EstimateOutputAction.pdf:
+        await _shareEstimatePdf(context);
+      case _EstimateOutputAction.excel:
+        await _exportExcel(context);
+    }
+  }
+
+  Future<void> _printEstimate(BuildContext context) async {
+    if (controller.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).text('印刷する明細がありません')),
+        ),
+      );
+      return;
+    }
+    if (!await _requestOutputAccess(RewardedAdEntryPoint.printOutput)) return;
+    if (!context.mounted) return;
+    try {
+      final pdfBytes = await _buildFormalPdf();
+      if (!context.mounted) return;
+      await printPdfBytes(
+        bytes: pdfBytes,
+        name: formalEstimatePdfFileName(controller.info.displayName),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).text('印刷用PDFを作成できませんでした'),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _shareEstimatePdf(BuildContext context) async {
     if (controller.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -210,6 +326,46 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
     companyProfile: settings.companyProfile,
     estimateDecimalPlaces: settings.estimateDecimalPlaces,
   );
+
+  Future<void> _exportExcel(BuildContext context) async {
+    if (controller.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).text('出力する明細がありません')),
+        ),
+      );
+      return;
+    }
+    if (!await _requestOutputAccess(RewardedAdEntryPoint.excelExport)) return;
+    if (!context.mounted) return;
+    try {
+      final file = await createWorkbookFile(
+        info: controller.info,
+        items: controller.items,
+        companyProfile: settings.companyProfile,
+        estimateDecimalPlaces: settings.estimateDecimalPlaces,
+      );
+      if (!context.mounted) return;
+      final box = context.findRenderObject() as RenderBox?;
+      await shareWorkbookFile(
+        file: file,
+        subject: controller.info.displayName,
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).text('Excelファイルを作成できませんでした'),
+            ),
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _copyTable(BuildContext context) async {
     if (controller.items.isEmpty) {

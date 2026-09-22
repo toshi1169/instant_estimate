@@ -118,6 +118,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('estimateOutputButton')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('estimateOutputSheet')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('shareEstimatePdf')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('estimateOutputSheet')), findsNothing);
 
     expect(sharedBytes, isNotNull);
@@ -192,6 +195,8 @@ void main() {
 
 Future<void> _selectOutput(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('estimateOutputButton')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const Key('shareEstimatePdf')));
   await tester.pumpAndSettle();
 }
 

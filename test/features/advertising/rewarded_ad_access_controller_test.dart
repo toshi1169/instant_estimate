@@ -232,7 +232,33 @@ void main() {
       expect(presenter.calls, hasLength(2));
     });
 
-    test('プレゼンターが例外になっても利用を妨げない', () async {
+    test('出力グループは広告取得・表示失敗時に開放しない', () async {
+      for (final result in [
+        RewardedAdResult.unavailable,
+        RewardedAdResult.failed,
+      ]) {
+        final presenter = _FakePresenter(results: [result, result, result]);
+        final store = _MemoryStore();
+        final controller = RewardedAdAccessController(
+          initialState: const AppAccessState(),
+          presenter: presenter,
+          store: store,
+          now: () => DateTime(2026, 8, 10),
+        );
+
+        for (final entryPoint in [
+          RewardedAdEntryPoint.printOutput,
+          RewardedAdEntryPoint.pdfExport,
+          RewardedAdEntryPoint.excelExport,
+        ]) {
+          expect(await controller.requestAccess(entryPoint), isFalse);
+        }
+        expect(store.saved, isEmpty);
+        expect(controller.requiresAd(RewardedAdEntryPoint.printOutput), isTrue);
+      }
+    });
+
+    test('プレゼンターが例外になっても出力以外は利用を妨げない', () async {
       final presenter = _FakePresenter(throwsError: true);
       final controller = RewardedAdAccessController(
         initialState: const AppAccessState(),
@@ -242,6 +268,10 @@ void main() {
 
       expect(
         await controller.requestAccess(RewardedAdEntryPoint.printOutput),
+        isFalse,
+      );
+      expect(
+        await controller.requestAccess(RewardedAdEntryPoint.instantEstimate),
         isTrue,
       );
     });

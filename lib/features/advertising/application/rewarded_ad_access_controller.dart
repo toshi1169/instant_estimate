@@ -79,7 +79,11 @@ class RewardedAdAccessController {
       result = RewardedAdResult.failed;
     }
 
-    if (result == RewardedAdResult.dismissed) return false;
+    if (result == RewardedAdResult.dismissed ||
+        (group == RewardedAdGroup.output &&
+            result != RewardedAdResult.completed)) {
+      return false;
+    }
 
     final groups = _state.rewardedAccessDay == day
         ? <String>{..._state.rewardedAccessGroups}
