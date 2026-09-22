@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../../../core/domain/persistent_id_repair.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
@@ -22,18 +23,34 @@ class PlatformEstimateItemStore implements EstimateItemStore {
     if (encoded == null || encoded.isEmpty) {
       return const EstimateWorkspace(activeEstimateId: '', estimates: []);
     }
+    final (workspace, repaired) = _decode(encoded);
+    // Never expose repaired IDs unless their durable write succeeds.
+    if (repaired) await save(workspace);
+    return workspace;
+  }
+
+  (EstimateWorkspace, bool) _decode(String encoded) {
     try {
       final decoded = jsonDecode(encoded);
       if (decoded is List<Object?>) {
+        PersistentIdRepair.items(decoded);
         final document = EstimateDocument(
           info: EstimateInfo.initial(DateTime.now()),
           items: _decodeItems(decoded),
         );
-        return EstimateWorkspace(
-          activeEstimateId: document.info.id,
-          estimates: [document],
+        return (
+          EstimateWorkspace(
+            activeEstimateId: document.info.id,
+            estimates: [document],
+          ),
+          true,
         );
       }
+      final repaired = decoded is Map<String, dynamic>
+          ? decoded.containsKey('estimates')
+                ? PersistentIdRepair.workspace(decoded)
+                : PersistentIdRepair.document(decoded)
+          : false;
       final map = (decoded as Map<Object?, Object?>).map(
         (key, value) => MapEntry(key.toString(), value),
       );
@@ -52,40 +69,57 @@ class PlatformEstimateItemStore implements EstimateItemStore {
               estimates.any((estimate) => estimate.info.id == requestedId)
               ? requestedId!
               : estimates.first.info.id;
-          return EstimateWorkspace(
-            activeEstimateId: activeId,
-            estimates: estimates,
-            unitPriceMasters: _decodeUnitPriceMasters(map['unitPriceMasters']),
+          return (
+            EstimateWorkspace(
+              activeEstimateId: activeId,
+              estimates: estimates,
+              unitPriceMasters: _decodeUnitPriceMasters(
+                map['unitPriceMasters'],
+              ),
+            ),
+            repaired,
           );
         }
-        return EstimateWorkspace(
-          activeEstimateId: '',
-          estimates: const [],
-          unitPriceMasters: _decodeUnitPriceMasters(map['unitPriceMasters']),
+        return (
+          EstimateWorkspace(
+            activeEstimateId: '',
+            estimates: const [],
+            unitPriceMasters: _decodeUnitPriceMasters(map['unitPriceMasters']),
+          ),
+          repaired,
         );
       }
       final document = EstimateDocument.fromJson(map);
-      return EstimateWorkspace(
-        activeEstimateId: document.info.id,
-        estimates: [document],
+      return (
+        EstimateWorkspace(
+          activeEstimateId: document.info.id,
+          estimates: [document],
+        ),
+        repaired,
       );
     } on FormatException {
       final document = EstimateDocument(
         info: EstimateInfo.initial(DateTime.now()),
         items: const [],
       );
-      return EstimateWorkspace(
-        activeEstimateId: document.info.id,
-        estimates: [document],
+      return (
+        EstimateWorkspace(
+          activeEstimateId: document.info.id,
+          estimates: [document],
+        ),
+        false,
       );
     } on TypeError {
       final document = EstimateDocument(
         info: EstimateInfo.initial(DateTime.now()),
         items: const [],
       );
-      return EstimateWorkspace(
-        activeEstimateId: document.info.id,
-        estimates: [document],
+      return (
+        EstimateWorkspace(
+          activeEstimateId: document.info.id,
+          estimates: [document],
+        ),
+        false,
       );
     }
   }

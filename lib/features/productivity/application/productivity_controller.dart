@@ -63,6 +63,9 @@ class ProductivityController extends ChangeNotifier {
 
   Future<void> add(ProductivityRecord record) async {
     if (!canAdd) throw ProductivityLimitException(recordLimit);
+    if (_records.any((existing) => existing.id == record.id)) {
+      throw StateError('Productivity record ID already exists.');
+    }
     final updated = [..._records, record];
     await store.save(updated);
     _records

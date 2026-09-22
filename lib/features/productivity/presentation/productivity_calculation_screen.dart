@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/persistent_id.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../application/productivity_controller.dart';
 import '../domain/productivity_calculator.dart';
@@ -412,7 +413,9 @@ class _ProductivityCalculationScreenState
     }
     final now = DateTime.now();
     final record = ProductivityRecord(
-      id: now.microsecondsSinceEpoch.toString(),
+      id: PersistentId.create(
+        excluding: widget.controller.records.map((record) => record.id),
+      ),
       createdAt: now,
       trade: _trade!,
       taskName: _task.text.trim(),

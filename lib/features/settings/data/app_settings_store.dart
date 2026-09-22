@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../../../core/domain/persistent_id_repair.dart';
 import '../domain/app_settings.dart';
 
 abstract interface class AppSettingsStore {
@@ -18,7 +19,10 @@ class PlatformAppSettingsStore implements AppSettingsStore {
     if (encoded != null && encoded.isNotEmpty) {
       final decoded = jsonDecode(encoded);
       if (decoded is Map<String, dynamic>) {
-        return AppSettings.fromJson(decoded);
+        final repaired = PersistentIdRepair.settings(decoded);
+        final settings = AppSettings.fromJson(decoded);
+        if (repaired) await save(settings);
+        return settings;
       }
     }
 
