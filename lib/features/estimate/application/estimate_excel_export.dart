@@ -49,6 +49,14 @@ List<int> buildEstimateWorkbook({
   return bytes;
 }
 
+typedef EstimateWorkbookFileCreator =
+    Future<File> Function({
+      required EstimateInfo info,
+      required Iterable<EstimateItem> items,
+      required CompanyProfile companyProfile,
+      required int estimateDecimalPlaces,
+    });
+
 Future<File> createEstimateWorkbookFile({
   required EstimateInfo info,
   required Iterable<EstimateItem> items,

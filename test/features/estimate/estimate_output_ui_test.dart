@@ -14,6 +14,9 @@ void main() {
       final strings = AppLocalizations(language);
       expect(strings.estimateOutput, isNotEmpty, reason: language.name);
       expect(strings.estimateOutputMethods, isNotEmpty, reason: language.name);
+      expect(strings.printA4Landscape, isNotEmpty, reason: language.name);
+      expect(strings.formalPdf, isNotEmpty, reason: language.name);
+      expect(strings.formalExcelXlsx, isNotEmpty, reason: language.name);
       expect(strings.saveOrShareExcel, isNotEmpty, reason: language.name);
     }
   });
@@ -57,6 +60,16 @@ void main() {
         find.byKey(const Key('editCompanyProfileFromEstimateItems')),
         findsOneWidget,
       );
+      expect(find.byKey(const Key('estimateOutputSheet')), findsNothing);
+      await tester.tap(find.byKey(const Key('estimateOutputButton')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('estimateOutputSheet')), findsOneWidget);
+      expect(find.byKey(const Key('printEstimatePdf')), findsOneWidget);
+      expect(find.byKey(const Key('shareEstimatePdf')), findsOneWidget);
+      expect(find.byKey(const Key('exportEstimateExcel')), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: language.name);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('estimateOutputSheet')), findsNothing);
       final displayedName = tester.widget<Text>(
         find.byKey(const Key('estimateInfoSummaryName')),
