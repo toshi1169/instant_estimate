@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/domain/transport_vehicle.dart';
+import '../../../core/domain/persistent_id.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -317,11 +318,16 @@ Future<TransportVehicle?> showAddTransportVehicleDialog(
           key: const Key('saveCustomVehicle'),
           onPressed: () {
             if (!(formKey.currentState?.validate() ?? false)) return;
-            final timestamp = DateTime.now().microsecondsSinceEpoch;
             final capacity = parseEarthworkNumber(capacityController.text);
             Navigator.of(dialogContext).pop(
               TransportVehicle(
-                id: 'custom_$timestamp',
+                id: PersistentId.create(
+                  excluding: [
+                    for (final vehicle in InitialTransportVehicles.all)
+                      vehicle.id,
+                    InitialTransportVehicles.defaultVehicleId,
+                  ],
+                ),
                 name: nameController.text.trim(),
                 initialCapacityCubicMeters: capacity,
                 maximumPayloadTons: parseEarthworkNumber(weightController.text),
