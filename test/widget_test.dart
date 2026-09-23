@@ -2720,6 +2720,7 @@ void main() {
       tester.widget<SnackBar>(find.byType(SnackBar)).duration,
       const Duration(seconds: 5),
     );
+    expect(tester.widget<SnackBar>(find.byType(SnackBar)).persist, isFalse);
 
     await tester.tap(find.byKey(const Key('undoEstimateItemAdd')));
     await tester.pumpAndSettle();
@@ -3126,6 +3127,9 @@ void main() {
     expect(controller.unitPriceMasters.single.unitPrice, 15000);
     expect(find.text('見積明細と単価マスタへ追加しました（1件）'), findsOneWidget);
     expect(find.byKey(const Key('undoEstimateItemAdd')), findsOneWidget);
+    final undoSnackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    expect(undoSnackBar.duration, const Duration(seconds: 5));
+    expect(undoSnackBar.persist, isFalse);
 
     await tester.tap(find.byKey(const Key('undoEstimateItemAdd')));
     await tester.pumpAndSettle();
