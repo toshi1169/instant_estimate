@@ -790,6 +790,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       ..showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 5),
+          persist: false,
           content: Row(
             children: [
               Expanded(child: Text(message)),

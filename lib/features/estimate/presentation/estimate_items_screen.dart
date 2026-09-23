@@ -723,6 +723,7 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
       ..showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 5),
+          persist: false,
           content: Text(
             l10n.estimateItemAddedWithCount(message, controller.items.length),
           ),
