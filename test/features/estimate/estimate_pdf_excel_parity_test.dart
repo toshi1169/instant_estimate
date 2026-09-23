@@ -4,6 +4,7 @@ import 'package:excel_plus/excel_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_excel_export.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_pdf_export.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_quantity.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_totals.dart';
 
 import 'fixtures/formal_estimate_comparison_fixture.dart';
@@ -165,7 +166,7 @@ void _expectSameBreakdownRow(
       expect(_number(sheet, 'D$excelRow'), item.quantity);
       expect(
         formatEstimatePdfQuantity(item.quantity, decimalPlaces),
-        item.quantity!.toStringAsFixed(decimalPlaces),
+        formatEstimateQuantity(item.quantity),
       );
       expect(_text(sheet, 'E$excelRow'), item.unit);
       expect(_number(sheet, 'F$excelRow'), item.unitPrice);
@@ -177,7 +178,7 @@ void _expectSameBreakdownRow(
             .cellStyle
             ?.numberFormat
             .toString(),
-        contains('#,##0.${List.filled(decimalPlaces, '0').join()}'),
+        contains('#,##0.#####'),
       );
     case EstimatePdfRowType.subtotal:
       expect(_text(sheet, 'B$excelRow'), '小計');

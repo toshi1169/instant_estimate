@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
+import '../domain/estimate_quantity.dart';
 
 enum MergeEstimateQuantityAction { merge, addSeparately, cancel }
 
@@ -84,7 +85,5 @@ Future<MergeEstimateQuantityAction> showMergeEstimateQuantityDialog(
 
 String _displayNumber(double? value, AppLocalizations l10n) {
   if (value == null) return l10n.text('未入力');
-  return value == value.truncateToDouble()
-      ? value.toInt().toString()
-      : value.toString();
+  return formatEstimateQuantity(value);
 }
