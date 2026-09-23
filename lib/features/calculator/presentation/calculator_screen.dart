@@ -30,6 +30,7 @@ import '../../productivity/presentation/productivity_master_screen.dart';
 import '../../estimate/presentation/duplicate_estimate_item_dialog.dart';
 import '../../estimate/presentation/merge_estimate_quantity_dialog.dart';
 import 'calculator_history_screen.dart';
+import 'calculator_history_line.dart';
 import 'calculator_side_menu.dart';
 import '../../construction_calculations/presentation/construction_calculations_screen.dart';
 import '../../help/presentation/help_screen.dart';
@@ -1162,20 +1163,10 @@ class _HistoryPanel extends StatelessWidget {
                   ),
                   const SizedBox(width: 3),
                   Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(text: '${item.expression} = '),
-                          TextSpan(
-                            text: item.result,
-                            style: const TextStyle(color: AppColors.accent),
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge?.copyWith(fontSize: 15),
+                    child: CalculatorHistoryLine(
+                      key: Key('historyText$index'),
+                      expression: item.expression,
+                      result: item.result,
                     ),
                   ),
                 ],
