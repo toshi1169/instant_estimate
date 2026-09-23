@@ -1,3 +1,8 @@
+// ignore_for_file: depend_on_referenced_packages
+
+import 'dart:convert';
+
+import 'package:archive/archive.dart';
 import 'package:excel_plus/excel_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_excel_export.dart';
@@ -6,6 +11,7 @@ import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_totals.dart';
 import 'package:instant_estimate/features/settings/domain/company_profile.dart';
+import 'package:xml/xml.dart';
 
 void main() {
   test('表紙をA1:P17の原本仕様で生成し内訳総額と自社情報を連動する', () {
@@ -368,30 +374,63 @@ void main() {
     expect(first.getRowHeights, second.getRowHeights);
   });
 
-  for (var decimalPlaces = 1; decimalPlaces <= 5; decimalPlaces++) {
-    test('数量は数値セルのまま有効小数を最大5桁表示する', () {
-      final sheet = _workbook([
-        _item(
-          id: 'quantity-$decimalPlaces',
-          trade: '工種',
-          location: '施工場所',
-          name: '数量確認',
-          quantity: 37,
-          unit: 'm',
-          unitPrice: 100,
-        ),
-      ], estimateDecimalPlaces: decimalPlaces)['内訳'];
-      final quantityCell = sheet.cell(CellIndex.indexByString('D5'));
-      const expectedFormat = '#,##0.#####';
+  test('数量は数値セルのまま有効小数桁ごとの表示書式を使う', () {
+    const cases = <(double, String)>[
+      (37, '#,##0'),
+      (390, '#,##0'),
+      (1, '#,##0'),
+      (12.6, '#,##0.0'),
+      (17.9, '#,##0.0'),
+      (12.34, '#,##0.00'),
+      (12.346, '#,##0.000'),
+      (12.34567, '#,##0.00000'),
+    ];
+    final bytes = buildEstimateWorkbook(
+      info: _formalInfo(),
+      items: [
+        for (var index = 0; index < cases.length; index++)
+          _item(
+            id: 'quantity-$index',
+            trade: '工種',
+            location: '施工場所',
+            name: '数量確認$index',
+            quantity: cases[index].$1,
+            unit: 'm',
+            unitPrice: 100,
+          ),
+      ],
+    );
+    final excel = Excel.decodeBytes(bytes);
+    final sheet = excel['内訳'];
 
-      expect(quantityCell.value, IntCellValue(37));
+    for (var index = 0; index < cases.length; index++) {
+      final row = 5 + index;
+      final quantityCell = sheet.cell(CellIndex.indexByString('D$row'));
+      final expectedValue = cases[index].$1;
       expect(
-        quantityCell.cellStyle?.numberFormat.toString(),
-        contains(expectedFormat),
+        quantityCell.value,
+        expectedValue == expectedValue.truncateToDouble()
+            ? IntCellValue(expectedValue.toInt())
+            : DoubleCellValue(expectedValue),
       );
-      expect(_formula(sheet, 'G5'), 'ROUND(D5*F5,0)');
-    });
-  }
+      expect(quantityCell.cellStyle?.numberFormat.formatCode, cases[index].$2);
+      expect(_formula(sheet, 'G$row'), 'ROUND(D$row*F$row,0)');
+    }
+
+    final decodedAgain = Excel.decodeBytes(excel.encode()!);
+    for (var index = 0; index < cases.length; index++) {
+      final value = decodedAgain['内訳']
+          .cell(CellIndex.indexByString('D${5 + index}'))
+          .value;
+      expect(switch (value) {
+        IntCellValue(:final value) => value.toDouble(),
+        DoubleCellValue(:final value) => value,
+        _ => null,
+      }, cases[index].$1);
+    }
+
+    _expectQuantityOpenXml(bytes, cases);
+  });
 
   test('内訳はA:K・20行周期でタイトルと見出しを各ページへ実体配置する', () {
     final items = List.generate(
@@ -479,7 +518,7 @@ void main() {
           .cellStyle
           ?.numberFormat
           .toString(),
-      contains('#,##0.#####'),
+      contains('#,##0.000'),
     );
     expect(_formula(sheet, 'G5'), 'ROUND(D5*F5,0)');
 
@@ -932,6 +971,52 @@ void main() {
     expect(_text(cover, 'O13'), '');
     expect(_formula(cover, 'H6'), 'EstimateGrandTotal');
   });
+}
+
+void _expectQuantityOpenXml(List<int> bytes, List<(double, String)> cases) {
+  final archive = ZipDecoder().decodeBytes(bytes);
+  final styles = XmlDocument.parse(_archiveText(archive, 'xl/styles.xml'));
+  final worksheet = XmlDocument.parse(
+    _archiveText(archive, 'xl/worksheets/sheet2.xml'),
+  );
+  final formatById = <String, String>{
+    for (final element in styles.findAllElements('numFmt'))
+      element.getAttribute('numFmtId')!: element.getAttribute('formatCode')!,
+  };
+  final cellFormats = styles
+      .findAllElements('cellXfs')
+      .single
+      .findElements('xf')
+      .toList(growable: false);
+
+  for (var index = 0; index < cases.length; index++) {
+    final reference = 'D${5 + index}';
+    final cell = worksheet
+        .findAllElements('c')
+        .singleWhere((element) => element.getAttribute('r') == reference);
+    expect(
+      cell.getAttribute('t'),
+      isNull,
+      reason: '$reference must be numeric',
+    );
+    expect(
+      double.parse(cell.findElements('v').single.innerText),
+      cases[index].$1,
+    );
+    final styleIndex = int.parse(cell.getAttribute('s')!);
+    final formatId = cellFormats[styleIndex].getAttribute('numFmtId')!;
+    final formatCode = formatById[formatId];
+    expect(formatCode, cases[index].$2, reason: reference);
+    if (cases[index].$1 == cases[index].$1.truncateToDouble()) {
+      expect(formatCode, isNot(contains('.')), reason: reference);
+    }
+  }
+}
+
+String _archiveText(Archive archive, String path) {
+  final file = archive.findFile(path);
+  expect(file, isNotNull, reason: path);
+  return utf8.decode(file!.content as List<int>);
 }
 
 Excel _workbook(

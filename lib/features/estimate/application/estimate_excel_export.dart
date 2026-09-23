@@ -7,6 +7,7 @@ import 'estimate_export_file_name.dart';
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_symbol.dart';
+import '../domain/estimate_quantity.dart';
 import '../domain/estimate_totals.dart';
 
 const _coverSheetName = '御見積書';
@@ -257,7 +258,7 @@ int _writeBreakdownSheet(
     sheet.setColumnWidth(column, widths[column]);
   }
 
-  final writer = _BreakdownWriter(sheet, quantityFormat: _quantityFormat());
+  final writer = _BreakdownWriter(sheet);
   final groups = _groupItemsByLocation(items);
   final subtotalLabel = _subtotalLabel(groups.keys.map((group) => group.$1));
   var firstGroup = true;
@@ -295,12 +296,11 @@ int _writeBreakdownSheet(
 }
 
 class _BreakdownWriter {
-  _BreakdownWriter(this.sheet, {required this.quantityFormat}) {
+  _BreakdownWriter(this.sheet) {
     _writePageHeader();
   }
 
   final Sheet sheet;
-  final String quantityFormat;
   final List<int> subtotalRows = <int>[];
   var pageIndex = 0;
   var usedDataRows = 0;
@@ -400,7 +400,7 @@ class _BreakdownWriter {
         _ => HorizontalAlign.Left,
       };
       final format = switch (column) {
-        3 => quantityFormat,
+        3 => _quantityFormat(item.quantity),
         5 || 6 => _moneyFormat,
         _ => null,
       };
@@ -942,8 +942,12 @@ String _sumCellReferences(String column, List<int> rows) {
   return 'SUM(${rows.map((row) => '$column$row').join(',')})';
 }
 
-String _quantityFormat() {
-  return '#,##0.#####';
+String _quantityFormat(double? value) {
+  final formatted = formatEstimateQuantity(value);
+  final decimalPoint = formatted.indexOf('.');
+  if (decimalPoint < 0) return '#,##0';
+  final decimalPlaces = (formatted.length - decimalPoint - 1).clamp(1, 5);
+  return '#,##0.${List.filled(decimalPlaces, '0').join()}';
 }
 
 Border _thinBorder() => Border(
