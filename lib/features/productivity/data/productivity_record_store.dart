@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import '../../../core/domain/persistent_id_repair.dart';
 import '../domain/productivity_record.dart';
 
 abstract interface class ProductivityRecordStore {
@@ -29,9 +30,12 @@ class PlatformProductivityRecordStore implements ProductivityRecordStore {
       'loadProductivityRecords',
     );
     if (encoded == null || encoded.isEmpty) return const [];
+    late List<ProductivityRecord> records;
+    var repaired = false;
     try {
       final decoded = jsonDecode(encoded) as List<Object?>;
-      return decoded
+      repaired = PersistentIdRepair.productivity(decoded);
+      records = decoded
           .whereType<Map<Object?, Object?>>()
           .map(
             (record) => ProductivityRecord.fromJson(
@@ -44,6 +48,8 @@ class PlatformProductivityRecordStore implements ProductivityRecordStore {
     } on TypeError {
       return const [];
     }
+    if (repaired) await save(records);
+    return records;
   }
 
   @override

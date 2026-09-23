@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../../../core/domain/persistent_id_repair.dart';
 import '../../calculator/data/calculation_history_store.dart';
 import '../../estimate/domain/estimate_document.dart';
 import '../../estimate/domain/estimate_info.dart';
@@ -69,9 +70,21 @@ class BackupSnapshot {
     return BackupSnapshot.fromJson(_asStringMap(decoded, r'$'));
   }
 
-  factory BackupSnapshot.fromJson(Map<String, Object?> json) =>
-      _BackupV1Validator(json).decode();
+  factory BackupSnapshot.fromJson(Map<String, Object?> json) {
+    // Clone before changing IDs: callers' backup data remains untouched.
+    final normalized = _mutableCopy(json) as Map<String, dynamic>;
+    PersistentIdRepair.backup(normalized);
+    return _BackupV1Validator(normalized).decode();
+  }
 }
+
+Object? _mutableCopy(Object? value) => switch (value) {
+  final Map<String, Object?> map => map.map(
+    (key, nested) => MapEntry(key, _mutableCopy(nested)),
+  ),
+  final List<Object?> list => list.map(_mutableCopy).toList(),
+  _ => value,
+};
 
 class BackupData {
   const BackupData({

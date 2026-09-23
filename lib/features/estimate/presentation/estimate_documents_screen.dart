@@ -254,7 +254,12 @@ class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
     final info = await Navigator.of(context).push<EstimateInfo>(
       MaterialPageRoute(
         builder: (_) => EstimateInfoEditorScreen(
-          initialInfo: EstimateInfo.initial(DateTime.now()),
+          initialInfo: EstimateInfo.initial(
+            DateTime.now(),
+            excluding: widget.controller.estimates.map(
+              (estimate) => estimate.info.id,
+            ),
+          ),
         ),
       ),
     );

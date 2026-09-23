@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/domain/transport_vehicle.dart';
+import '../../../core/domain/persistent_id.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../estimate/domain/estimate_item_draft.dart';
 import '../../settings/domain/app_settings.dart';
@@ -44,11 +45,23 @@ class _EarthworkCalculationScreenState
   Future<TransportVehicle?> _addVehicle() async {
     final vehicle = await showAddTransportVehicleDialog(context);
     if (vehicle == null || !mounted) return null;
-    setState(() => _customVehicles = [..._customVehicles, vehicle]);
+    final used = _vehicles.map((existing) => existing.id);
+    final uniqueVehicle = used.contains(vehicle.id)
+        ? TransportVehicle(
+            id: PersistentId.create(excluding: used),
+            name: vehicle.name,
+            initialCapacityCubicMeters: vehicle.initialCapacityCubicMeters,
+            maximumPayloadTons: vehicle.maximumPayloadTons,
+            approximateCapacityLabel: vehicle.approximateCapacityLabel,
+            isCrawler: vehicle.isCrawler,
+            isCustom: vehicle.isCustom,
+          )
+        : vehicle;
+    setState(() => _customVehicles = [..._customVehicles, uniqueVehicle]);
     widget.onSettingsChanged?.call(
       widget.settings.copyWith(customTransportVehicles: _customVehicles),
     );
-    return vehicle;
+    return uniqueVehicle;
   }
 
   @override

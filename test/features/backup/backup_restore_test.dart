@@ -276,6 +276,50 @@ void main() {
       expect(harness.estimate.workspace.estimates, hasLength(6));
     });
 
+    test('Version 1の重複IDバックアップを修復して復元・再出力できる', () async {
+      final raw =
+          jsonDecode(
+                _snapshot(
+                  'incoming',
+                  estimateCount: 2,
+                  itemCount: 2,
+                  unitPriceMasterCount: 2,
+                  productivityRecordCount: 2,
+                ).encode(),
+              )
+              as Map<String, dynamic>;
+      final data = raw['data'] as Map<String, dynamic>;
+      final workspace = data['estimateWorkspace'] as Map<String, dynamic>;
+      final estimates = workspace['estimates'] as List;
+      final first = estimates[0] as Map<String, dynamic>;
+      final second = estimates[1] as Map<String, dynamic>;
+      (second['info'] as Map<String, dynamic>)['id'] =
+          (first['info'] as Map<String, dynamic>)['id'];
+      workspace['activeEstimateId'] =
+          (first['info'] as Map<String, dynamic>)['id'];
+      ((second['items'] as List)[0] as Map<String, dynamic>)['id'] =
+          ((first['items'] as List)[0] as Map<String, dynamic>)['id'];
+      final incoming = BackupSnapshot.decode(jsonEncode(raw));
+      final harness = _Harness(previous: _snapshot('previous'));
+      await harness.coordinator.restore(incoming);
+      expect(harness.estimate.workspace.estimates, hasLength(2));
+      expect(harness.estimate.workspace.estimates.first.items, hasLength(2));
+      expect(harness.estimate.workspace.estimates.last.items, hasLength(2));
+      expect(
+        harness.estimate.workspace.estimates.first.info.id,
+        isNot(harness.estimate.workspace.estimates.last.info.id),
+      );
+      expect(
+        harness.estimate.workspace.activeEstimateId,
+        harness.estimate.workspace.estimates.first.info.id,
+      );
+      final export = await harness.factory.create(harness.settings.value);
+      expect(
+        BackupSnapshot.decode(export.encode()).data.toJson(),
+        incoming.data.toJson(),
+      );
+    });
+
     test('空バックアップも有効で全対象を空へ置換する', () async {
       final harness = _Harness(previous: _snapshot('previous'));
       final empty = _snapshot('empty', empty: true);

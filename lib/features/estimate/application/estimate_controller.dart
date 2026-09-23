@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/domain/app_access_plan.dart';
+import '../../../core/domain/persistent_id.dart';
 import '../data/estimate_item_store.dart';
 import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
@@ -127,7 +128,13 @@ class EstimateController extends ChangeNotifier {
     final resolvedDraft = _resolveConstructionLocation(draft);
     final item = EstimateItem.fromDraft(
       resolvedDraft,
-      id: now.microsecondsSinceEpoch.toString(),
+      id: PersistentId.create(
+        excluding: [
+          for (final estimate in _estimates)
+            for (final existing in estimate.items) existing.id,
+          for (final existing in _items) existing.id,
+        ],
+      ),
       createdAt: now,
     );
     final updated = _synchronizeConstructionLocation([..._items, item], item);
@@ -277,6 +284,9 @@ class EstimateController extends ChangeNotifier {
     if (!canCreateEstimate) {
       throw StateError('Free estimate limit reached.');
     }
+    if (_estimates.any((estimate) => estimate.info.id == info.id)) {
+      throw StateError('Estimate ID already exists.');
+    }
     final created = EstimateDocument(info: info, items: const []);
     final current = _currentDocument();
     final existing = _estimates;
@@ -307,7 +317,9 @@ class EstimateController extends ChangeNotifier {
       orElse: () => throw StateError('Estimate was not found.'),
     );
     final now = DateTime.now();
-    final copyId = now.microsecondsSinceEpoch.toString();
+    final copyId = PersistentId.create(
+      excluding: currentWorkspace.estimates.map((estimate) => estimate.info.id),
+    );
     final copiedInfo = EstimateInfo(
       id: copyId,
       estimateName: '${source.info.displayName}（コピー）',
@@ -321,11 +333,15 @@ class EstimateController extends ChangeNotifier {
       constructionPeriod: source.info.constructionPeriod,
       paymentTerms: source.info.paymentTerms,
     );
+    final usedItemIds = {
+      for (final estimate in currentWorkspace.estimates)
+        for (final item in estimate.items) item.id,
+    };
     final copiedItems = [
       for (var index = 0; index < source.items.length; index++)
         EstimateItem.fromDraft(
           source.items[index].toDraft(),
-          id: '$copyId-$index',
+          id: _nextItemId(usedItemIds),
           createdAt: now.add(Duration(microseconds: index)),
         ),
     ];
@@ -460,7 +476,9 @@ class EstimateController extends ChangeNotifier {
     final now = DateTime.now();
     final price = UnitPriceMaster.fromDraft(
       draft,
-      id: now.microsecondsSinceEpoch.toString(),
+      id: PersistentId.create(
+        excluding: _unitPriceMasters.map((master) => master.id),
+      ),
       createdAt: now,
     );
     final updated = [..._unitPriceMasters, price];
@@ -593,3 +611,9 @@ bool _hasSameUnitPriceMasterContent(
     _normalized(price.description) == _normalized(draft.description);
 
 String _normalized(String value) => value.trim().toLowerCase();
+
+String _nextItemId(Set<String> used) {
+  final id = PersistentId.create(excluding: used);
+  used.add(id);
+  return id;
+}

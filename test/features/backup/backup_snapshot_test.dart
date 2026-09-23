@@ -146,7 +146,7 @@ void main() {
       );
     });
 
-    test('重複IDと無効activeEstimateIdを拒否する', () {
+    test('重複見積IDは最初を維持して修復し、無効activeEstimateIdは拒否する', () {
       final duplicate = _mutableJson(
         _snapshot(workspace: _workspace(estimateCount: 2, itemCount: 1)),
       );
@@ -160,9 +160,17 @@ void main() {
           (estimates[1] as Map<String, dynamic>)['info']!
               as Map<String, dynamic>;
       secondInfo['id'] = firstInfo['id'];
+      workspace['activeEstimateId'] = firstInfo['id'];
+      final repaired = BackupSnapshot.fromJson(duplicate);
+      final repairedEstimates = repaired.data.estimateWorkspace.estimates;
+      expect(repairedEstimates, hasLength(2));
+      expect(repairedEstimates.first.info.id, firstInfo['id']);
+      expect(repairedEstimates.last.info.id, isNot(firstInfo['id']));
+      expect(repairedEstimates.last.info.estimateName, 'Estimate 1');
+      expect(repaired.data.estimateWorkspace.activeEstimateId, firstInfo['id']);
       expect(
-        () => BackupSnapshot.fromJson(duplicate),
-        throwsA(isA<BackupValidationException>()),
+        BackupSnapshot.decode(repaired.encode()).data.toJson(),
+        repaired.data.toJson(),
       );
 
       final invalidActive = _mutableJson(
@@ -174,6 +182,114 @@ void main() {
           'missing';
       expect(
         () => BackupSnapshot.fromJson(invalidActive),
+        throwsA(isA<BackupValidationException>()),
+      );
+
+      final emptyActive = _mutableJson(
+        _snapshot(workspace: _workspace(estimateCount: 1)),
+      );
+      (emptyActive['data']!
+              as Map<
+                String,
+                dynamic
+              >)['estimateWorkspace']['activeEstimateId'] =
+          '';
+      expect(
+        () => BackupSnapshot.fromJson(emptyActive),
+        throwsA(isA<BackupValidationException>()),
+      );
+    });
+
+    test('Version 1バックアップの欠損・重複IDだけを補正し再出力できる', () {
+      final raw = _mutableJson(
+        _snapshot(
+          settings: _fullSettings,
+          workspace: _workspace(estimateCount: 2, itemCount: 2, masterCount: 2),
+          records: [_record(1), _record(2)],
+        ),
+      );
+      final data = raw['data'] as Map<String, dynamic>;
+      final workspace = data['estimateWorkspace'] as Map<String, dynamic>;
+      final estimates = workspace['estimates'] as List;
+      final first = estimates[0] as Map<String, dynamic>;
+      final second = estimates[1] as Map<String, dynamic>;
+      final firstItems = first['items'] as List;
+      final secondItems = second['items'] as List;
+      (secondItems[0] as Map<String, dynamic>)['id'] =
+          (firstItems[0] as Map<String, dynamic>)['id'];
+      (secondItems[1] as Map<String, dynamic>).remove('id');
+      final masters = workspace['unitPriceMasters'] as List;
+      (masters[1] as Map<String, dynamic>)['id'] =
+          (masters[0] as Map<String, dynamic>)['id'];
+      final records = data['productivityRecords'] as List;
+      (records[1] as Map<String, dynamic>)['id'] =
+          (records[0] as Map<String, dynamic>)['id'];
+      final vehicles =
+          (data['settings'] as Map<String, dynamic>)['customTransportVehicles']
+              as List;
+      (vehicles[0] as Map<String, dynamic>)['id'] = 'dump_4t';
+
+      final restored = BackupSnapshot.fromJson(raw);
+      expect(restored.toJson()['backupVersion'], 1);
+      expect(restored.data.estimateWorkspace.estimates, hasLength(2));
+      expect(
+        restored.data.estimateWorkspace.estimates.expand((e) => e.items),
+        hasLength(4),
+      );
+      expect(restored.data.estimateWorkspace.unitPriceMasters, hasLength(2));
+      expect(restored.data.productivityRecords, hasLength(2));
+      expect(restored.data.settings.customTransportVehicles, hasLength(1));
+      expect(
+        restored.data.settings.customTransportVehicles.single.id,
+        isNot('dump_4t'),
+      );
+      expect(
+        restored.data.estimateWorkspace.estimates.first.items.first.id,
+        (firstItems[0] as Map<String, dynamic>)['id'],
+      );
+      expect(
+        restored.data.estimateWorkspace.unitPriceMasters.first.id,
+        (masters[0] as Map<String, dynamic>)['id'],
+      );
+      expect(
+        restored.data.productivityRecords.first.id,
+        (records[0] as Map<String, dynamic>)['id'],
+      );
+      final reimported = BackupSnapshot.decode(restored.encode());
+      expect(reimported.data.toJson(), restored.data.toJson());
+      expect(
+        BackupSnapshot.fromJson(raw).data.estimateWorkspace.estimates,
+        hasLength(2),
+      );
+    });
+
+    test('ID以外の必須項目欠損と不正なID型は引き続き拒否する', () {
+      final missingName = _mutableJson(
+        _snapshot(workspace: _workspace(estimateCount: 1, itemCount: 1)),
+      );
+      final estimate =
+          (((missingName['data'] as Map)['estimateWorkspace']
+                          as Map)['estimates']
+                      as List)
+                  .first
+              as Map;
+      (estimate['info'] as Map).remove('estimateName');
+      expect(
+        () => BackupSnapshot.fromJson(missingName),
+        throwsA(isA<BackupValidationException>()),
+      );
+
+      final wrongId = _mutableJson(
+        _snapshot(workspace: _workspace(estimateCount: 1)),
+      );
+      final badEstimate =
+          (((wrongId['data'] as Map)['estimateWorkspace'] as Map)['estimates']
+                      as List)
+                  .first
+              as Map;
+      (badEstimate['info'] as Map)['id'] = 123;
+      expect(
+        () => BackupSnapshot.fromJson(wrongId),
         throwsA(isA<BackupValidationException>()),
       );
     });

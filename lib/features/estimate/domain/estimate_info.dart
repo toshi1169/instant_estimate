@@ -1,3 +1,5 @@
+import '../../../core/domain/persistent_id.dart';
+
 class EstimateInfo {
   const EstimateInfo({
     required this.id,
@@ -13,8 +15,11 @@ class EstimateInfo {
     this.paymentTerms = '',
   });
 
-  factory EstimateInfo.initial(DateTime now) => EstimateInfo(
-    id: now.microsecondsSinceEpoch.toString(),
+  factory EstimateInfo.initial(
+    DateTime now, {
+    Iterable<String> excluding = const [],
+  }) => EstimateInfo(
+    id: PersistentId.create(excluding: excluding),
     estimateName: '名称未設定の見積',
     siteName: '',
     clientName: '',
@@ -30,7 +35,7 @@ class EstimateInfo {
   factory EstimateInfo.fromJson(Map<String, Object?> json) {
     final now = DateTime.now();
     return EstimateInfo(
-      id: json['id'] as String? ?? now.microsecondsSinceEpoch.toString(),
+      id: json['id'] as String? ?? PersistentId.create(),
       estimateName: json['estimateName'] as String? ?? '名称未設定の見積',
       siteName: json['siteName'] as String? ?? '',
       clientName: json['clientName'] as String? ?? '',
