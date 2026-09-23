@@ -10,6 +10,7 @@ import '../domain/estimate_document.dart';
 import '../domain/estimate_info.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_items_screen.dart';
+import 'estimate_success_snack_bar.dart';
 import 'unit_price_master_screen.dart';
 
 enum _EstimateDocumentAction { duplicate, delete }
@@ -175,10 +176,9 @@ class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
           return;
         }
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).text('見積を複製しました')),
-          ),
+        showEstimateSuccessSnackBar(
+          context,
+          content: Text(AppLocalizations.of(context).text('見積を複製しました')),
         );
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -224,10 +224,9 @@ class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
         try {
           await widget.controller.deleteEstimate(estimate.info.id);
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context).text('見積を削除しました')),
-              ),
+            showEstimateSuccessSnackBar(
+              context,
+              content: Text(AppLocalizations.of(context).text('見積を削除しました')),
             );
           }
         } catch (_) {

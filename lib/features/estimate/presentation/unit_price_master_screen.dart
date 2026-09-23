@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../application/estimate_controller.dart';
 import '../domain/unit_price_master.dart';
+import 'estimate_success_snack_bar.dart';
 import 'unit_price_master_editor_screen.dart';
 
 enum _UnitPriceAction { edit, delete }
@@ -160,10 +161,9 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
     try {
       await controller.addUnitPriceMaster(draft);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).text('単価を登録しました')),
-          ),
+        showEstimateSuccessSnackBar(
+          context,
+          content: Text(AppLocalizations.of(context).text('単価を登録しました')),
         );
       }
     } catch (_) {
@@ -190,10 +190,9 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
     try {
       await controller.updateUnitPriceMaster(price.id, draft);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).text('単価を更新しました')),
-          ),
+        showEstimateSuccessSnackBar(
+          context,
+          content: Text(AppLocalizations.of(context).text('単価を更新しました')),
         );
       }
     } catch (_) {
@@ -239,10 +238,9 @@ class _UnitPriceMasterScreenState extends State<UnitPriceMasterScreen> {
         try {
           await controller.deleteUnitPriceMaster(price.id);
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context).text('単価を削除しました')),
-              ),
+            showEstimateSuccessSnackBar(
+              context,
+              content: Text(AppLocalizations.of(context).text('単価を削除しました')),
             );
           }
         } catch (_) {

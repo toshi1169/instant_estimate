@@ -2716,12 +2716,20 @@ void main() {
     expect(estimateStore.items, hasLength(1));
     expect(find.byKey(const Key('openAddedEstimate')), findsOneWidget);
     expect(find.byKey(const Key('undoEstimateItemAdd')), findsOneWidget);
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+      const Duration(seconds: 5),
+    );
 
     await tester.tap(find.byKey(const Key('undoEstimateItemAdd')));
     await tester.pumpAndSettle();
 
     expect(estimateStore.items, isEmpty);
     expect(find.text('直前の追加を取り消しました'), findsOneWidget);
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+      const Duration(seconds: 2),
+    );
   });
 
   testWidgets('電卓から同じ計算内容を送ると既存明細を更新できる', (tester) async {
@@ -3053,6 +3061,9 @@ void main() {
     expect(copiedText, contains('消費税（10%）'));
     expect(copiedText, contains('税込総額'));
     expect(find.text('見積明細をコピーしました（1件）'), findsOneWidget);
+    final successSnackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    expect(successSnackBar.duration, const Duration(seconds: 2));
+    expect(successSnackBar.action, isNull);
   });
 
   testWidgets('見積明細画面から明細を直接追加して工種小計へ反映できる', (tester) async {
