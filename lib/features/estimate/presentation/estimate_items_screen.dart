@@ -18,6 +18,7 @@ import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_item_group.dart';
 import '../domain/estimate_info.dart';
+import '../domain/estimate_quantity.dart';
 import 'duplicate_estimate_item_dialog.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_item_editor_screen.dart';
@@ -796,10 +797,7 @@ class _EstimateOutputIcon extends StatelessWidget {
 }
 
 String _displayQuantity(double? value) {
-  if (value == null) return '';
-  return value == value.truncateToDouble()
-      ? value.toInt().toString()
-      : value.toString();
+  return formatEstimateQuantity(value);
 }
 
 class _EstimateTotalsSummary extends StatelessWidget {
@@ -1091,8 +1089,7 @@ class _EstimateGroupSection extends StatelessWidget {
 
 String _number(double? value) {
   if (value == null) return '—';
-  if (value == value.truncateToDouble()) return value.toInt().toString();
-  return value.toString();
+  return formatEstimateQuantity(value);
 }
 
 String _money(num value) {

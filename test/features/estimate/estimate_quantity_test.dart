@@ -74,11 +74,17 @@ void main() {
     );
   });
 
-  test('正式数量の表示では不要な末尾0を付けず保存値を再丸めしない', () {
+  test('数量表示は不要な末尾0だけを除き保存値を再丸めしない', () {
+    expect(formatEstimateQuantity(null), '');
+    expect(formatEstimateQuantity(0), '0');
     expect(formatEstimateQuantity(12), '12');
     expect(formatEstimateQuantity(12.3), '12.3');
     expect(formatEstimateQuantity(12.34), '12.34');
     expect(formatEstimateQuantity(12.346), '12.346');
     expect(formatEstimateQuantity(12.34567), '12.34567');
+    expect(formatEstimateQuantity(12.340), '12.34');
+    expect(formatEstimateQuantity(17.90), '17.9');
+    expect(formatEstimateQuantity(-12.340), '-12.34');
+    expect(formatEstimateQuantity(123456789.12345), '123456789.12345');
   });
 }

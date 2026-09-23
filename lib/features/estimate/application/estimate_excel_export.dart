@@ -257,10 +257,7 @@ int _writeBreakdownSheet(
     sheet.setColumnWidth(column, widths[column]);
   }
 
-  final writer = _BreakdownWriter(
-    sheet,
-    quantityFormat: _quantityFormat(estimateDecimalPlaces),
-  );
+  final writer = _BreakdownWriter(sheet, quantityFormat: _quantityFormat());
   final groups = _groupItemsByLocation(items);
   final subtotalLabel = _subtotalLabel(groups.keys.map((group) => group.$1));
   var firstGroup = true;
@@ -945,9 +942,8 @@ String _sumCellReferences(String column, List<int> rows) {
   return 'SUM(${rows.map((row) => '$column$row').join(',')})';
 }
 
-String _quantityFormat(int decimalPlaces) {
-  final places = decimalPlaces.clamp(1, 5);
-  return '#,##0.${List.filled(places, '0').join()}';
+String _quantityFormat() {
+  return '#,##0.#####';
 }
 
 Border _thinBorder() => Border(

@@ -369,7 +369,7 @@ void main() {
   });
 
   for (var decimalPlaces = 1; decimalPlaces <= 5; decimalPlaces++) {
-    test('数量を見積設定$decimalPlaces桁で固定表示し内部値は変更しない', () {
+    test('数量は数値セルのまま有効小数を最大5桁表示する', () {
       final sheet = _workbook([
         _item(
           id: 'quantity-$decimalPlaces',
@@ -382,7 +382,7 @@ void main() {
         ),
       ], estimateDecimalPlaces: decimalPlaces)['内訳'];
       final quantityCell = sheet.cell(CellIndex.indexByString('D5'));
-      final expectedFormat = '#,##0.${List.filled(decimalPlaces, '0').join()}';
+      const expectedFormat = '#,##0.#####';
 
       expect(quantityCell.value, IntCellValue(37));
       expect(
@@ -479,7 +479,7 @@ void main() {
           .cellStyle
           ?.numberFormat
           .toString(),
-      contains('#,##0.00'),
+      contains('#,##0.#####'),
     );
     expect(_formula(sheet, 'G5'), 'ROUND(D5*F5,0)');
 

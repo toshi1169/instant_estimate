@@ -7,6 +7,7 @@ import '../../settings/domain/company_profile.dart';
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
 import '../domain/estimate_item_symbol.dart';
+import '../domain/estimate_quantity.dart';
 import '../domain/estimate_totals.dart';
 
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
@@ -642,8 +643,7 @@ List<String> estimatePdfCompanyProfileLines(CompanyProfile profile) {
 
 @visibleForTesting
 String formatEstimatePdfQuantity(double? value, int decimalPlaces) {
-  if (value == null) return '';
-  return value.toStringAsFixed(decimalPlaces.clamp(1, 5));
+  return formatEstimateQuantity(value);
 }
 
 double _detailFontSize(String value) {

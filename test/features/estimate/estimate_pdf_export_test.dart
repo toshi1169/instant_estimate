@@ -70,12 +70,12 @@ void main() {
     expect(formatEstimateQuantity(12.300), '12.3');
   });
 
-  test('正式PDF数量は見積設定1～5桁で末尾0を固定表示する', () {
-    expect(formatEstimatePdfQuantity(37, 1), '37.0');
-    expect(formatEstimatePdfQuantity(12.6, 2), '12.60');
+  test('正式PDF数量は保存値を再丸めせず不要な末尾0を表示しない', () {
+    expect(formatEstimatePdfQuantity(37, 1), '37');
+    expect(formatEstimatePdfQuantity(12.6, 2), '12.6');
     expect(formatEstimatePdfQuantity(12.346, 3), '12.346');
-    expect(formatEstimatePdfQuantity(1, 4), '1.0000');
-    expect(formatEstimatePdfQuantity(1, 5), '1.00000');
+    expect(formatEstimatePdfQuantity(12.340, 4), '12.34');
+    expect(formatEstimatePdfQuantity(1, 5), '1');
     expect(formatEstimatePdfQuantity(null, 2), '');
   });
 
