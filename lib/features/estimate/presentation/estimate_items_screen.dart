@@ -22,6 +22,7 @@ import '../domain/estimate_quantity.dart';
 import 'duplicate_estimate_item_dialog.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_item_editor_screen.dart';
+import 'estimate_success_snack_bar.dart';
 import 'merge_estimate_quantity_dialog.dart';
 
 enum _EstimateItemAction { duplicate, edit, delete }
@@ -384,13 +385,12 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
         ClipboardData(text: buildEstimateTableText(controller.items)),
       );
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(
-                context,
-              ).copiedEstimateDetails(controller.items.length),
-            ),
+        showEstimateSuccessSnackBar(
+          context,
+          content: Text(
+            AppLocalizations.of(
+              context,
+            ).copiedEstimateDetails(controller.items.length),
           ),
         );
       }
@@ -446,12 +446,11 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
                 )
               : false;
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context).text(
-                    addedToMaster ? '既存明細を更新し単価マスタへ追加しました' : '既存の見積明細を更新しました',
-                  ),
+            showEstimateSuccessSnackBar(
+              context,
+              content: Text(
+                AppLocalizations.of(context).text(
+                  addedToMaster ? '既存明細を更新し単価マスタへ追加しました' : '既存の見積明細を更新しました',
                 ),
               ),
             );
@@ -483,17 +482,14 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
                   )
                 : false;
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    addedToMaster
-                        ? AppLocalizations.of(
-                            context,
-                          ).text('数量を加算し単価マスタへ追加しました')
-                        : AppLocalizations.of(context).mergedEstimateQuantity(
-                            _displayQuantity(merged.quantity),
-                          ),
-                  ),
+              showEstimateSuccessSnackBar(
+                context,
+                content: Text(
+                  addedToMaster
+                      ? AppLocalizations.of(context).text('数量を加算し単価マスタへ追加しました')
+                      : AppLocalizations.of(context).mergedEstimateQuantity(
+                          _displayQuantity(merged.quantity),
+                        ),
                 ),
               );
             }
@@ -535,10 +531,9 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
     try {
       await controller.updateInfo(info);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).text('見積基本情報を保存しました')),
-          ),
+        showEstimateSuccessSnackBar(
+          context,
+          content: Text(AppLocalizations.of(context).text('見積基本情報を保存しました')),
         );
       }
     } catch (_) {
@@ -640,13 +635,12 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
                 )
               : false;
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context).text(
-                    addedToMaster ? '見積明細を更新し単価マスタへ追加しました' : '見積明細を更新しました',
-                  ),
-                ),
+            showEstimateSuccessSnackBar(
+              context,
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                ).text(addedToMaster ? '見積明細を更新し単価マスタへ追加しました' : '見積明細を更新しました'),
               ),
             );
           }
@@ -689,10 +683,9 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
         try {
           await controller.delete(item.id);
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context).text('見積明細を削除しました')),
-              ),
+            showEstimateSuccessSnackBar(
+              context,
+              content: Text(AppLocalizations.of(context).text('見積明細を削除しました')),
             );
           }
         } catch (_) {
@@ -740,11 +733,10 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
               try {
                 await controller.delete(itemId);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        AppLocalizations.of(context).text('直前の追加を取り消しました'),
-                      ),
+                  showEstimateSuccessSnackBar(
+                    context,
+                    content: Text(
+                      AppLocalizations.of(context).text('直前の追加を取り消しました'),
                     ),
                   );
                 }
