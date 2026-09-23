@@ -178,7 +178,7 @@ void _expectSameBreakdownRow(
             .cellStyle
             ?.numberFormat
             .toString(),
-        contains('#,##0.#####'),
+        contains(_quantityFormat(item.quantity)),
       );
     case EstimatePdfRowType.subtotal:
       expect(_text(sheet, 'B$excelRow'), '小計');
@@ -194,6 +194,14 @@ void _expectSameBreakdownRow(
       expect(_text(sheet, 'B$excelRow'), '合計');
       expect(_formula(sheet, 'G$excelRow'), isNotEmpty);
   }
+}
+
+String _quantityFormat(double? value) {
+  final formatted = formatEstimateQuantity(value);
+  final decimalPoint = formatted.indexOf('.');
+  if (decimalPoint < 0) return '#,##0';
+  final decimalPlaces = (formatted.length - decimalPoint - 1).clamp(1, 5);
+  return '#,##0.${List.filled(decimalPlaces, '0').join()}';
 }
 
 String _text(Sheet sheet, String cell) {
