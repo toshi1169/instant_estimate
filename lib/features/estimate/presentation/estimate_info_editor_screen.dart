@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../domain/estimate_info.dart';
+import 'estimate_text_guidance.dart';
 
 class EstimateInfoEditorScreen extends StatefulWidget {
   const EstimateInfoEditorScreen({required this.initialInfo, super.key});
@@ -166,6 +167,7 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
               strings.text('備考'),
               key: const Key('estimateInfoNotesField'),
               maxLines: 4,
+              guidanceKey: const Key('estimateInfoNotesGuidance'),
             ),
             const SizedBox(height: 8),
             FilledButton.icon(
@@ -186,13 +188,21 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
     required Key key,
     String? hint,
     int maxLines = 1,
+    Key? guidanceKey,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: TextField(
-      key: key,
-      controller: controller,
-      maxLines: maxLines,
-      decoration: InputDecoration(labelText: label, hintText: hint),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          key: key,
+          controller: controller,
+          maxLines: maxLines,
+          decoration: InputDecoration(labelText: label, hintText: hint),
+        ),
+        if (guidanceKey != null)
+          EstimateTextGuidance(controller: controller, counterKey: guidanceKey),
+      ],
     ),
   );
 }

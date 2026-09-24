@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../domain/unit_price_master.dart';
+import 'estimate_text_guidance.dart';
 
 class UnitPriceMasterEditorScreen extends StatefulWidget {
   const UnitPriceMasterEditorScreen({
@@ -78,6 +79,8 @@ class _UnitPriceMasterEditorScreenState
                 _name,
                 l10n.text('名称（必須）'),
                 const Key('unitPriceNameField'),
+                maxLines: null,
+                guidanceKey: const Key('unitPriceNameGuidance'),
                 validator: (value) => value == null || value.trim().isEmpty
                     ? l10n.text('名称を入力してください')
                     : null,
@@ -86,7 +89,8 @@ class _UnitPriceMasterEditorScreenState
                 _specification,
                 l10n.text('仕様'),
                 const Key('unitPriceSpecificationField'),
-                maxLines: 2,
+                maxLines: null,
+                guidanceKey: const Key('unitPriceSpecificationGuidance'),
               ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +131,8 @@ class _UnitPriceMasterEditorScreenState
                 _description,
                 l10n.text('摘要'),
                 const Key('unitPriceDescriptionField'),
-                maxLines: 3,
+                maxLines: null,
+                guidanceKey: const Key('unitPriceDescriptionGuidance'),
               ),
               const SizedBox(height: 8),
               FilledButton(
@@ -146,24 +151,35 @@ class _UnitPriceMasterEditorScreenState
     TextEditingController controller,
     String label,
     Key key, {
-    int maxLines = 1,
+    int? maxLines = 1,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    Key? guidanceKey,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        key: key,
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            key: key,
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            validator: validator,
+            decoration: InputDecoration(
+              labelText: label,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          if (guidanceKey != null)
+            EstimateTextGuidance(
+              controller: controller,
+              counterKey: guidanceKey,
+            ),
+        ],
       ),
     );
   }

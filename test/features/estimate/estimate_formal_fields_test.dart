@@ -176,7 +176,7 @@ void main() {
           )
           .first,
     );
-    expect(field(const Key('estimateDescriptionField')).maxLines, 1);
+    expect(field(const Key('estimateDescriptionField')).maxLines, isNull);
     await tester.ensureVisible(find.byKey(const Key('saveEstimateChanges')));
     await tester.tap(find.byKey(const Key('saveEstimateChanges')));
     await tester.pumpAndSettle();
