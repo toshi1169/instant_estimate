@@ -293,6 +293,9 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                     TextFormField(
                       key: const Key('customDensityMaterialName'),
                       controller: _customMaterialController,
+                      onTapOutside: (_) {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                      },
                       decoration: InputDecoration(
                         labelText: strings.text('材料名'),
                       ),
@@ -309,6 +312,9 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
+                    onTapOutside: (_) {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    },
                     decoration: InputDecoration(
                       labelText: strings.text('体積'),
                       suffixText: 'm³',
@@ -325,6 +331,9 @@ class _WeightCalculationScreenState extends State<WeightCalculationScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
                     ],
+                    onTapOutside: (_) {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    },
                     decoration: InputDecoration(
                       labelText: strings.text('比重'),
                       suffixText: 't/m³',
@@ -482,6 +491,9 @@ class _AddDensityMaterialDialogState extends State<_AddDensityMaterialDialog> {
               key: const Key('newDensityMaterialName'),
               controller: _nameController,
               autofocus: true,
+              onTapOutside: (_) {
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
               decoration: InputDecoration(labelText: strings.text('材料名')),
               validator: _validateName,
             ),
@@ -495,6 +507,9 @@ class _AddDensityMaterialDialogState extends State<_AddDensityMaterialDialog> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
+              onTapOutside: (_) {
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
               decoration: InputDecoration(
                 labelText: strings.text('比重'),
                 suffixText: 't/m³',
