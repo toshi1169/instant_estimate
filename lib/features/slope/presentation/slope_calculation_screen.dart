@@ -575,6 +575,9 @@ class _InputRow extends StatelessWidget {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
               ],
+              onTapOutside: (_) {
+                FocusManager.instance.primaryFocus?.unfocus();
+              },
               decoration: InputDecoration(
                 filled: selected,
                 fillColor: AppColors.accent.withValues(alpha: 0.08),
