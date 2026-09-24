@@ -188,6 +188,68 @@ void main() {
     expect(find.byKey(const Key('unitConversionTo')), findsOneWidget);
   });
 
+  for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+    testWidgets('単位変換のDoneでメイン入力欄だけフォーカス解除する（${platform.name}）', (
+      tester,
+    ) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await pumpScreen(
+        tester,
+        const UnitConversionScreen(),
+        platform: platform,
+      );
+
+      final value = find.byKey(const Key('unitConversionValue'));
+      final field = tester.widget<TextField>(value);
+      expect(
+        field.keyboardType,
+        const TextInputType.numberWithOptions(decimal: true, signed: true),
+      );
+      expect(field.textInputAction, TextInputAction.done);
+
+      await tester.tap(value);
+      await tester.enterText(value, '-12.3');
+      await tester.pump();
+      expect(editable(tester, value).focusNode.hasFocus, isTrue);
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      expect(editable(tester, value).focusNode.hasFocus, isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(editable(tester, value).controller.text, '-12.3');
+    });
+  }
+
+  testWidgets('単位変換は負の温度と3桁カンマを従来どおり計算する', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpScreen(tester, const UnitConversionScreen());
+
+    await tester.tap(find.byKey(const Key('unitConversionCategory')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('温度').last);
+    await tester.pumpAndSettle();
+    final value = find.byKey(const Key('unitConversionValue'));
+    await tester.enterText(value, '-40');
+    await tester.pump();
+    expect(find.text('-40.00 ℉'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('unitConversionCategory')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('長さ').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(value, '1,234.5');
+    await tester.pump();
+    expect(find.text('123.45 cm'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('swapConversionUnits')));
+    await tester.pump();
+    expect(find.text('12345.00 mm'), findsOneWidget);
+
+    await tester.tap(find.text('クリア'));
+    await tester.pump();
+    expect(editable(tester, value).controller.text, isEmpty);
+    expect(find.text('—'), findsOneWidget);
+  });
+
   testWidgets('四辺面積は値と計算結果を保って欄外解除する', (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await pumpScreen(
