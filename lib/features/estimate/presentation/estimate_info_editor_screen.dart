@@ -101,6 +101,8 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
               ),
               hint: strings.text('例：○○邸 外構工事'),
               key: const Key('estimateInfoNameField'),
+              maxLines: 2,
+              guidanceKey: const Key('estimateInfoNameGuidance'),
             ),
             ListTile(
               key: const Key('estimateInfoDateField'),
@@ -126,6 +128,7 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
               ),
               key: const Key('estimateInfoProvisoField'),
               maxLines: 3,
+              guidanceKey: const Key('estimateInfoProvisoGuidance'),
             ),
             _field(
               _validityPeriod,
@@ -140,6 +143,9 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
                 myanmar: 'ခန့်မှန်းချက်သက်တမ်း',
               ),
               key: const Key('estimateInfoValidityPeriodField'),
+              guidanceKey: const Key('estimateInfoValidityPeriodGuidance'),
+              japaneseCharacterLimit: 20,
+              japaneseLineLimit: 1,
             ),
             _field(
               _constructionPeriod,
@@ -154,6 +160,9 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
                 myanmar: 'ဆောက်လုပ်ရေးကာလ',
               ),
               key: const Key('estimateInfoConstructionPeriodField'),
+              guidanceKey: const Key('estimateInfoConstructionPeriodGuidance'),
+              japaneseCharacterLimit: 20,
+              japaneseLineLimit: 1,
             ),
             _field(
               _paymentTerms,
@@ -168,6 +177,9 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
                 myanmar: 'ငွေပေးချေမှုစည်းကမ်းချက်များ',
               ),
               key: const Key('estimateInfoPaymentTermsField'),
+              guidanceKey: const Key('estimateInfoPaymentTermsGuidance'),
+              japaneseCharacterLimit: 20,
+              japaneseLineLimit: 1,
             ),
             _field(
               _notes,
@@ -196,6 +208,8 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
     String? hint,
     int maxLines = 1,
     Key? guidanceKey,
+    int? japaneseCharacterLimit,
+    int? japaneseLineLimit,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Column(
@@ -205,10 +219,18 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
           key: key,
           controller: controller,
           maxLines: maxLines,
+          onTapOutside: (_) {
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
           decoration: InputDecoration(labelText: label, hintText: hint),
         ),
         if (guidanceKey != null)
-          EstimateTextGuidance(controller: controller, counterKey: guidanceKey),
+          EstimateTextGuidance(
+            controller: controller,
+            counterKey: guidanceKey,
+            japaneseCharacterLimit: japaneseCharacterLimit,
+            japaneseLineLimit: japaneseLineLimit,
+          ),
       ],
     ),
   );

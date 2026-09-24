@@ -736,6 +736,9 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
             key: key,
             controller: controller,
             maxLines: maxLines,
+            onTapOutside: (_) {
+              FocusManager.instance.primaryFocus?.unfocus();
+            },
             decoration: InputDecoration(
               labelText: label,
               border: const OutlineInputBorder(),
@@ -762,6 +765,9 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
       child: TextFormField(
         key: key,
         controller: controller,
+        onTapOutside: (_) {
+          FocusManager.instance.primaryFocus?.unfocus();
+        },
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
           FilteringTextInputFormatter.allow(RegExp(r'[0-9.,+\-eE]')),

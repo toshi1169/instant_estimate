@@ -176,6 +176,9 @@ class _UnitPriceMasterEditorScreenState
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,
             validator: validator,
+            onTapOutside: (_) {
+              FocusManager.instance.primaryFocus?.unfocus();
+            },
             decoration: InputDecoration(
               labelText: label,
               border: const OutlineInputBorder(),

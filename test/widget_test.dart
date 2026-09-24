@@ -3371,6 +3371,8 @@ void main() {
       find.byKey(const Key('estimateInfoNameField')),
       '○○邸 外構工事',
     );
+    await tester.tap(find.text('見積基本情報').first);
+    await tester.pump();
     await tester.scrollUntilVisible(
       find.byKey(const Key('saveEstimateInfo')),
       250,
@@ -3381,6 +3383,11 @@ void main() {
           )
           .first,
     );
+    await tester.drag(
+      find.byKey(const Key('estimateInfoEditor')),
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('saveEstimateInfo')));
     await tester.pumpAndSettle();
 
@@ -3418,7 +3425,14 @@ void main() {
       find.byKey(const Key('estimateInfoNameField')),
       '2件目の見積',
     );
+    await tester.tap(find.text('見積基本情報').first);
+    await tester.pump();
     await tester.ensureVisible(find.byKey(const Key('saveEstimateInfo')));
+    await tester.drag(
+      find.byKey(const Key('estimateInfoEditor')),
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('saveEstimateInfo')));
     await tester.pumpAndSettle();
 
