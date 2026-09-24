@@ -980,6 +980,38 @@ class AppLocalizations {
     filipino: 'Patakaran sa Privacy',
     myanmar: 'ကိုယ်ရေးအချက်အလက် မူဝါဒ',
   );
+  String get supportTitle => _pick(
+    japanese: 'サポート',
+    english: 'Support',
+    simplifiedChinese: '支持',
+    traditionalChinese: '支援',
+    vietnamese: 'Hỗ trợ',
+    indonesian: 'Dukungan',
+    filipino: 'Suporta',
+    myanmar: 'အကူအညီ',
+  );
+  String get reportFeedbackAndIssues => _pick(
+    japanese: 'ご意見・不具合の報告',
+    english: 'Feedback and issue reports',
+    simplifiedChinese: '意见与问题反馈',
+    traditionalChinese: '意見與問題回報',
+    vietnamese: 'Gửi ý kiến và báo lỗi',
+    indonesian: 'Saran dan laporan masalah',
+    filipino: 'Feedback at pag-ulat ng problema',
+    myanmar: 'အကြံပြုချက်နှင့် ပြဿနာ တင်ပြခြင်း',
+  );
+  String get supportDescription => _pick(
+    japanese: 'ご意見や不具合がある場合は、こちらからお問い合わせください。',
+    english: 'Contact us here if you have feedback or encounter a problem.',
+    simplifiedChinese: '如有意见或遇到问题，请从此处联系我们。',
+    traditionalChinese: '如有意見或遇到問題，請從此處與我們聯絡。',
+    vietnamese: 'Hãy liên hệ tại đây nếu bạn có ý kiến hoặc gặp sự cố.',
+    indonesian:
+        'Hubungi kami di sini jika Anda memiliki saran atau mengalami masalah.',
+    filipino:
+        'Makipag-ugnayan dito kung may feedback ka o nakaranas ng problema.',
+    myanmar: 'အကြံပြုချက် သို့မဟုတ် ပြဿနာရှိပါက ဤနေရာမှ ဆက်သွယ်ပါ။',
+  );
   String get termsOfUse => _pick(
     japanese: '利用規約',
     english: 'Terms of Use',
