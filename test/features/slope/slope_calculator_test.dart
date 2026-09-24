@@ -176,6 +176,134 @@ void main() {
     expect(tester.widget<TextField>(heightField).controller!.text, '1.00');
   });
 
+  testWidgets('iPhone相当で入力欄間を移動し欄外タップで値と結果を保ってキーボードを閉じる', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.iOS),
+        home: const SlopeCalculationScreen(
+          settings: AppSettings(
+            decimalPlaces: 2,
+            roundingMode: CalculatorRoundingMode.halfUp,
+          ),
+        ),
+      ),
+    );
+
+    final fields = find.byType(TextField);
+    expect(fields, findsNWidgets(7));
+    for (final element in fields.evaluate()) {
+      expect((element.widget as TextField).onTapOutside, isNotNull);
+    }
+
+    final horizontalField = find.descendant(
+      of: find.byKey(const Key('slopeHorizontalDistance')),
+      matching: find.byType(TextField),
+    );
+    final percentField = find.descendant(
+      of: find.byKey(const Key('slopePercent')),
+      matching: find.byType(TextField),
+    );
+    final horizontalController = tester
+        .widget<TextField>(horizontalField)
+        .controller!;
+    final percentController = tester
+        .widget<TextField>(percentField)
+        .controller!;
+    EditableText editable(Finder field) => tester.widget<EditableText>(
+      find.descendant(of: field, matching: find.byType(EditableText)),
+    );
+
+    await tester.tap(horizontalField);
+    await tester.pump();
+    expect(editable(horizontalField).focusNode.hasFocus, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+    await tester.enterText(horizontalField, '10');
+
+    await tester.tap(percentField);
+    await tester.pump();
+    expect(editable(horizontalField).focusNode.hasFocus, isFalse);
+    expect(editable(percentField).focusNode.hasFocus, isTrue);
+    await tester.enterText(percentField, '10');
+    await tester.pump();
+
+    final heightField = find.descendant(
+      of: find.byKey(const Key('slopeHeight')),
+      matching: find.byType(TextField),
+    );
+    final heightController = tester.widget<TextField>(heightField).controller!;
+    expect(horizontalController.text, '10');
+    expect(percentController.text, '10');
+    expect(heightController.text, '1.00');
+
+    await tester.tap(find.byKey(const Key('slopeDiagram')));
+    await tester.pump();
+    expect(editable(percentField).focusNode.hasFocus, isFalse);
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(horizontalController.text, '10');
+    expect(percentController.text, '10');
+    expect(heightController.text, '1.00');
+    expect(find.text('10.00 %'), findsOneWidget);
+
+    final listView = find.byType(ListView);
+    final scrollable = find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+    );
+    final position = tester.state<ScrollableState>(scrollable).position;
+    final offsetBefore = position.pixels;
+    await tester.drag(listView, const Offset(0, -250));
+    await tester.pumpAndSettle();
+    expect(position.pixels, greaterThan(offsetBefore));
+
+    await tester.scrollUntilVisible(
+      find.text('mm'),
+      250,
+      scrollable: scrollable,
+    );
+    await tester.tap(find.text('mm'));
+    await tester.pumpAndSettle();
+    expect(horizontalController.text, '10000.00');
+
+    await tester.tap(find.text('クリア'));
+    await tester.pump();
+    expect(horizontalController.text, isEmpty);
+    expect(percentController.text, isEmpty);
+
+    await tester.tap(find.byTooltip('入力方法'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('計算に使う2つの入力欄'), findsOneWidget);
+  });
+
+  testWidgets('Android相当でも欄外タップでフォーカスを解除する', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.android),
+        home: const SlopeCalculationScreen(),
+      ),
+    );
+
+    final horizontalField = find.descendant(
+      of: find.byKey(const Key('slopeHorizontalDistance')),
+      matching: find.byType(TextField),
+    );
+    final editable = find.descendant(
+      of: horizontalField,
+      matching: find.byType(EditableText),
+    );
+    await tester.tap(horizontalField);
+    await tester.pump();
+    expect(tester.widget<EditableText>(editable).focusNode.hasFocus, isTrue);
+
+    await tester.tap(find.byKey(const Key('slopeDiagram')));
+    await tester.pump();
+    expect(tester.widget<EditableText>(editable).focusNode.hasFocus, isFalse);
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
+
   testWidgets('English settings show slope errors and help in English', (
     tester,
   ) async {
