@@ -8,6 +8,7 @@ import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_item_symbol.dart';
 import '../domain/unit_price_master.dart';
+import 'estimate_text_guidance.dart';
 
 enum EstimateItemEditorAction { continueCalculating, openEstimate }
 
@@ -533,6 +534,9 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                       key: const Key('estimateConstructionLocationField'),
                       maxLines: null,
                       padding: EdgeInsets.zero,
+                      guidanceKey: const Key(
+                        'estimateConstructionLocationGuidance',
+                      ),
                     ),
                   ),
                 ],
@@ -543,12 +547,14 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 l10n.text('名称'),
                 key: const Key('estimateNameField'),
                 maxLines: null,
+                guidanceKey: const Key('estimateNameGuidance'),
               ),
               _field(
                 _specification,
                 l10n.text('仕様'),
                 key: const Key('estimateSpecificationField'),
                 maxLines: null,
+                guidanceKey: const Key('estimateSpecificationGuidance'),
               ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -649,6 +655,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 _description,
                 l10n.text('摘要'),
                 key: const Key('estimateDescriptionField'),
+                maxLines: null,
+                guidanceKey: const Key('estimateDescriptionGuidance'),
               ),
               _field(
                 _trade,
@@ -710,17 +718,28 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     required Key key,
     int? maxLines = 1,
     EdgeInsetsGeometry padding = const EdgeInsets.only(bottom: 12),
+    Key? guidanceKey,
   }) {
     return Padding(
       padding: padding,
-      child: TextFormField(
-        key: key,
-        controller: controller,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            key: key,
+            controller: controller,
+            maxLines: maxLines,
+            decoration: InputDecoration(
+              labelText: label,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          if (guidanceKey != null)
+            EstimateTextGuidance(
+              controller: controller,
+              counterKey: guidanceKey,
+            ),
+        ],
       ),
     );
   }

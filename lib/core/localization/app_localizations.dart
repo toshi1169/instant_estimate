@@ -1032,6 +1032,41 @@ class AppLocalizations {
     filipino: 'Hindi mabuksan ang link.',
     myanmar: 'လင့်ခ်ကို ဖွင့်မရပါ။',
   );
+  String estimateTextCharacterCounter(int count, int limit) => _pick(
+    japanese: '$count / $limit文字',
+    english: '$count / $limit characters',
+    simplifiedChinese: '$count / $limit字',
+    traditionalChinese: '$count / $limit字',
+    vietnamese: '$count / $limit ký tự',
+    indonesian: '$count / $limit karakter',
+    filipino: '$count / $limit character',
+    myanmar: '$count / $limit အက္ခရာ',
+  );
+  String estimateTextLineCounter(int count, int limit) => _pick(
+    japanese: '$count / $limit行',
+    english: '$count / $limit lines',
+    simplifiedChinese: '$count / $limit行',
+    traditionalChinese: '$count / $limit行',
+    vietnamese: '$count / $limit dòng',
+    indonesian: '$count / $limit baris',
+    filipino: '$count / $limit linya',
+    myanmar: '$count / $limit လိုင်း',
+  );
+  String get estimateTextGuidanceExceeded => _pick(
+    japanese: '帳票の推奨範囲を超えています。文字が縮小または折り返される場合があります。',
+    english:
+        'This exceeds the recommended range for documents. Text may be reduced or wrapped.',
+    simplifiedChinese: '已超出文档的建议范围。文字可能会缩小或换行。',
+    traditionalChinese: '已超出文件的建議範圍。文字可能會縮小或換行。',
+    vietnamese:
+        'Nội dung vượt quá phạm vi khuyến nghị cho chứng từ. Văn bản có thể bị thu nhỏ hoặc xuống dòng.',
+    indonesian:
+        'Teks melebihi batas yang disarankan untuk dokumen. Teks mungkin diperkecil atau dibungkus.',
+    filipino:
+        'Lampas ito sa inirerekomendang saklaw para sa dokumento. Maaaring paliitin o i-wrap ang text.',
+    myanmar:
+        'စာရွက်စာတမ်းအတွက် အကြံပြုအတိုင်းအတာကို ကျော်လွန်နေသည်။ စာသားကို သေးငယ်စေခြင်း သို့မဟုတ် စာကြောင်းခွဲခြင်း ဖြစ်နိုင်သည်။',
+  );
   String get disclaimerSettingsSubtitle => _pick(
     japanese: '計算・見積・帳票を利用する前に確認してください',
     english: 'Review before using calculations, estimates or documents',

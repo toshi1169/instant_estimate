@@ -2707,11 +2707,16 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('estimateNameField')), '取消確認');
-    await tester.drag(
-      find.byKey(const Key('estimateItemEditor')),
-      const Offset(0, -500),
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('addEstimateAndContinue')),
+      400,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
     await tester.pumpAndSettle();
 
@@ -2777,11 +2782,16 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('estimateNameField')), '更新後');
-    await tester.drag(
-      find.byKey(const Key('estimateItemEditor')),
-      const Offset(0, -500),
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('addEstimateAndContinue')),
+      400,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
     await tester.pumpAndSettle();
 
@@ -2923,7 +2933,16 @@ void main() {
       find.byKey(const Key('estimateUnitPriceField')),
       '5000',
     );
-    await tester.ensureVisible(find.byKey(const Key('estimateTradeField')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateTradeField')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.enterText(find.byKey(const Key('estimateTradeField')), '型枠工事');
     await tester.ensureVisible(find.byKey(const Key('saveEstimateChanges')));
     await tester.tap(find.byKey(const Key('saveEstimateChanges')));
@@ -3089,32 +3108,59 @@ void main() {
     expect(find.text('見積明細へ追加'), findsOneWidget);
     expect(find.byKey(const Key('addEstimateAndOpen')), findsNothing);
 
-    await tester.enterText(
-      find.byKey(const Key('estimateTradeField')),
-      'コンクリート工事',
+    final editorScrollable = find
+        .descendant(
+          of: find.byKey(const Key('estimateItemEditor')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateNameField')),
+      -300,
+      scrollable: editorScrollable,
     );
     await tester.enterText(
       find.byKey(const Key('estimateNameField')),
       'コンクリート打設',
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateQuantityField')),
+      300,
+      scrollable: editorScrollable,
+    );
     await tester.enterText(find.byKey(const Key('estimateQuantityField')), '3');
     await tester.enterText(find.byKey(const Key('estimateUnitField')), 'm³');
-    await tester.ensureVisible(find.byKey(const Key('estimateUnitPriceField')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateUnitPriceField')),
+      300,
+      scrollable: editorScrollable,
+    );
     await tester.enterText(
       find.byKey(const Key('estimateUnitPriceField')),
       '15000',
     );
-    await tester.ensureVisible(
+    await tester.scrollUntilVisible(
       find.byKey(const Key('saveEstimateToUnitPriceMaster')),
+      300,
+      scrollable: editorScrollable,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('この内容を単価マスタへ登録'));
     await tester.pumpAndSettle();
-    await tester.drag(
-      find.byKey(const Key('estimateItemEditor')),
-      const Offset(0, -400),
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateTradeField')),
+      300,
+      scrollable: editorScrollable,
     );
-    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('estimateTradeField')),
+      'コンクリート工事',
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('addEstimateAndContinue')),
+      300,
+      scrollable: editorScrollable,
+    );
     await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
     await tester.pumpAndSettle();
 
@@ -3176,6 +3222,16 @@ void main() {
     expect(find.text('見積明細へ追加'), findsOneWidget);
     expect(find.byKey(const Key('saveEstimateChanges')), findsNothing);
     expect(find.text('①'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateConstructionLocationField')),
+      -300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(
       tester
           .widget<TextFormField>(
@@ -3185,12 +3241,32 @@ void main() {
           ?.text,
       '北側通路',
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateTradeField')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(
       tester
           .widget<TextFormField>(find.byKey(const Key('estimateTradeField')))
           .controller
           ?.text,
       '土工事',
+    );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateUnitPriceField')),
+      -300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     expect(
       tester
@@ -3201,14 +3277,49 @@ void main() {
           ?.text,
       '4000',
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateNameField')),
+      -300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.enterText(
       find.byKey(const Key('estimateNameField')),
       '根切り 追加分',
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('estimateQuantityField')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.enterText(find.byKey(const Key('estimateQuantityField')), '3');
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('addEstimateAndContinue')),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.drag(
-      find.byKey(const Key('estimateItemEditor')),
-      const Offset(0, -400),
+      find
+          .descendant(
+            of: find.byKey(const Key('estimateItemEditor')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+      const Offset(0, -200),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('addEstimateAndContinue')));
