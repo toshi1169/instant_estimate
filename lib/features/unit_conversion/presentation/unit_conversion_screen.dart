@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../settings/domain/app_settings.dart';
 import '../domain/unit_converter.dart';
+import 'signed_decimal_input_formatter.dart';
 
 class UnitConversionScreen extends StatefulWidget {
   const UnitConversionScreen({this.settings = const AppSettings(), super.key});
@@ -192,9 +193,11 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                         decimal: true,
                         signed: true,
                       ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]')),
-                      ],
+                      inputFormatters: const [SignedDecimalInputFormatter()],
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                      },
                       onTapOutside: (_) {
                         FocusManager.instance.primaryFocus?.unfocus();
                       },
