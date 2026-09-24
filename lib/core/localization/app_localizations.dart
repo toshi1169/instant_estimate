@@ -2842,6 +2842,13 @@ class AppLocalizations {
     myanmar: 'တရားဝင် PDF',
   );
 
+  String? get formalPdfScriptSupportNotice => switch (appLanguage) {
+    AppLanguage.simplifiedChinese => '正式 PDF 中，部分文字可能无法正确显示。计划在今后的更新中改进。',
+    AppLanguage.myanmar =>
+      'တရားဝင် PDF တွင် အက္ခရာအချို့ သို့မဟုတ် အက္ခရာပေါင်းစပ်ပုံအချို့ကို မှန်ကန်စွာ မပြသနိုင်သည့် အခြေအနေ ရှိနိုင်ပါသည်။ နောင်အပ်ဒိတ်များတွင် ပိုမိုကောင်းမွန်အောင် ပြင်ဆင်ရန် စီစဉ်ထားပါသည်။',
+    _ => null,
+  };
+
   String get formalExcelXlsx => _pick(
     japanese: '正式Excel（XLSX）',
     english: 'Formal Excel (XLSX)',

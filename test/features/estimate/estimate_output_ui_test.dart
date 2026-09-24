@@ -67,6 +67,19 @@ void main() {
       expect(find.byKey(const Key('printEstimatePdf')), findsOneWidget);
       expect(find.byKey(const Key('shareEstimatePdf')), findsOneWidget);
       expect(find.byKey(const Key('exportEstimateExcel')), findsOneWidget);
+      final expectsScriptNotice =
+          language == AppLanguage.simplifiedChinese ||
+          language == AppLanguage.myanmar;
+      expect(
+        find.byKey(const Key('estimateOutputPdfScriptNotice')),
+        expectsScriptNotice ? findsOneWidget : findsNothing,
+      );
+      final scriptNotice = AppLocalizations(
+        language,
+      ).formalPdfScriptSupportNotice;
+      if (scriptNotice != null) {
+        expect(find.text(scriptNotice), findsOneWidget);
+      }
       expect(tester.takeException(), isNull, reason: language.name);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
