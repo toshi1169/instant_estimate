@@ -7,6 +7,7 @@ import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_info_editor_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_item_editor_screen.dart';
+import 'package:instant_estimate/features/estimate/presentation/estimate_pdf_script_notice.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_text_guidance.dart';
 import 'package:instant_estimate/features/estimate/presentation/unit_price_master_editor_screen.dart';
 
@@ -235,6 +236,63 @@ void main() {
       expect(find.byKey(const Key('counter')), findsOneWidget);
     }
   });
+
+  testWidgets(
+    'PDF script notice appears only for Simplified Chinese and Myanmar',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 1200);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      for (final language in AppLanguage.values) {
+        await tester.pumpWidget(
+          _app(
+            language: language,
+            textScale: 1.6,
+            home: const Scaffold(
+              body: Padding(
+                padding: EdgeInsets.all(16),
+                child: EstimatePdfScriptNotice(
+                  key: Key('standalonePdfScriptNotice'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final expectsNotice =
+            language == AppLanguage.simplifiedChinese ||
+            language == AppLanguage.myanmar;
+        final notice = AppLocalizations(language).formalPdfScriptSupportNotice;
+        if (notice != null) {
+          expect(find.text(notice), findsOneWidget);
+        } else {
+          expect(expectsNotice, isFalse, reason: language.name);
+          expect(find.byType(Icon), findsNothing, reason: language.name);
+        }
+        expect(tester.takeException(), isNull, reason: language.name);
+      }
+
+      await tester.pumpWidget(
+        _app(
+          language: AppLanguage.simplifiedChinese,
+          home: const EstimateItemEditorScreen(
+            initialDraft: EstimateItemDraft(),
+            isEditing: true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('estimateItemPdfScriptNotice')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('estimateNameGuidance')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Widget _app({

@@ -22,6 +22,7 @@ import '../domain/estimate_quantity.dart';
 import 'duplicate_estimate_item_dialog.dart';
 import 'estimate_info_editor_screen.dart';
 import 'estimate_item_editor_screen.dart';
+import 'estimate_pdf_script_notice.dart';
 import 'estimate_success_snack_bar.dart';
 import 'merge_estimate_quantity_dialog.dart';
 
@@ -208,6 +209,13 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
                   ),
                 ),
               ),
+              if (l10n.formalPdfScriptSupportNotice != null)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: EstimatePdfScriptNotice(
+                    key: Key('estimateOutputPdfScriptNotice'),
+                  ),
+                ),
               ListTile(
                 key: const Key('printEstimatePdf'),
                 leading: const Icon(Icons.print_outlined),

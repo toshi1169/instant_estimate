@@ -8,6 +8,7 @@ import '../domain/estimate_item.dart';
 import '../domain/estimate_item_draft.dart';
 import '../domain/estimate_item_symbol.dart';
 import '../domain/unit_price_master.dart';
+import 'estimate_pdf_script_notice.dart';
 import 'estimate_text_guidance.dart';
 
 enum EstimateItemEditorAction { continueCalculating, openEstimate }
@@ -466,6 +467,12 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
             key: const Key('estimateItemEditor'),
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
+              if (l10n.formalPdfScriptSupportNotice != null) ...[
+                const EstimatePdfScriptNotice(
+                  key: Key('estimateItemPdfScriptNotice'),
+                ),
+                const SizedBox(height: 12),
+              ],
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.description_outlined),

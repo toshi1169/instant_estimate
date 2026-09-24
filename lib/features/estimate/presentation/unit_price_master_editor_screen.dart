@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../domain/unit_price_master.dart';
+import 'estimate_pdf_script_notice.dart';
 import 'estimate_text_guidance.dart';
 
 class UnitPriceMasterEditorScreen extends StatefulWidget {
@@ -74,6 +75,12 @@ class _UnitPriceMasterEditorScreenState
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
+              if (l10n.formalPdfScriptSupportNotice != null) ...[
+                const EstimatePdfScriptNotice(
+                  key: Key('unitPricePdfScriptNotice'),
+                ),
+                const SizedBox(height: 12),
+              ],
               _field(_trade, l10n.text('工種'), const Key('unitPriceTradeField')),
               _field(
                 _name,

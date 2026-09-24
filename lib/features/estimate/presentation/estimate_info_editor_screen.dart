@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../domain/estimate_info.dart';
+import 'estimate_pdf_script_notice.dart';
 import 'estimate_text_guidance.dart';
 
 class EstimateInfoEditorScreen extends StatefulWidget {
@@ -80,6 +81,12 @@ class _EstimateInfoEditorScreenState extends State<EstimateInfoEditorScreen> {
           key: const Key('estimateInfoEditor'),
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
+            if (strings.formalPdfScriptSupportNotice != null) ...[
+              const EstimatePdfScriptNotice(
+                key: Key('estimateInfoPdfScriptNotice'),
+              ),
+              const SizedBox(height: 12),
+            ],
             _field(
               _estimateName,
               strings.choose(
