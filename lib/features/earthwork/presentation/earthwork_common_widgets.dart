@@ -62,6 +62,9 @@ class EarthworkNumberField extends StatelessWidget {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+      onTapOutside: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffix,
@@ -283,6 +286,9 @@ Future<TransportVehicle?> showAddTransportVehicleDialog(
               TextFormField(
                 key: const Key('customVehicleName'),
                 controller: nameController,
+                onTapOutside: (_) {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                },
                 decoration: InputDecoration(labelText: l10n.text('車両名')),
                 textInputAction: TextInputAction.next,
                 validator: (value) => (value ?? '').trim().isEmpty

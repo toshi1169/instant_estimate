@@ -195,6 +195,9 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]')),
                       ],
+                      onTapOutside: (_) {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                      },
                       decoration: InputDecoration(
                         labelText: strings.text('変換する値'),
                         hintText: strings.text('数値を入力'),
@@ -351,6 +354,9 @@ class _UnitConversionScreenState extends State<UnitConversionScreen> {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+      onTapOutside: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
       decoration: InputDecoration(labelText: label),
     );
   }

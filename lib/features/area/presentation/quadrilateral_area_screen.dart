@@ -273,6 +273,9 @@ class _QuadrilateralAreaScreenState extends State<QuadrilateralAreaScreen> {
       controller: _controllers[index],
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+      onTapOutside: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
       decoration: InputDecoration(labelText: label, suffixText: 'm'),
       validator: _validateLength,
       onFieldSubmitted: (_) => _calculate(),

@@ -179,6 +179,9 @@ class _RatioCalculationScreenState extends State<RatioCalculationScreen> {
       controller: _controllers[term],
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+      onTapOutside: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
       textAlign: TextAlign.center,
       decoration: InputDecoration(
         labelText: term.name.toUpperCase(),

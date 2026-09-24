@@ -261,6 +261,9 @@ class _ProductivityCalculationScreenState
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
+      onTapOutside: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
       decoration: InputDecoration(labelText: label),
       onChanged: (_) => setState(() {}),
     ),
