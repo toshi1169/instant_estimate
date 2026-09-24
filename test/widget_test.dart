@@ -796,6 +796,8 @@ void main() {
 
           final purchaseTile = find.byKey(target.$1);
           await tester.scrollUntilVisible(purchaseTile, 250);
+          await tester.ensureVisible(purchaseTile);
+          await tester.pumpAndSettle();
           await tester.tap(purchaseTile);
           await tester.pumpAndSettle();
 

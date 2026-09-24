@@ -65,6 +65,10 @@ void main() {
         find.byKey(const Key('openSourceLicensesSetting')),
         300,
       );
+      await tester.ensureVisible(
+        find.byKey(const Key('openSourceLicensesSetting')),
+      );
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.tap(find.byKey(const Key('openSourceLicensesSetting')));
       await tester.pump();

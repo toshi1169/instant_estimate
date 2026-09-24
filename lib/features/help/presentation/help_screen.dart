@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
+import 'support_links_section.dart';
 
 class HelpScreen extends StatelessWidget {
-  const HelpScreen({super.key});
+  const HelpScreen({this.supportLinkLauncher, super.key});
+
+  final SupportLinkLauncher? supportLinkLauncher;
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +90,10 @@ class HelpScreen extends StatelessWidget {
               icon: Icons.gavel_outlined,
               title: l10n.disclaimerTitle,
               body: l10n.disclaimerBody,
+            ),
+            SupportLinksSection(
+              key: const Key('helpSupportSection'),
+              linkLauncher: supportLinkLauncher,
             ),
           ],
         ),

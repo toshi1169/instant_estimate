@@ -11,6 +11,7 @@ import '../../onboarding/data/onboarding_preferences.dart';
 import '../../onboarding/domain/occupation.dart';
 import '../../onboarding/presentation/occupation_selection_screen.dart';
 import '../../help/presentation/disclaimer_screen.dart';
+import '../../help/presentation/support_links_section.dart';
 import '../../subscription/domain/purchase_store.dart';
 import '../../subscription/presentation/access_plan_screen.dart';
 import '../../backup/application/backup_snapshot_factory.dart';
@@ -31,6 +32,7 @@ class SettingsScreen extends StatefulWidget {
     this.backupSnapshotFactory,
     this.backupRestoreCoordinator,
     this.onBackupRestored,
+    this.supportLinkLauncher,
     super.key,
   });
 
@@ -44,6 +46,7 @@ class SettingsScreen extends StatefulWidget {
   final BackupSnapshotFactory? backupSnapshotFactory;
   final BackupRestoreCoordinator? backupRestoreCoordinator;
   final Future<void> Function(AppSettings settings)? onBackupRestored;
+  final SupportLinkLauncher? supportLinkLauncher;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -654,6 +657,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ? null
                   : () => _openBackup(context),
             ),
+          ),
+          const SizedBox(height: 24),
+          SupportLinksSection(
+            key: const Key('settingsSupportSection'),
+            linkLauncher: widget.supportLinkLauncher,
           ),
           const SizedBox(height: 24),
           Card(
