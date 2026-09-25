@@ -10,6 +10,7 @@ class StoredCalculationHistoryEntry {
     required this.createdAt,
     this.improperFractionResult,
     this.mixedFractionResult,
+    this.remainderResult,
   });
 
   factory StoredCalculationHistoryEntry.fromJson(Map<String, Object?> json) {
@@ -19,6 +20,7 @@ class StoredCalculationHistoryEntry {
       decimalResult: json['decimalResult'] as String,
       improperFractionResult: json['improperFractionResult'] as String?,
       mixedFractionResult: json['mixedFractionResult'] as String?,
+      remainderResult: json['remainderResult'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
@@ -28,6 +30,7 @@ class StoredCalculationHistoryEntry {
   final String decimalResult;
   final String? improperFractionResult;
   final String? mixedFractionResult;
+  final String? remainderResult;
   final DateTime createdAt;
 
   Map<String, Object?> toJson() => {
@@ -36,6 +39,7 @@ class StoredCalculationHistoryEntry {
     'decimalResult': decimalResult,
     'improperFractionResult': improperFractionResult,
     'mixedFractionResult': mixedFractionResult,
+    'remainderResult': remainderResult,
     'createdAt': createdAt.toIso8601String(),
   };
 }

@@ -52,6 +52,7 @@ class _CalculatorHistoryScreenState extends State<CalculatorHistoryScreen> {
             entry.decimalResult,
             entry.improperFractionResult,
             entry.mixedFractionResult,
+            entry.remainderResult,
           ].whereType<String>().any(
             (value) => value.toLowerCase().contains(query),
           );
@@ -212,6 +213,7 @@ class _HistoryCard extends StatelessWidget {
     final fractionRows = <(String, String?)>[
       (strings.text('仮分数'), entry.improperFractionResult),
       (strings.text('帯分数'), entry.mixedFractionResult),
+      (strings.remainderResult, entry.remainderResult),
     ].where((row) => row.$2 != null).toList(growable: false);
 
     return Card(

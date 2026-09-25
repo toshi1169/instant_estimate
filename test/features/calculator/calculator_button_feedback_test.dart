@@ -160,6 +160,7 @@ void main() {
     final controller = CalculatorController(
       improperFractionResultEnabled: false,
       mixedFractionResultEnabled: false,
+      remainderResultEnabled: false,
     );
     controller.pasteAtCaret('2−1÷2');
     controller.press('=');
@@ -170,6 +171,7 @@ void main() {
           settings: const AppSettings(
             improperFractionResultEnabled: false,
             mixedFractionResultEnabled: false,
+            remainderResultEnabled: false,
           ),
         ),
       ),

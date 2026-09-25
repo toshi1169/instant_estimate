@@ -8,7 +8,7 @@ import 'package:instant_estimate/features/settings/presentation/settings_screen.
 import 'package:instant_estimate/features/settings/presentation/result_display_settings_screen.dart';
 
 void main() {
-  testWidgets('解の表示入口から小数常時有効と2つのSwitchを設定できる', (tester) async {
+  testWidgets('解の表示入口から小数常時有効と3つのSwitchを設定できる', (tester) async {
     var settings = const AppSettings();
     await tester.pumpWidget(_app(settings, (value) => settings = value));
 
@@ -38,6 +38,14 @@ void main() {
           .value,
       isFalse,
     );
+    expect(
+      tester
+          .widget<SwitchListTile>(
+            find.byKey(const Key('remainderResultSetting')),
+          )
+          .value,
+      isTrue,
+    );
 
     await tester.tap(find.byKey(const Key('improperFractionResultSetting')));
     await tester.pump();
@@ -60,8 +68,10 @@ void main() {
           const ResultDisplaySettingsScreen(
             improperFractionEnabled: true,
             mixedFractionEnabled: true,
+            remainderEnabled: true,
             onImproperFractionChanged: _ignore,
             onMixedFractionChanged: _ignore,
+            onRemainderChanged: _ignore,
           ),
         ),
       );

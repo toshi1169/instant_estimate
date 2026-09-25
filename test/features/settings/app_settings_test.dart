@@ -7,11 +7,12 @@ import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 import 'package:instant_estimate/features/settings/domain/company_profile.dart';
 
 void main() {
-  test('完全新規ユーザーは仮分数ON・帯分数OFFで開始する', () {
+  test('完全新規ユーザーは仮分数ON・帯分数OFF・余りONで開始する', () {
     const settings = AppSettings();
 
     expect(settings.improperFractionResultEnabled, isTrue);
     expect(settings.mixedFractionResultEnabled, isFalse);
+    expect(settings.remainderResultEnabled, isTrue);
   });
 
   test('言語設定を保存・復元し、旧データは日本語として扱う', () {
@@ -22,6 +23,7 @@ void main() {
 
     expect(restored.language, AppLanguage.english);
     expect(restoredLegacy.language, AppLanguage.japanese);
+    expect(restoredLegacy.remainderResultEnabled, isFalse);
   });
 
   test('簡体字中国語の設定を保存・復元できる', () {

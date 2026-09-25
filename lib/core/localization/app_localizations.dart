@@ -3136,15 +3136,37 @@ class AppLocalizations {
     filipino: 'Mixed fraction',
     myanmar: 'ကိန်းရော',
   );
+  String get remainderResult => _pick(
+    japanese: '余り',
+    english: 'Remainder',
+    simplifiedChinese: '余数',
+    traditionalChinese: '餘數',
+    vietnamese: 'Số dư',
+    indonesian: 'Sisa',
+    filipino: 'Natira',
+    myanmar: 'အကြွင်း',
+  );
+  String remainderText(String quotient, String remainder) => _pick(
+    japanese: '$quotient 余り $remainder',
+    english: '$quotient remainder $remainder',
+    simplifiedChinese: '$quotient 余 $remainder',
+    traditionalChinese: '$quotient 餘 $remainder',
+    vietnamese: '$quotient dư $remainder',
+    indonesian: '$quotient sisa $remainder',
+    filipino: '$quotient, natira ang $remainder',
+    myanmar: '$quotient၊ အကြွင်း $remainder',
+  );
   String resultDisplaySummary({
     required bool improperFraction,
     required bool mixedFraction,
+    required bool remainder,
   }) {
     if (!improperFraction && !mixedFraction) return decimalResult;
     return [
       decimalResult,
       if (improperFraction) improperFractionResult,
       if (mixedFraction) mixedFractionResult,
+      if (remainder) remainderResult,
     ].join(' / ');
   }
 

@@ -214,7 +214,11 @@ class _BackupV1Validator {
         'customDensityMaterials',
         'companyProfile',
       },
-      const {'improperFractionResultEnabled', 'mixedFractionResultEnabled'},
+      const {
+        'improperFractionResultEnabled',
+        'mixedFractionResultEnabled',
+        'remainderResultEnabled',
+      },
       path,
     );
     _enumName(json, 'language', path, const {
@@ -249,6 +253,9 @@ class _BackupV1Validator {
     }
     if (json.containsKey('mixedFractionResultEnabled')) {
       _boolean(json, 'mixedFractionResultEnabled', path);
+    }
+    if (json.containsKey('remainderResultEnabled')) {
+      _boolean(json, 'remainderResultEnabled', path);
     }
 
     final vehicleIds = <String>{};
@@ -342,19 +349,27 @@ class _BackupV1Validator {
   }
 
   void _validateHistory(Map<String, Object?> json, String path) {
-    _exactKeys(json, const {
-      'expression',
-      'result',
-      'decimalResult',
-      'improperFractionResult',
-      'mixedFractionResult',
-      'createdAt',
-    }, path);
+    _keysWithOptional(
+      json,
+      const {
+        'expression',
+        'result',
+        'decimalResult',
+        'improperFractionResult',
+        'mixedFractionResult',
+        'createdAt',
+      },
+      const {'remainderResult'},
+      path,
+    );
     _string(json, 'expression', path);
     _string(json, 'result', path);
     _string(json, 'decimalResult', path);
     _nullableString(json, 'improperFractionResult', path);
     _nullableString(json, 'mixedFractionResult', path);
+    if (json.containsKey('remainderResult')) {
+      _nullableString(json, 'remainderResult', path);
+    }
     _date(json, 'createdAt', path);
   }
 

@@ -307,10 +307,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (_) => ResultDisplaySettingsScreen(
           improperFractionEnabled: _settings.improperFractionResultEnabled,
           mixedFractionEnabled: _settings.mixedFractionResultEnabled,
+          remainderEnabled: _settings.remainderResultEnabled,
           onImproperFractionChanged: (value) =>
               _update(_settings.copyWith(improperFractionResultEnabled: value)),
           onMixedFractionChanged: (value) =>
               _update(_settings.copyWith(mixedFractionResultEnabled: value)),
+          onRemainderChanged: (value) =>
+              _update(_settings.copyWith(remainderResultEnabled: value)),
         ),
       ),
     );
@@ -490,6 +493,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     strings.resultDisplaySummary(
                       improperFraction: _settings.improperFractionResultEnabled,
                       mixedFraction: _settings.mixedFractionResultEnabled,
+                      remainder: _settings.remainderResultEnabled,
                     ),
                   ),
                   trailing: const Icon(Icons.chevron_right),

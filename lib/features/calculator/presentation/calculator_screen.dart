@@ -141,10 +141,15 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   @override
   void initState() {
     super.initState();
-    _applyDisplaySettings();
     unawaited(_controller.loadHistory());
     unawaited(_loadEstimateItems());
     unawaited(_loadProductivityRecords());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _applyDisplaySettings();
   }
 
   @override
@@ -169,6 +174,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       improperFractionResultEnabled:
           widget.settings.improperFractionResultEnabled,
       mixedFractionResultEnabled: widget.settings.mixedFractionResultEnabled,
+      remainderResultEnabled: widget.settings.remainderResultEnabled,
+      remainderResultFormatter: AppLocalizations.of(context).remainderText,
     );
   }
 
@@ -312,6 +319,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       improperFractionResultEnabled:
           widget.settings.improperFractionResultEnabled,
       mixedFractionResultEnabled: widget.settings.mixedFractionResultEnabled,
+      remainderResultEnabled: widget.settings.remainderResultEnabled,
+      remainderResultFormatter: AppLocalizations.of(context).remainderText,
     );
     widget.onSettingsChanged?.call(
       widget.settings.copyWith(angleUnit: angleUnit),

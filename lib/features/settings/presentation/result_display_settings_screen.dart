@@ -6,15 +6,19 @@ class ResultDisplaySettingsScreen extends StatefulWidget {
   const ResultDisplaySettingsScreen({
     required this.improperFractionEnabled,
     required this.mixedFractionEnabled,
+    required this.remainderEnabled,
     required this.onImproperFractionChanged,
     required this.onMixedFractionChanged,
+    required this.onRemainderChanged,
     super.key,
   });
 
   final bool improperFractionEnabled;
   final bool mixedFractionEnabled;
+  final bool remainderEnabled;
   final ValueChanged<bool> onImproperFractionChanged;
   final ValueChanged<bool> onMixedFractionChanged;
+  final ValueChanged<bool> onRemainderChanged;
 
   @override
   State<ResultDisplaySettingsScreen> createState() =>
@@ -25,6 +29,7 @@ class _ResultDisplaySettingsScreenState
     extends State<ResultDisplaySettingsScreen> {
   late bool _improperFractionEnabled = widget.improperFractionEnabled;
   late bool _mixedFractionEnabled = widget.mixedFractionEnabled;
+  late bool _remainderEnabled = widget.remainderEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +60,17 @@ class _ResultDisplaySettingsScreenState
                     onChanged: (value) {
                       setState(() => _improperFractionEnabled = value);
                       widget.onImproperFractionChanged(value);
+                    },
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    key: const Key('remainderResultSetting'),
+                    secondary: const Icon(Icons.more_horiz),
+                    title: Text(strings.remainderResult),
+                    value: _remainderEnabled,
+                    onChanged: (value) {
+                      setState(() => _remainderEnabled = value);
+                      widget.onRemainderChanged(value);
                     },
                   ),
                   const Divider(height: 1),
