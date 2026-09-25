@@ -11,7 +11,10 @@ abstract interface class AppSettingsStore {
 }
 
 class PlatformAppSettingsStore implements AppSettingsStore {
+  PlatformAppSettingsStore({this.hasSelectedOccupation});
+
   static const _channel = MethodChannel('jp.instant_estimate/app_settings');
+  final Future<bool> Function()? hasSelectedOccupation;
 
   @override
   Future<AppSettings> load() async {
@@ -28,13 +31,21 @@ class PlatformAppSettingsStore implements AppSettingsStore {
 
     // 旧版で保存したテーマだけがある場合も、その選択を引き継ぐ。
     final legacyTheme = await _channel.invokeMethod<String>('loadThemeMode');
-    return AppSettings(
+    final isExistingUser = await hasSelectedOccupation?.call() ?? false;
+    final settings = AppSettings(
       theme: switch (legacyTheme) {
         'dark' => AppThemeSelection.dark,
         'system' => AppThemeSelection.system,
         _ => AppThemeSelection.light,
       },
+      // A completed legacy onboarding identifies an existing user even when
+      // the old app never wrote the full appSettings JSON.
+      mixedFractionResultEnabled: isExistingUser,
     );
+    // Persist this one-time classification so subsequent launches never need
+    // to infer it again from onboarding state.
+    await save(settings);
+    return settings;
   }
 
   @override

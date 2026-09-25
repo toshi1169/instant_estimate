@@ -25,7 +25,9 @@ Future<void> main() async {
   const profileScreenshotFullAccess = kProfileMode;
   final onboardingPreferences = PlatformOnboardingPreferences();
   final calculationHistoryStore = PlatformCalculationHistoryStore();
-  final appSettingsStore = PlatformAppSettingsStore();
+  final appSettingsStore = PlatformAppSettingsStore(
+    hasSelectedOccupation: onboardingPreferences.hasSelectedOccupation,
+  );
   final estimateItemStore = PlatformEstimateItemStore();
   final productivityRecordStore = PlatformProductivityRecordStore();
   final snapshotFactory = BackupSnapshotFactory(
