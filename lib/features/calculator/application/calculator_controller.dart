@@ -290,6 +290,8 @@ class CalculatorController extends ChangeNotifier {
     this._decimalPlaces = 12,
     this._roundingMode = CalculatorRoundingMode.halfUp,
     this._angleUnit = AngleUnit.degrees,
+    this._improperFractionResultEnabled = true,
+    this._mixedFractionResultEnabled = true,
   });
 
   static const int numberDigitLimit = 20;
@@ -306,6 +308,8 @@ class CalculatorController extends ChangeNotifier {
   int _decimalPlaces;
   CalculatorRoundingMode _roundingMode;
   AngleUnit _angleUnit;
+  bool _improperFractionResultEnabled;
+  bool _mixedFractionResultEnabled;
 
   String _expression = '';
   String _result = '0';
@@ -332,7 +336,9 @@ class CalculatorController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   CalculatorState get state => _state;
   bool get showCaret => _state == CalculatorState.input;
-  bool get canCycleFraction => _canCycleFraction;
+  bool get canCycleFraction =>
+      _canCycleFraction &&
+      (_improperFractionResultEnabled || _mixedFractionResultEnabled);
   bool get isPreviewResult => _isPreviewResult;
   ResultDisplayMode get resultDisplayMode => _resultDisplayMode;
   int? get resultFractionNumerator => _resultFraction?.numerator;
@@ -367,11 +373,24 @@ class CalculatorController extends ChangeNotifier {
     required int decimalPlaces,
     required CalculatorRoundingMode roundingMode,
     AngleUnit? angleUnit,
+    bool? improperFractionResultEnabled,
+    bool? mixedFractionResultEnabled,
   }) {
     final angleChanged = angleUnit != null && angleUnit != _angleUnit;
     _decimalPlaces = decimalPlaces.clamp(1, 12);
     _roundingMode = roundingMode;
     _angleUnit = angleUnit ?? _angleUnit;
+    _improperFractionResultEnabled =
+        improperFractionResultEnabled ?? _improperFractionResultEnabled;
+    _mixedFractionResultEnabled =
+        mixedFractionResultEnabled ?? _mixedFractionResultEnabled;
+    if ((_resultDisplayMode == ResultDisplayMode.improperFraction &&
+            !_improperFractionResultEnabled) ||
+        (_resultDisplayMode == ResultDisplayMode.mixedFraction &&
+            !_mixedFractionResultEnabled)) {
+      _resultDisplayMode = ResultDisplayMode.decimal;
+      _restoreDecimalResult();
+    }
     if (angleChanged && _expression.isNotEmpty) {
       if (_state == CalculatorState.input) {
         _updatePreviewResult();
@@ -396,7 +415,9 @@ class CalculatorController extends ChangeNotifier {
         }
       }
     }
-    if (_state != CalculatorState.error && _rawResult.isNotEmpty) {
+    if (_state != CalculatorState.error &&
+        _rawResult.isNotEmpty &&
+        _resultDisplayMode == ResultDisplayMode.decimal) {
       if (_exactResult != null) {
         _rawResult = _roundedExactPlainNumber(_exactResult!);
         _result = _formatExactNumber(_exactResult!);
@@ -1974,6 +1995,12 @@ class CalculatorController extends ChangeNotifier {
   }
 
   void _cycleResultDisplay() {
+    final enabledModes = <ResultDisplayMode>[
+      ResultDisplayMode.decimal,
+      if (_improperFractionResultEnabled) ResultDisplayMode.improperFraction,
+      if (_mixedFractionResultEnabled) ResultDisplayMode.mixedFraction,
+    ];
+    if (enabledModes.length == 1) return;
     final fraction = _resultFraction;
     if (fraction == null) {
       _pendingNotice = '分数に変換できません';
@@ -1981,18 +2008,23 @@ class CalculatorController extends ChangeNotifier {
       return;
     }
 
+    final currentIndex = enabledModes.indexOf(_resultDisplayMode);
+    _resultDisplayMode = enabledModes[(currentIndex + 1) % enabledModes.length];
     switch (_resultDisplayMode) {
       case ResultDisplayMode.decimal:
-        _resultDisplayMode = ResultDisplayMode.improperFraction;
-        _result = '${fraction.numerator}/${fraction.denominator}';
+        _restoreDecimalResult();
       case ResultDisplayMode.improperFraction:
-        _resultDisplayMode = ResultDisplayMode.mixedFraction;
-        _result = _mixedFractionText(fraction);
+        _result = '${fraction.numerator}/${fraction.denominator}';
       case ResultDisplayMode.mixedFraction:
-        _resultDisplayMode = ResultDisplayMode.decimal;
-        _result = _formatNumber(double.parse(_rawResult));
+        _result = _mixedFractionText(fraction);
     }
     notifyListeners();
+  }
+
+  void _restoreDecimalResult() {
+    _result = _exactResult == null
+        ? _formatNumber(double.parse(_rawResult))
+        : _formatExactNumber(_exactResult!);
   }
 
   String _mixedFractionText(_ResultFraction fraction) {

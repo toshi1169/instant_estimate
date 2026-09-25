@@ -19,6 +19,7 @@ import '../../backup/application/backup_restore_coordinator.dart';
 import '../../backup/presentation/backup_screen.dart';
 import 'button_settings_screen.dart';
 import 'company_profile_editor_screen.dart';
+import 'result_display_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -300,6 +301,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _editResultDisplaySettings(BuildContext context) {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ResultDisplaySettingsScreen(
+          improperFractionEnabled: _settings.improperFractionResultEnabled,
+          mixedFractionEnabled: _settings.mixedFractionResultEnabled,
+          onImproperFractionChanged: (value) =>
+              _update(_settings.copyWith(improperFractionResultEnabled: value)),
+          onMixedFractionChanged: (value) =>
+              _update(_settings.copyWith(mixedFractionResultEnabled: value)),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openDisclaimer(BuildContext context) {
     return Navigator.of(context).push<void>(
       MaterialPageRoute<void>(builder: (_) => const DisclaimerScreen()),
@@ -464,6 +480,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _selectRoundingMode(context),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('resultDisplaySetting'),
+                  leading: const Icon(Icons.calculate_outlined),
+                  title: Text(strings.resultDisplaySettings),
+                  subtitle: Text(
+                    strings.resultDisplaySummary(
+                      improperFraction: _settings.improperFractionResultEnabled,
+                      mixedFraction: _settings.mixedFractionResultEnabled,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _editResultDisplaySettings(context),
                 ),
                 const Divider(height: 1),
                 ListTile(

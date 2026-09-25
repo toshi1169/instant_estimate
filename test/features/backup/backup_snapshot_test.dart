@@ -63,6 +63,45 @@ void main() {
       );
     });
 
+    test('v1.0設定は新しい解表示キーなしで復元し既定ONを補完する', () {
+      final json =
+          jsonDecode(_snapshot(settings: _fullSettings).encode())
+              as Map<String, dynamic>;
+      final settings =
+          (json['data'] as Map<String, dynamic>)['settings']
+              as Map<String, dynamic>;
+      settings.remove('improperFractionResultEnabled');
+      settings.remove('mixedFractionResultEnabled');
+
+      final restored = BackupSnapshot.decode(jsonEncode(json));
+
+      expect(restored.toJson()['backupVersion'], 1);
+      expect(restored.data.settings.improperFractionResultEnabled, isTrue);
+      expect(restored.data.settings.mixedFractionResultEnabled, isTrue);
+    });
+
+    test('解表示設定はbooleanだけを許可してbackupVersion 1で往復する', () {
+      const settings = AppSettings(
+        improperFractionResultEnabled: false,
+        mixedFractionResultEnabled: true,
+      );
+      final snapshot = _snapshot(settings: settings);
+      final restored = BackupSnapshot.decode(snapshot.encode());
+      expect(restored.toJson()['backupVersion'], 1);
+      expect(restored.data.settings.improperFractionResultEnabled, isFalse);
+      expect(restored.data.settings.mixedFractionResultEnabled, isTrue);
+
+      final invalid = jsonDecode(snapshot.encode()) as Map<String, dynamic>;
+      final invalidSettings =
+          (invalid['data'] as Map<String, dynamic>)['settings']
+              as Map<String, dynamic>;
+      invalidSettings['improperFractionResultEnabled'] = 'true';
+      expect(
+        () => BackupSnapshot.decode(jsonEncode(invalid)),
+        throwsA(isA<BackupValidationException>()),
+      );
+    });
+
     test('100見積と多数データを実用的なサイズで生成・検証できる', () {
       final stopwatch = Stopwatch()..start();
       final snapshot = _snapshot(

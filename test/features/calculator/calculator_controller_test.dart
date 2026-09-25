@@ -324,6 +324,92 @@ void main() {
       expect(controller.history.single.result, '1.5');
     });
 
+    test('有効な解の表示候補だけを順番に切り替える', () {
+      for (final configuration in const [
+        (true, true, ['1.5', '3/2', '1 1/2', '1.5']),
+        (true, false, ['1.5', '3/2', '1.5', '3/2']),
+        (false, true, ['1.5', '1 1/2', '1.5', '1 1/2']),
+        (false, false, ['1.5', '1.5', '1.5', '1.5']),
+      ]) {
+        final controller = CalculatorController(
+          improperFractionResultEnabled: configuration.$1,
+          mixedFractionResultEnabled: configuration.$2,
+        );
+        controller.pasteAtCaret('2−1÷2');
+        controller.press('=');
+        expect(controller.result, configuration.$3[0]);
+        expect(
+          controller.canCycleFraction,
+          configuration.$1 || configuration.$2,
+        );
+        controller.press('=');
+        expect(controller.result, configuration.$3[1]);
+        controller.press('a/b');
+        expect(controller.result, configuration.$3[2]);
+        controller.press('=');
+        expect(controller.result, configuration.$3[3]);
+        expect(controller.history, hasLength(1));
+        expect(controller.history.single.improperFractionResult, '3/2');
+        expect(controller.history.single.mixedFractionResult, '1 1/2');
+      }
+    });
+
+    test('表示中の分数形式を無効にすると履歴を変えず小数へ戻る', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('2−1÷2');
+      controller.press('=');
+      controller.press('=');
+      expect(controller.resultDisplayMode, ResultDisplayMode.improperFraction);
+
+      controller.updateDisplaySettings(
+        decimalPlaces: 12,
+        roundingMode: CalculatorRoundingMode.halfUp,
+        improperFractionResultEnabled: false,
+        mixedFractionResultEnabled: true,
+      );
+
+      expect(controller.resultDisplayMode, ResultDisplayMode.decimal);
+      expect(controller.result, '1.5');
+      expect(controller.history, hasLength(1));
+      expect(controller.history.single.improperFractionResult, '3/2');
+    });
+
+    test('両分数表示OFFでも入力中のa/bは分数入力に使える', () {
+      final controller = CalculatorController(
+        improperFractionResultEnabled: false,
+        mixedFractionResultEnabled: false,
+      );
+
+      controller.press('a/b');
+
+      expect(controller.isEditingFraction, isTrue);
+      expect(controller.state, CalculatorState.input);
+    });
+
+    test('負数の分数候補でも設定した表示形式だけを使う', () {
+      final controller = CalculatorController(
+        improperFractionResultEnabled: false,
+        mixedFractionResultEnabled: true,
+      );
+      controller.pasteAtCaret('1÷2−2');
+      controller.press('=');
+      controller.press('=');
+
+      expect(controller.result, '−1 1/2');
+      expect(controller.resultDisplayMode, ResultDisplayMode.mixedFraction);
+    });
+
+    test('見積用文字列は現在表示形式、数量は常にdoubleを維持する', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('2−1÷2');
+      controller.press('=');
+      controller.press('=');
+
+      expect(controller.estimateResultText, '3/2');
+      expect(controller.estimateQuantityValue, 1.5);
+      expect(controller.estimateQuantityValue, isA<double>());
+    });
+
     test('分数化できない解では案内を返す', () {
       final controller = CalculatorController();
       controller.press('2');
