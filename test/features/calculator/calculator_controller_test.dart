@@ -410,6 +410,119 @@ void main() {
       expect(controller.estimateQuantityValue, isA<double>());
     });
 
+    test('非負整数÷正整数だけ正確な余り候補を生成する', () {
+      for (final testCase in const [
+        ('7÷3', '2 余り 1'),
+        ('6÷3', '2 余り 0'),
+        ('2÷3', '0 余り 2'),
+        ('0÷3', '0 余り 0'),
+        ('7÷(1+2)', '2 余り 1'),
+      ]) {
+        final controller = CalculatorController(
+          improperFractionResultEnabled: false,
+          mixedFractionResultEnabled: false,
+          remainderResultEnabled: true,
+        );
+        controller.pasteAtCaret(testCase.$1);
+        controller.press('=');
+        final decimal = controller.result;
+        controller.press('=');
+        expect(controller.result, testCase.$2, reason: testCase.$1);
+        expect(controller.history.single.remainderResult, testCase.$2);
+        expect(controller.history, hasLength(1));
+        controller.press('a/b');
+        expect(controller.result, decimal);
+        expect(controller.history, hasLength(1));
+      }
+    });
+
+    test('負数・小数・整数でない分数・関数は余り候補にしない', () {
+      for (final expression in const [
+        '-7÷3',
+        '7÷-3',
+        '7.0÷3',
+        '7÷1.5',
+        '7÷3+1',
+        '1+7÷3',
+        '7÷3×2',
+      ]) {
+        final controller = CalculatorController(
+          improperFractionResultEnabled: false,
+          mixedFractionResultEnabled: false,
+          remainderResultEnabled: true,
+        );
+        controller.pasteAtCaret(expression);
+        controller.press('=');
+        expect(controller.history.single.remainderResult, isNull);
+        expect(controller.canCycleFraction, isFalse);
+      }
+    });
+
+    test('余りは丸め設定に影響されず見積quantityは元のdoubleを維持する', () {
+      final controller = CalculatorController(
+        decimalPlaces: 1,
+        roundingMode: CalculatorRoundingMode.ceiling,
+        improperFractionResultEnabled: false,
+        mixedFractionResultEnabled: false,
+        remainderResultEnabled: true,
+      );
+      controller.pasteAtCaret('7÷3');
+      controller.press('=');
+      expect(controller.result, '2.4');
+      controller.press('=');
+      expect(controller.result, '2 余り 1');
+      expect(controller.estimateResultText, '2 余り 1');
+      expect(controller.estimateQuantityValue, closeTo(2.333333333333, 1e-12));
+    });
+
+    test('4形式を小数・仮分数・帯分数・余りの順に切り替える', () {
+      final controller = CalculatorController(remainderResultEnabled: true);
+      controller.pasteAtCaret('7÷3');
+      controller.press('=');
+      expect(controller.result, '2.333333333333');
+      controller.press('=');
+      expect(controller.result, '7/3');
+      controller.press('a/b');
+      expect(controller.result, '2 1/3');
+      controller.press('=');
+      expect(controller.result, '2 余り 1');
+      controller.press('=');
+      expect(controller.result, '2.333333333333');
+      expect(controller.history, hasLength(1));
+    });
+
+    test('余り設定OFFでも履歴へ候補を保存する', () {
+      final controller = CalculatorController(
+        improperFractionResultEnabled: false,
+        mixedFractionResultEnabled: false,
+        remainderResultEnabled: false,
+      );
+      controller.pasteAtCaret('7÷3');
+      controller.press('=');
+      expect(controller.canCycleFraction, isFalse);
+      expect(controller.history.single.remainderResult, '2 余り 1');
+    });
+
+    test('百分率の既存挙動を余り表示と混同しない', () {
+      final controller = CalculatorController(remainderResultEnabled: true);
+      controller.pasteAtCaret('50%');
+      controller.press('=');
+      expect(controller.result, '0.5');
+      expect(controller.history.single.remainderResult, isNull);
+    });
+
+    test('20桁整数でもBigIntで余りを正確に求める', () {
+      final controller = CalculatorController(
+        improperFractionResultEnabled: false,
+        mixedFractionResultEnabled: false,
+        remainderResultEnabled: true,
+      );
+      controller.pasteAtCaret('99999999999999999999÷7');
+      controller.press('=');
+      controller.press('=');
+      expect(controller.result, '14285714285714285714 余り 1');
+    });
+
     test('分数化できない解では案内を返す', () {
       final controller = CalculatorController();
       controller.press('2');

@@ -38,6 +38,8 @@ void main() {
     expect(first.improperFractionResultEnabled, isTrue);
     expect(first.mixedFractionResultEnabled, isFalse);
     expect(second.mixedFractionResultEnabled, isFalse);
+    expect(first.remainderResultEnabled, isTrue);
+    expect(second.remainderResultEnabled, isTrue);
     expect(occupationChecks, 1);
   });
 
@@ -60,6 +62,7 @@ void main() {
 
     expect(settings.improperFractionResultEnabled, isTrue);
     expect(settings.mixedFractionResultEnabled, isTrue);
+    expect(settings.remainderResultEnabled, isFalse);
     expect(jsonDecode(stored!)['mixedFractionResultEnabled'], isTrue);
   });
 
@@ -68,6 +71,7 @@ void main() {
       final stored = jsonEncode({
         'improperFractionResultEnabled': values.$1,
         'mixedFractionResultEnabled': values.$2,
+        'remainderResultEnabled': false,
       });
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
@@ -83,6 +87,7 @@ void main() {
 
       expect(settings.improperFractionResultEnabled, values.$1);
       expect(settings.mixedFractionResultEnabled, values.$2);
+      expect(settings.remainderResultEnabled, isFalse);
     }
   });
 }

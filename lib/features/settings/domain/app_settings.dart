@@ -23,9 +23,7 @@ class AppSettings {
     this.roundingMode = CalculatorRoundingMode.halfUp,
     this.improperFractionResultEnabled = true,
     this.mixedFractionResultEnabled = false,
-    // When remainder display is implemented, its new-install default is ON.
-    // Do not persist an unimplemented remainder setting before then; its
-    // legacy missing-key behavior must be decided separately at migration.
+    this.remainderResultEnabled = true,
     this.estimateDecimalPlaces = 2,
     this.estimateRoundingMode = EstimateQuantityRoundingMode.halfUp,
     this.angleUnit = AngleUnit.degrees,
@@ -44,6 +42,7 @@ class AppSettings {
   final CalculatorRoundingMode roundingMode;
   final bool improperFractionResultEnabled;
   final bool mixedFractionResultEnabled;
+  final bool remainderResultEnabled;
   final int estimateDecimalPlaces;
   final EstimateQuantityRoundingMode estimateRoundingMode;
   final AngleUnit angleUnit;
@@ -89,6 +88,7 @@ class AppSettings {
     CalculatorRoundingMode? roundingMode,
     bool? improperFractionResultEnabled,
     bool? mixedFractionResultEnabled,
+    bool? remainderResultEnabled,
     int? estimateDecimalPlaces,
     EstimateQuantityRoundingMode? estimateRoundingMode,
     AngleUnit? angleUnit,
@@ -109,6 +109,8 @@ class AppSettings {
           improperFractionResultEnabled ?? this.improperFractionResultEnabled,
       mixedFractionResultEnabled:
           mixedFractionResultEnabled ?? this.mixedFractionResultEnabled,
+      remainderResultEnabled:
+          remainderResultEnabled ?? this.remainderResultEnabled,
       estimateDecimalPlaces:
           estimateDecimalPlaces ?? this.estimateDecimalPlaces,
       estimateRoundingMode: estimateRoundingMode ?? this.estimateRoundingMode,
@@ -135,6 +137,7 @@ class AppSettings {
     'roundingMode': roundingMode.name,
     'improperFractionResultEnabled': improperFractionResultEnabled,
     'mixedFractionResultEnabled': mixedFractionResultEnabled,
+    'remainderResultEnabled': remainderResultEnabled,
     'estimateDecimalPlaces': estimateDecimalPlaces,
     'estimateRoundingMode': estimateRoundingMode.name,
     'angleUnit': angleUnit.name,
@@ -181,6 +184,11 @@ class AppSettings {
           // result-display preferences existed. New installs use the
           // constructor default above instead.
           : true,
+      // Existing settings and v1 backups predate remainder display. Keep it
+      // off when the key is absent; the constructor default is for new users.
+      remainderResultEnabled: json['remainderResultEnabled'] is bool
+          ? json['remainderResultEnabled']! as bool
+          : false,
       estimateDecimalPlaces: estimatePlaces is int
           ? estimatePlaces.clamp(1, 5)
           : 2,

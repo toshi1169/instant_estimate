@@ -10,7 +10,10 @@ import '../../settings/domain/app_settings.dart';
 
 enum CalculatorState { input, result, error }
 
-enum ResultDisplayMode { decimal, improperFraction, mixedFraction }
+enum ResultDisplayMode { decimal, improperFraction, mixedFraction, remainder }
+
+typedef RemainderResultFormatter =
+    String Function(String quotient, String remainder);
 
 class CalculationHistoryEntry {
   const CalculationHistoryEntry({
@@ -20,6 +23,7 @@ class CalculationHistoryEntry {
     required this.createdAt,
     this.improperFractionResult,
     this.mixedFractionResult,
+    this.remainderResult,
   });
 
   final String expression;
@@ -28,6 +32,7 @@ class CalculationHistoryEntry {
   final DateTime createdAt;
   final String? improperFractionResult;
   final String? mixedFractionResult;
+  final String? remainderResult;
 }
 
 class _ExactDecimal {
@@ -100,6 +105,13 @@ class _ExactRational {
   _ExactRational operator -() => _ExactRational(-numerator, denominator);
 
   double toDouble() => numerator.toDouble() / denominator.toDouble();
+}
+
+class _RemainderResult {
+  const _RemainderResult({required this.quotient, required this.remainder});
+
+  final BigInt quotient;
+  final BigInt remainder;
 }
 
 class _ExactExpressionParser {
@@ -292,7 +304,11 @@ class CalculatorController extends ChangeNotifier {
     this._angleUnit = AngleUnit.degrees,
     this._improperFractionResultEnabled = true,
     this._mixedFractionResultEnabled = true,
-  });
+    this._remainderResultEnabled = false,
+    RemainderResultFormatter? remainderResultFormatter,
+  }) : _remainderResultFormatter =
+           remainderResultFormatter ??
+           ((quotient, remainder) => '$quotient 余り $remainder');
 
   static const int numberDigitLimit = 20;
   static const int fractionDigitLimit = numberDigitLimit;
@@ -310,16 +326,19 @@ class CalculatorController extends ChangeNotifier {
   AngleUnit _angleUnit;
   bool _improperFractionResultEnabled;
   bool _mixedFractionResultEnabled;
+  bool _remainderResultEnabled;
+  RemainderResultFormatter _remainderResultFormatter;
 
   String _expression = '';
   String _result = '0';
   String _rawResult = '0';
+  double? _quantityResult = 0;
   String? _errorMessage;
   CalculatorState _state = CalculatorState.input;
-  bool _canCycleFraction = false;
   bool _isPreviewResult = false;
   ResultDisplayMode _resultDisplayMode = ResultDisplayMode.decimal;
   _ResultFraction? _resultFraction;
+  _RemainderResult? _remainderResult;
   _ExactRational? _exactResult;
   String? _pendingNotice;
   int _caretPosition = 0;
@@ -336,9 +355,7 @@ class CalculatorController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   CalculatorState get state => _state;
   bool get showCaret => _state == CalculatorState.input;
-  bool get canCycleFraction =>
-      _canCycleFraction &&
-      (_improperFractionResultEnabled || _mixedFractionResultEnabled);
+  bool get canCycleFraction => _availableResultModes().length > 1;
   bool get isPreviewResult => _isPreviewResult;
   ResultDisplayMode get resultDisplayMode => _resultDisplayMode;
   int? get resultFractionNumerator => _resultFraction?.numerator;
@@ -375,6 +392,8 @@ class CalculatorController extends ChangeNotifier {
     AngleUnit? angleUnit,
     bool? improperFractionResultEnabled,
     bool? mixedFractionResultEnabled,
+    bool? remainderResultEnabled,
+    RemainderResultFormatter? remainderResultFormatter,
   }) {
     final angleChanged = angleUnit != null && angleUnit != _angleUnit;
     _decimalPlaces = decimalPlaces.clamp(1, 12);
@@ -384,10 +403,15 @@ class CalculatorController extends ChangeNotifier {
         improperFractionResultEnabled ?? _improperFractionResultEnabled;
     _mixedFractionResultEnabled =
         mixedFractionResultEnabled ?? _mixedFractionResultEnabled;
+    _remainderResultEnabled = remainderResultEnabled ?? _remainderResultEnabled;
+    _remainderResultFormatter =
+        remainderResultFormatter ?? _remainderResultFormatter;
     if ((_resultDisplayMode == ResultDisplayMode.improperFraction &&
             !_improperFractionResultEnabled) ||
         (_resultDisplayMode == ResultDisplayMode.mixedFraction &&
-            !_mixedFractionResultEnabled)) {
+            !_mixedFractionResultEnabled) ||
+        (_resultDisplayMode == ResultDisplayMode.remainder &&
+            (!_remainderResultEnabled || _remainderResult == null))) {
       _resultDisplayMode = ResultDisplayMode.decimal;
       _restoreDecimalResult();
     }
@@ -400,6 +424,7 @@ class CalculatorController extends ChangeNotifier {
         try {
           final evaluation = _evaluateCurrentExpression();
           final value = evaluation.approximate;
+          _quantityResult = value;
           _exactResult = evaluation.exact;
           _rawResult = _exactResult == null
               ? _rawNumber(value)
@@ -408,7 +433,7 @@ class CalculatorController extends ChangeNotifier {
               ? _formatNumber(value)
               : _formatExactNumber(_exactResult!);
           _resultFraction = _findSimpleFraction(value);
-          _canCycleFraction = _resultFraction != null;
+          _remainderResult = _findRemainderResult(_expressionForCalculation());
           _resultDisplayMode = ResultDisplayMode.decimal;
         } catch (_) {
           // 既に確定済みの表示は、再計算できない場合も維持する。
@@ -425,6 +450,8 @@ class CalculatorController extends ChangeNotifier {
         final value = double.tryParse(_rawResult);
         if (value != null && value.isFinite) _result = _formatNumber(value);
       }
+    } else if (_resultDisplayMode == ResultDisplayMode.remainder) {
+      _result = _remainderResultText ?? _result;
     }
     notifyListeners();
   }
@@ -442,7 +469,7 @@ class CalculatorController extends ChangeNotifier {
       _state == CalculatorState.error ? '' : _result;
   double? get estimateQuantityValue {
     if (_state == CalculatorState.error) return null;
-    final value = double.tryParse(_rawResult);
+    final value = _quantityResult;
     return value != null && value.isFinite ? value : null;
   }
 
@@ -465,6 +492,7 @@ class CalculatorController extends ChangeNotifier {
               decimalResult: entry.decimalResult,
               improperFractionResult: entry.improperFractionResult,
               mixedFractionResult: entry.mixedFractionResult,
+              remainderResult: entry.remainderResult,
               createdAt: entry.createdAt,
             ),
           ),
@@ -497,6 +525,7 @@ class CalculatorController extends ChangeNotifier {
             decimalResult: entry.decimalResult,
             improperFractionResult: entry.improperFractionResult,
             mixedFractionResult: entry.mixedFractionResult,
+            remainderResult: entry.remainderResult,
             createdAt: entry.createdAt,
           ),
         ),
@@ -517,6 +546,7 @@ class CalculatorController extends ChangeNotifier {
             decimalResult: entry.decimalResult,
             improperFractionResult: entry.improperFractionResult,
             mixedFractionResult: entry.mixedFractionResult,
+            remainderResult: entry.remainderResult,
             createdAt: entry.createdAt,
           ),
         )
@@ -741,7 +771,6 @@ class CalculatorController extends ChangeNotifier {
     }
     _insertAtCaret(insertion);
     _state = CalculatorState.input;
-    _canCycleFraction = false;
     _updatePreviewResult();
     notifyListeners();
     return null;
@@ -761,7 +790,6 @@ class CalculatorController extends ChangeNotifier {
     _activeFractionCaretOffset = 0;
     _caretPosition = _expression.indexOf(marker);
     _state = CalculatorState.input;
-    _canCycleFraction = false;
     _result = '0';
     _isPreviewResult = false;
     notifyListeners();
@@ -778,6 +806,7 @@ class CalculatorController extends ChangeNotifier {
     try {
       final evaluation = _evaluateCurrentExpression();
       final value = evaluation.approximate;
+      _quantityResult = value;
       _exactResult = evaluation.exact;
       _rawResult = evaluation.exact == null
           ? _rawNumber(value)
@@ -789,7 +818,7 @@ class CalculatorController extends ChangeNotifier {
       _isPreviewResult = false;
       _errorMessage = null;
       _resultFraction = _findSimpleFraction(value);
-      _canCycleFraction = _resultFraction != null;
+      _remainderResult = _findRemainderResult(_expressionForCalculation());
       _resultDisplayMode = ResultDisplayMode.decimal;
       _caretPosition = _expression.length;
       _activeFractionMarker = null;
@@ -806,6 +835,7 @@ class CalculatorController extends ChangeNotifier {
           mixedFractionResult: _resultFraction == null
               ? null
               : _mixedFractionText(_resultFraction!),
+          remainderResult: _remainderResultText,
           createdAt: DateTime.now(),
         ),
       );
@@ -823,7 +853,6 @@ class CalculatorController extends ChangeNotifier {
     if (_state == CalculatorState.error) return;
     if (_state == CalculatorState.result) {
       _state = CalculatorState.input;
-      _canCycleFraction = false;
     }
 
     var bestRawOffset = 0;
@@ -847,7 +876,6 @@ class CalculatorController extends ChangeNotifier {
     if (_state == CalculatorState.error) return;
     if (_state == CalculatorState.result) {
       _state = CalculatorState.input;
-      _canCycleFraction = false;
     }
     _caretPosition = rawOffset.clamp(0, _expression.length);
     _activeFractionMarker = null;
@@ -863,7 +891,6 @@ class CalculatorController extends ChangeNotifier {
   }) {
     if (!_fractions.containsKey(marker)) return;
     _state = CalculatorState.input;
-    _canCycleFraction = false;
     _activeFractionMarker = marker;
     _activeFractionField = field;
     final value = _fractionFieldValue(_fractions[marker]!, field);
@@ -880,7 +907,6 @@ class CalculatorController extends ChangeNotifier {
     if (markerIndex < 0) return;
     if (_state == CalculatorState.result) {
       _state = CalculatorState.input;
-      _canCycleFraction = false;
     }
     _activeFractionMarker = null;
     _activeFractionField = null;
@@ -894,7 +920,6 @@ class CalculatorController extends ChangeNotifier {
     if (markerIndex < 0) return;
     if (_state == CalculatorState.result) {
       _state = CalculatorState.input;
-      _canCycleFraction = false;
     }
     _activeFractionMarker = null;
     _activeFractionField = null;
@@ -974,7 +999,6 @@ class CalculatorController extends ChangeNotifier {
           '${_expression.substring(0, _caretPosition - functionToken.length)}'
           '${_expression.substring(_caretPosition)}';
       _caretPosition -= functionToken.length;
-      _canCycleFraction = false;
       _updatePreviewResult();
       notifyListeners();
       return;
@@ -988,7 +1012,6 @@ class CalculatorController extends ChangeNotifier {
       _fractions.remove(removedCharacter);
     }
     _caretPosition--;
-    _canCycleFraction = false;
     _updatePreviewResult();
     notifyListeners();
   }
@@ -1026,7 +1049,6 @@ class CalculatorController extends ChangeNotifier {
     _activeFractionField = null;
     _activeFractionCaretOffset = 0;
     _updatePreviewResult();
-    _canCycleFraction = false;
     notifyListeners();
   }
 
@@ -1034,12 +1056,14 @@ class CalculatorController extends ChangeNotifier {
     _expression = '';
     _result = '';
     _rawResult = '';
+    _quantityResult = null;
     _errorMessage = null;
     _state = CalculatorState.input;
-    _canCycleFraction = false;
     _isPreviewResult = false;
     _resultDisplayMode = ResultDisplayMode.decimal;
     _resultFraction = null;
+    _remainderResult = null;
+    _remainderResult = null;
     _exactResult = null;
     _caretPosition = 0;
     _fractions.clear();
@@ -1080,7 +1104,6 @@ class CalculatorController extends ChangeNotifier {
     _rawResult = '0';
     _errorMessage = null;
     _state = CalculatorState.input;
-    _canCycleFraction = false;
     _isPreviewResult = false;
     _resultDisplayMode = ResultDisplayMode.decimal;
     _resultFraction = null;
@@ -1121,7 +1144,6 @@ class CalculatorController extends ChangeNotifier {
       clear();
     }
     _insertAtCaret(sanitized);
-    _canCycleFraction = false;
     _updatePreviewResult();
     notifyListeners();
     return true;
@@ -1226,7 +1248,6 @@ class CalculatorController extends ChangeNotifier {
     } else if (previous != '.') {
       _insertAtCaret(operator);
     }
-    _canCycleFraction = false;
     notifyListeners();
   }
 
@@ -1304,7 +1325,6 @@ class CalculatorController extends ChangeNotifier {
     if (_state == CalculatorState.result || _state == CalculatorState.error) {
       clear();
     }
-    _canCycleFraction = false;
   }
 
   void _insertAtCaret(String value) {
@@ -1839,7 +1859,6 @@ class CalculatorController extends ChangeNotifier {
     _errorMessage = message;
     _result = '';
     _state = CalculatorState.error;
-    _canCycleFraction = false;
     _isPreviewResult = false;
     _resultDisplayMode = ResultDisplayMode.decimal;
     _resultFraction = null;
@@ -1862,6 +1881,7 @@ class CalculatorController extends ChangeNotifier {
     try {
       final evaluation = _evaluateCurrentExpression();
       _exactResult = evaluation.exact;
+      _quantityResult = evaluation.approximate;
       _result = evaluation.exact == null
           ? _formatNumber(evaluation.approximate)
           : _formatExactNumber(evaluation.exact!);
@@ -1871,6 +1891,7 @@ class CalculatorController extends ChangeNotifier {
       _isPreviewResult = true;
     } catch (_) {
       _result = '0';
+      _quantityResult = null;
       _exactResult = null;
       _isPreviewResult = false;
     }
@@ -1995,16 +2016,13 @@ class CalculatorController extends ChangeNotifier {
   }
 
   void _cycleResultDisplay() {
-    final enabledModes = <ResultDisplayMode>[
-      ResultDisplayMode.decimal,
-      if (_improperFractionResultEnabled) ResultDisplayMode.improperFraction,
-      if (_mixedFractionResultEnabled) ResultDisplayMode.mixedFraction,
-    ];
-    if (enabledModes.length == 1) return;
-    final fraction = _resultFraction;
-    if (fraction == null) {
-      _pendingNotice = '分数に変換できません';
-      notifyListeners();
+    final enabledModes = _availableResultModes();
+    if (enabledModes.length == 1) {
+      if (_resultFraction == null &&
+          (_improperFractionResultEnabled || _mixedFractionResultEnabled)) {
+        _pendingNotice = '分数に変換できません';
+        notifyListeners();
+      }
       return;
     }
 
@@ -2014,11 +2032,80 @@ class CalculatorController extends ChangeNotifier {
       case ResultDisplayMode.decimal:
         _restoreDecimalResult();
       case ResultDisplayMode.improperFraction:
+        final fraction = _resultFraction!;
         _result = '${fraction.numerator}/${fraction.denominator}';
       case ResultDisplayMode.mixedFraction:
-        _result = _mixedFractionText(fraction);
+        _result = _mixedFractionText(_resultFraction!);
+      case ResultDisplayMode.remainder:
+        _result = _remainderResultText!;
     }
     notifyListeners();
+  }
+
+  List<ResultDisplayMode> _availableResultModes() => <ResultDisplayMode>[
+    ResultDisplayMode.decimal,
+    if (_resultFraction != null && _improperFractionResultEnabled)
+      ResultDisplayMode.improperFraction,
+    if (_resultFraction != null && _mixedFractionResultEnabled)
+      ResultDisplayMode.mixedFraction,
+    if (_remainderResult != null && _remainderResultEnabled)
+      ResultDisplayMode.remainder,
+  ];
+
+  String? get _remainderResultText {
+    final value = _remainderResult;
+    if (value == null) return null;
+    return _remainderResultFormatter(
+      value.quotient.toString(),
+      value.remainder.toString(),
+    );
+  }
+
+  _RemainderResult? _findRemainderResult(String source) {
+    final expression = source
+        .replaceAll('×', '*')
+        .replaceAll('÷', '/')
+        .replaceAll('−', '-')
+        .replaceAll(RegExp(r'\s+'), '');
+    if (expression.contains('.') ||
+        RegExp(r'[^0-9+\-*/()]').hasMatch(expression)) {
+      return null;
+    }
+    var depth = 0;
+    int? divisionIndex;
+    for (var index = 0; index < expression.length; index++) {
+      final character = expression[index];
+      if (character == '(') depth++;
+      if (character == ')') depth--;
+      if (depth == 0 && index > 0 && (character == '+' || character == '-')) {
+        return null;
+      }
+      if (character == '/' && depth == 0) {
+        if (divisionIndex != null) return null;
+        divisionIndex = index;
+      } else if (divisionIndex != null && depth == 0 && character == '*') {
+        return null;
+      }
+    }
+    if (divisionIndex == null) return null;
+    final dividend = _ExactExpressionParser.tryEvaluate(
+      expression.substring(0, divisionIndex),
+    );
+    final divisor = _ExactExpressionParser.tryEvaluate(
+      expression.substring(divisionIndex + 1),
+    );
+    if (dividend == null ||
+        divisor == null ||
+        dividend.denominator != BigInt.one ||
+        divisor.denominator != BigInt.one ||
+        dividend.numerator.isNegative ||
+        divisor.numerator <= BigInt.zero) {
+      return null;
+    }
+    return _RemainderResult(
+      quotient: dividend.numerator ~/ divisor.numerator,
+      remainder: dividend.numerator.remainder(divisor.numerator),
+    );
   }
 
   void _restoreDecimalResult() {

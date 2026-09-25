@@ -41,6 +41,7 @@ class PlatformAppSettingsStore implements AppSettingsStore {
       // A completed legacy onboarding identifies an existing user even when
       // the old app never wrote the full appSettings JSON.
       mixedFractionResultEnabled: isExistingUser,
+      remainderResultEnabled: !isExistingUser,
     );
     // Persist this one-time classification so subsequent launches never need
     // to infer it again from onboarding state.

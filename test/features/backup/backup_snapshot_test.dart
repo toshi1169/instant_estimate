@@ -72,24 +72,28 @@ void main() {
               as Map<String, dynamic>;
       settings.remove('improperFractionResultEnabled');
       settings.remove('mixedFractionResultEnabled');
+      settings.remove('remainderResultEnabled');
 
       final restored = BackupSnapshot.decode(jsonEncode(json));
 
       expect(restored.toJson()['backupVersion'], 1);
       expect(restored.data.settings.improperFractionResultEnabled, isTrue);
       expect(restored.data.settings.mixedFractionResultEnabled, isTrue);
+      expect(restored.data.settings.remainderResultEnabled, isFalse);
     });
 
     test('解表示設定はbooleanだけを許可してbackupVersion 1で往復する', () {
       const settings = AppSettings(
         improperFractionResultEnabled: false,
         mixedFractionResultEnabled: true,
+        remainderResultEnabled: true,
       );
       final snapshot = _snapshot(settings: settings);
       final restored = BackupSnapshot.decode(snapshot.encode());
       expect(restored.toJson()['backupVersion'], 1);
       expect(restored.data.settings.improperFractionResultEnabled, isFalse);
       expect(restored.data.settings.mixedFractionResultEnabled, isTrue);
+      expect(restored.data.settings.remainderResultEnabled, isTrue);
 
       final invalid = jsonDecode(snapshot.encode()) as Map<String, dynamic>;
       final invalidSettings =
@@ -98,6 +102,31 @@ void main() {
       invalidSettings['improperFractionResultEnabled'] = 'true';
       expect(
         () => BackupSnapshot.decode(jsonEncode(invalid)),
+        throwsA(isA<BackupValidationException>()),
+      );
+      invalidSettings['improperFractionResultEnabled'] = false;
+      invalidSettings['remainderResultEnabled'] = 'true';
+      expect(
+        () => BackupSnapshot.decode(jsonEncode(invalid)),
+        throwsA(isA<BackupValidationException>()),
+      );
+    });
+
+    test('旧履歴は余りキー欠損を許可し、存在時は文字列だけを許可する', () {
+      final json =
+          jsonDecode(_snapshot(history: [_history(1)]).encode())
+              as Map<String, dynamic>;
+      final history =
+          ((json['data'] as Map<String, dynamic>)['calculatorHistory'] as List)
+                  .single
+              as Map<String, dynamic>;
+      history.remove('remainderResult');
+      final restored = BackupSnapshot.decode(jsonEncode(json));
+      expect(restored.data.calculatorHistory.single.remainderResult, isNull);
+
+      history['remainderResult'] = 1;
+      expect(
+        () => BackupSnapshot.decode(jsonEncode(json)),
         throwsA(isA<BackupValidationException>()),
       );
     });
