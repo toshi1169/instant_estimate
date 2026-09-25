@@ -132,6 +132,20 @@ void main() {
     expect(restored.roundingMode, CalculatorRoundingMode.ceiling);
     expect(restored.estimateDecimalPlaces, 2);
     expect(restored.estimateRoundingMode, EstimateQuantityRoundingMode.halfUp);
+    expect(restored.improperFractionResultEnabled, isTrue);
+    expect(restored.mixedFractionResultEnabled, isTrue);
+  });
+
+  test('解の表示設定を保存・復元できる', () {
+    const settings = AppSettings(
+      improperFractionResultEnabled: false,
+      mixedFractionResultEnabled: true,
+    );
+
+    final restored = AppSettings.fromJson(settings.toJson());
+
+    expect(restored.improperFractionResultEnabled, isFalse);
+    expect(restored.mixedFractionResultEnabled, isTrue);
   });
 
   test('関数電卓設定と見積数量設定は独立して丸める', () {

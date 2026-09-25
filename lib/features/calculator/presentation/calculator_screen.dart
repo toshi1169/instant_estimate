@@ -166,6 +166,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       decimalPlaces: widget.settings.decimalPlaces,
       roundingMode: widget.settings.roundingMode,
       angleUnit: widget.settings.angleUnit,
+      improperFractionResultEnabled:
+          widget.settings.improperFractionResultEnabled,
+      mixedFractionResultEnabled: widget.settings.mixedFractionResultEnabled,
     );
   }
 
@@ -306,6 +309,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       decimalPlaces: widget.settings.decimalPlaces,
       roundingMode: widget.settings.roundingMode,
       angleUnit: angleUnit,
+      improperFractionResultEnabled:
+          widget.settings.improperFractionResultEnabled,
+      mixedFractionResultEnabled: widget.settings.mixedFractionResultEnabled,
     );
     widget.onSettingsChanged?.call(
       widget.settings.copyWith(angleUnit: angleUnit),

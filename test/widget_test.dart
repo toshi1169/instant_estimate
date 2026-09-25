@@ -715,6 +715,8 @@ void main() {
       const Key('advertisingPrivacyOptionsSetting'),
     );
     await tester.scrollUntilVisible(privacySetting, 250);
+    await tester.ensureVisible(privacySetting);
+    await tester.pumpAndSettle();
     expect(find.text('広告のプライバシー設定'), findsOneWidget);
 
     await tester.tap(privacySetting);

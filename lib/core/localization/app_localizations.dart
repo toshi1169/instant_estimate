@@ -3086,6 +3086,68 @@ class AppLocalizations {
     simplifiedChinese: '舍入方式',
     traditionalChinese: '捨入方式',
   );
+  String get resultDisplaySettings => _pick(
+    japanese: '解の表示',
+    english: 'Result display',
+    simplifiedChinese: '结果显示',
+    traditionalChinese: '結果顯示',
+    vietnamese: 'Hiển thị kết quả',
+    indonesian: 'Tampilan hasil',
+    filipino: 'Pagpapakita ng resulta',
+    myanmar: 'အဖြေပြသမှု',
+  );
+  String get decimalResult => _pick(
+    japanese: '小数',
+    english: 'Decimal',
+    simplifiedChinese: '小数',
+    traditionalChinese: '小數',
+    vietnamese: 'Số thập phân',
+    indonesian: 'Desimal',
+    filipino: 'Desimal',
+    myanmar: 'ဒဿမကိန်း',
+  );
+  String get alwaysEnabled => _pick(
+    japanese: '常に有効',
+    english: 'Always enabled',
+    simplifiedChinese: '始终启用',
+    traditionalChinese: '永遠啟用',
+    vietnamese: 'Luôn bật',
+    indonesian: 'Selalu aktif',
+    filipino: 'Palaging naka-enable',
+    myanmar: 'အမြဲဖွင့်ထားသည်',
+  );
+  String get improperFractionResult => _pick(
+    japanese: '仮分数',
+    english: 'Improper fraction',
+    simplifiedChinese: '假分数',
+    traditionalChinese: '假分數',
+    vietnamese: 'Phân số không chính quy',
+    indonesian: 'Pecahan tidak wajar',
+    filipino: 'Improper fraction',
+    myanmar: 'မလျော်ကန်သောအပိုင်းကိန်း',
+  );
+  String get mixedFractionResult => _pick(
+    japanese: '帯分数',
+    english: 'Mixed fraction',
+    simplifiedChinese: '带分数',
+    traditionalChinese: '帶分數',
+    vietnamese: 'Hỗn số',
+    indonesian: 'Pecahan campuran',
+    filipino: 'Mixed fraction',
+    myanmar: 'ကိန်းရော',
+  );
+  String resultDisplaySummary({
+    required bool improperFraction,
+    required bool mixedFraction,
+  }) {
+    if (!improperFraction && !mixedFraction) return decimalResult;
+    return [
+      decimalResult,
+      if (improperFraction) improperFractionResult,
+      if (mixedFraction) mixedFractionResult,
+    ].join(' / ');
+  }
+
   String get instantEstimateSettings => _pick(
     japanese: 'インスタント見積もり用設定',
     english: 'Instant Estimate settings',

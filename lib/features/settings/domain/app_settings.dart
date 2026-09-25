@@ -21,6 +21,8 @@ class AppSettings {
     this.theme = AppThemeSelection.light,
     this.decimalPlaces = 2,
     this.roundingMode = CalculatorRoundingMode.halfUp,
+    this.improperFractionResultEnabled = true,
+    this.mixedFractionResultEnabled = true,
     this.estimateDecimalPlaces = 2,
     this.estimateRoundingMode = EstimateQuantityRoundingMode.halfUp,
     this.angleUnit = AngleUnit.degrees,
@@ -37,6 +39,8 @@ class AppSettings {
   final AppThemeSelection theme;
   final int decimalPlaces;
   final CalculatorRoundingMode roundingMode;
+  final bool improperFractionResultEnabled;
+  final bool mixedFractionResultEnabled;
   final int estimateDecimalPlaces;
   final EstimateQuantityRoundingMode estimateRoundingMode;
   final AngleUnit angleUnit;
@@ -80,6 +84,8 @@ class AppSettings {
     AppThemeSelection? theme,
     int? decimalPlaces,
     CalculatorRoundingMode? roundingMode,
+    bool? improperFractionResultEnabled,
+    bool? mixedFractionResultEnabled,
     int? estimateDecimalPlaces,
     EstimateQuantityRoundingMode? estimateRoundingMode,
     AngleUnit? angleUnit,
@@ -96,6 +102,10 @@ class AppSettings {
       theme: theme ?? this.theme,
       decimalPlaces: decimalPlaces ?? this.decimalPlaces,
       roundingMode: roundingMode ?? this.roundingMode,
+      improperFractionResultEnabled:
+          improperFractionResultEnabled ?? this.improperFractionResultEnabled,
+      mixedFractionResultEnabled:
+          mixedFractionResultEnabled ?? this.mixedFractionResultEnabled,
       estimateDecimalPlaces:
           estimateDecimalPlaces ?? this.estimateDecimalPlaces,
       estimateRoundingMode: estimateRoundingMode ?? this.estimateRoundingMode,
@@ -120,6 +130,8 @@ class AppSettings {
     'theme': theme.name,
     'decimalPlaces': decimalPlaces,
     'roundingMode': roundingMode.name,
+    'improperFractionResultEnabled': improperFractionResultEnabled,
+    'mixedFractionResultEnabled': mixedFractionResultEnabled,
     'estimateDecimalPlaces': estimateDecimalPlaces,
     'estimateRoundingMode': estimateRoundingMode.name,
     'angleUnit': angleUnit.name,
@@ -156,6 +168,13 @@ class AppSettings {
         json['roundingMode'],
         CalculatorRoundingMode.halfUp,
       ),
+      improperFractionResultEnabled:
+          json['improperFractionResultEnabled'] is bool
+          ? json['improperFractionResultEnabled']! as bool
+          : true,
+      mixedFractionResultEnabled: json['mixedFractionResultEnabled'] is bool
+          ? json['mixedFractionResultEnabled']! as bool
+          : true,
       estimateDecimalPlaces: estimatePlaces is int
           ? estimatePlaces.clamp(1, 5)
           : 2,

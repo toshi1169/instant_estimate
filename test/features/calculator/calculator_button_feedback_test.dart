@@ -154,6 +154,37 @@ void main() {
     expect(background('a/b'), isNot(AppColors.fractionToggle));
     expect(background('='), isNot(AppColors.fractionToggle));
   });
+
+  testWidgets('両分数表示OFFではa/bと＝をオレンジにしない', (tester) async {
+    _setPhoneSize(tester);
+    final controller = CalculatorController(
+      improperFractionResultEnabled: false,
+      mixedFractionResultEnabled: false,
+    );
+    controller.pasteAtCaret('2−1÷2');
+    controller.press('=');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CalculatorScreen(
+          controller: controller,
+          settings: const AppSettings(
+            improperFractionResultEnabled: false,
+            mixedFractionResultEnabled: false,
+          ),
+        ),
+      ),
+    );
+
+    Color? background(String label) => tester
+        .widget<FilledButton>(find.byKey(Key('calculatorKey$label')))
+        .style
+        ?.backgroundColor
+        ?.resolve(<WidgetState>{});
+
+    expect(controller.canCycleFraction, isFalse);
+    expect(background('a/b'), isNot(AppColors.fractionToggle));
+    expect(background('='), isNot(AppColors.fractionToggle));
+  });
 }
 
 void _setPhoneSize(WidgetTester tester) {

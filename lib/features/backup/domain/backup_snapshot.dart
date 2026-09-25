@@ -196,22 +196,27 @@ class _BackupV1Validator {
   }
 
   void _validateSettings(Map<String, Object?> json, String path) {
-    _exactKeys(json, const {
-      'language',
-      'theme',
-      'decimalPlaces',
-      'roundingMode',
-      'estimateDecimalPlaces',
-      'estimateRoundingMode',
-      'angleUnit',
-      'historySortOrder',
-      'confirmHistoryDeletion',
-      'calculatorTapSoundEnabled',
-      'calculatorHapticsEnabled',
-      'customTransportVehicles',
-      'customDensityMaterials',
-      'companyProfile',
-    }, path);
+    _keysWithOptional(
+      json,
+      const {
+        'language',
+        'theme',
+        'decimalPlaces',
+        'roundingMode',
+        'estimateDecimalPlaces',
+        'estimateRoundingMode',
+        'angleUnit',
+        'historySortOrder',
+        'confirmHistoryDeletion',
+        'calculatorTapSoundEnabled',
+        'calculatorHapticsEnabled',
+        'customTransportVehicles',
+        'customDensityMaterials',
+        'companyProfile',
+      },
+      const {'improperFractionResultEnabled', 'mixedFractionResultEnabled'},
+      path,
+    );
     _enumName(json, 'language', path, const {
       'japanese',
       'english',
@@ -239,6 +244,12 @@ class _BackupV1Validator {
     _boolean(json, 'confirmHistoryDeletion', path);
     _boolean(json, 'calculatorTapSoundEnabled', path);
     _boolean(json, 'calculatorHapticsEnabled', path);
+    if (json.containsKey('improperFractionResultEnabled')) {
+      _boolean(json, 'improperFractionResultEnabled', path);
+    }
+    if (json.containsKey('mixedFractionResultEnabled')) {
+      _boolean(json, 'mixedFractionResultEnabled', path);
+    }
 
     final vehicleIds = <String>{};
     final vehicles = _list(json, 'customTransportVehicles', path);
@@ -572,6 +583,18 @@ class _BackupV1Validator {
   void _exactKeys(Map<String, Object?> map, Set<String> expected, String path) {
     final missing = expected.difference(map.keys.toSet());
     final unknown = map.keys.toSet().difference(expected);
+    if (missing.isNotEmpty) _fail(path, 'missing keys: ${missing.join(', ')}');
+    if (unknown.isNotEmpty) _fail(path, 'unknown keys: ${unknown.join(', ')}');
+  }
+
+  void _keysWithOptional(
+    Map<String, Object?> map,
+    Set<String> required,
+    Set<String> optional,
+    String path,
+  ) {
+    final missing = required.difference(map.keys.toSet());
+    final unknown = map.keys.toSet().difference(required.union(optional));
     if (missing.isNotEmpty) _fail(path, 'missing keys: ${missing.join(', ')}');
     if (unknown.isNotEmpty) _fail(path, 'unknown keys: ${unknown.join(', ')}');
   }
