@@ -36,12 +36,10 @@ void main() {
             find.byKey(const Key('mixedFractionResultSetting')),
           )
           .value,
-      isTrue,
+      isFalse,
     );
 
     await tester.tap(find.byKey(const Key('improperFractionResultSetting')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('mixedFractionResultSetting')));
     await tester.pump();
     expect(settings.improperFractionResultEnabled, isFalse);
     expect(settings.mixedFractionResultEnabled, isFalse);

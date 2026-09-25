@@ -22,7 +22,10 @@ class AppSettings {
     this.decimalPlaces = 2,
     this.roundingMode = CalculatorRoundingMode.halfUp,
     this.improperFractionResultEnabled = true,
-    this.mixedFractionResultEnabled = true,
+    this.mixedFractionResultEnabled = false,
+    // When remainder display is implemented, its new-install default is ON.
+    // Do not persist an unimplemented remainder setting before then; its
+    // legacy missing-key behavior must be decided separately at migration.
     this.estimateDecimalPlaces = 2,
     this.estimateRoundingMode = EstimateQuantityRoundingMode.halfUp,
     this.angleUnit = AngleUnit.degrees,
@@ -174,6 +177,9 @@ class AppSettings {
           : true,
       mixedFractionResultEnabled: json['mixedFractionResultEnabled'] is bool
           ? json['mixedFractionResultEnabled']! as bool
+          // Compatibility default for settings and backups created before
+          // result-display preferences existed. New installs use the
+          // constructor default above instead.
           : true,
       estimateDecimalPlaces: estimatePlaces is int
           ? estimatePlaces.clamp(1, 5)

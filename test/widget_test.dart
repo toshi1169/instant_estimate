@@ -2429,7 +2429,12 @@ void main() {
     controller.pasteAtCaret('2−1÷2');
     controller.press('=');
     await tester.pumpWidget(
-      MaterialApp(home: CalculatorScreen(controller: controller)),
+      MaterialApp(
+        home: CalculatorScreen(
+          controller: controller,
+          settings: const AppSettings(mixedFractionResultEnabled: true),
+        ),
+      ),
     );
 
     controller.press('=');

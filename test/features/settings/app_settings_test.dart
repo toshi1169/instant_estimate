@@ -7,6 +7,13 @@ import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 import 'package:instant_estimate/features/settings/domain/company_profile.dart';
 
 void main() {
+  test('完全新規ユーザーは仮分数ON・帯分数OFFで開始する', () {
+    const settings = AppSettings();
+
+    expect(settings.improperFractionResultEnabled, isTrue);
+    expect(settings.mixedFractionResultEnabled, isFalse);
+  });
+
   test('言語設定を保存・復元し、旧データは日本語として扱う', () {
     const settings = AppSettings(language: AppLanguage.english);
 
