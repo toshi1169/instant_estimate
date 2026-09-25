@@ -1299,7 +1299,8 @@ class _ResultLine extends StatelessWidget {
       height: 1,
       fontWeight: FontWeight.w500,
     );
-    if (controller.resultDisplayMode == ResultDisplayMode.decimal) {
+    if (controller.resultDisplayMode == ResultDisplayMode.decimal ||
+        controller.resultDisplayMode == ResultDisplayMode.remainder) {
       return Text(
         '=  ${controller.result}',
         key: const Key('resultText'),
