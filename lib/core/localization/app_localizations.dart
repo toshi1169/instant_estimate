@@ -3143,7 +3143,7 @@ class AppLocalizations {
     traditionalChinese: '餘數',
     vietnamese: 'Số dư',
     indonesian: 'Sisa',
-    filipino: 'Natira',
+    filipino: 'Remainder',
     myanmar: 'အကြွင်း',
   );
   String remainderText(String quotient, String remainder) => _pick(
@@ -3153,9 +3153,21 @@ class AppLocalizations {
     traditionalChinese: '$quotient 餘 $remainder',
     vietnamese: '$quotient dư $remainder',
     indonesian: '$quotient sisa $remainder',
-    filipino: '$quotient, natira ang $remainder',
+    filipino: '$quotient remainder $remainder',
     myanmar: '$quotient၊ အကြွင်း $remainder',
   );
+  String get remainderInlineWord => _pick(
+    japanese: '余り',
+    english: 'remainder',
+    simplifiedChinese: '余',
+    traditionalChinese: '餘',
+    vietnamese: 'dư',
+    indonesian: 'sisa',
+    filipino: 'remainder',
+    myanmar: 'အကြွင်း',
+  );
+  String get remainderInlineSeparatorBefore =>
+      appLanguage == AppLanguage.myanmar ? '၊ ' : ' ';
   String resultDisplaySummary({
     required bool improperFraction,
     required bool mixedFraction,

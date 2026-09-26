@@ -40,8 +40,9 @@ void main() {
 
       expect(controller.resultDisplayMode, ResultDisplayMode.remainder);
       final result = tester.widget<Text>(find.byKey(const Key('resultText')));
-      expect(result.data, '=  ${testCase.$2}');
+      expect(_plainText(result), '=  ${testCase.$2}');
       expect(result.maxLines, 1);
+      expect(result.textAlign, TextAlign.right);
       expect(tester.takeException(), isNull);
     }
   });
@@ -64,7 +65,7 @@ void main() {
 
     expect(controller.resultDisplayMode, ResultDisplayMode.remainder);
     expect(
-      tester.widget<Text>(find.byKey(const Key('resultText'))).data,
+      _plainText(tester.widget<Text>(find.byKey(const Key('resultText')))),
       '=  2 余り 1',
     );
   });
@@ -121,13 +122,13 @@ void main() {
     await tester.pump();
 
     expect(
-      tester.widget<Text>(find.byKey(const Key('resultText'))).data,
+      _plainText(tester.widget<Text>(find.byKey(const Key('resultText')))),
       '=  14285714285714285714 余り 1',
     );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('8言語の余り結果を通常Text経路で表示する', (tester) async {
+  testWidgets('8言語で商と余り値は100%、余り語だけ50%で表示する', (tester) async {
     _setPhoneSize(tester);
     for (final language in AppLanguage.values) {
       final controller = CalculatorController();
@@ -143,16 +144,66 @@ void main() {
         ..press('=');
       await tester.pump();
 
-      final expected = AppLocalizations(language).remainderText('2', '1');
+      final strings = AppLocalizations(language);
+      final result = tester.widget<Text>(find.byKey(const Key('resultText')));
+      final spans = (result.textSpan! as TextSpan).children!;
       expect(
-        tester.widget<Text>(find.byKey(const Key('resultText'))).data,
-        '=  $expected',
+        _plainText(result),
+        '=  ${strings.remainderText('2', '1')}',
         reason: language.name,
       );
+      expect(result.style?.fontSize, 42, reason: language.name);
+      expect(
+        (spans[0] as TextSpan).style?.fontSize,
+        isNull,
+        reason: language.name,
+      );
+      expect(
+        (spans[1] as TextSpan).text,
+        strings.remainderInlineWord,
+        reason: language.name,
+      );
+      expect((spans[1] as TextSpan).style?.fontSize, 21, reason: language.name);
+      expect(
+        (spans[2] as TextSpan).style?.fontSize,
+        isNull,
+        reason: language.name,
+      );
+      expect(result.maxLines, 1, reason: language.name);
+      expect(result.textAlign, TextAlign.right, reason: language.name);
       expect(tester.takeException(), isNull, reason: language.name);
     }
   });
+
+  testWidgets('320px幅でも大きな商・余り値を右寄せ1行で縮小表示する', (tester) async {
+    _setPhoneSize(tester, width: 320, height: 568);
+    final controller = CalculatorController();
+    await _pumpCalculator(
+      tester,
+      controller: controller,
+      settings: remainderOnlySettings,
+    );
+    controller
+      ..pasteAtCaret('99999999999999999999÷88888888888888888888')
+      ..press('=')
+      ..press('=');
+    await tester.pump();
+
+    final resultFinder = find.byKey(const Key('resultText'));
+    final result = tester.widget<Text>(resultFinder);
+    expect(_plainText(result), '=  1 余り 11111111111111111111');
+    expect(result.maxLines, 1);
+    expect(result.textAlign, TextAlign.right);
+    final fittedBox = tester.widget<FittedBox>(
+      find.ancestor(of: resultFinder, matching: find.byType(FittedBox)).first,
+    );
+    expect(fittedBox.fit, BoxFit.scaleDown);
+    expect(fittedBox.alignment, Alignment.centerRight);
+    expect(tester.takeException(), isNull);
+  });
 }
+
+String _plainText(Text text) => text.data ?? text.textSpan!.toPlainText();
 
 Future<void> _pumpCalculator(
   WidgetTester tester, {
@@ -181,8 +232,12 @@ Future<void> _pumpCalculator(
   await tester.pump();
 }
 
-void _setPhoneSize(WidgetTester tester) {
-  tester.view.physicalSize = const Size(375, 812);
+void _setPhoneSize(
+  WidgetTester tester, {
+  double width = 375,
+  double height = 812,
+}) {
+  tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
