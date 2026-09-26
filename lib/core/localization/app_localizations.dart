@@ -3173,7 +3173,9 @@ class AppLocalizations {
     required bool mixedFraction,
     required bool remainder,
   }) {
-    if (!improperFraction && !mixedFraction) return decimalResult;
+    if (!improperFraction && !mixedFraction && !remainder) {
+      return decimalResult;
+    }
     return [
       decimalResult,
       if (improperFraction) improperFractionResult,
