@@ -2061,6 +2061,10 @@ class CalculatorController extends ChangeNotifier {
     );
   }
 
+  String? get remainderQuotient => _remainderResult?.quotient.toString();
+
+  String? get remainderValue => _remainderResult?.remainder.toString();
+
   _RemainderResult? _findRemainderResult(String source) {
     final expression = source
         .replaceAll('×', '*')

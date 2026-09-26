@@ -1299,12 +1299,34 @@ class _ResultLine extends StatelessWidget {
       height: 1,
       fontWeight: FontWeight.w500,
     );
-    if (controller.resultDisplayMode == ResultDisplayMode.decimal ||
-        controller.resultDisplayMode == ResultDisplayMode.remainder) {
+    if (controller.resultDisplayMode == ResultDisplayMode.decimal) {
       return Text(
         '=  ${controller.result}',
         key: const Key('resultText'),
         maxLines: 1,
+        style: resultStyle,
+      );
+    }
+    if (controller.resultDisplayMode == ResultDisplayMode.remainder) {
+      final strings = AppLocalizations.of(context);
+      return Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text:
+                  '=  ${controller.remainderQuotient}'
+                  '${strings.remainderInlineSeparatorBefore}',
+            ),
+            TextSpan(
+              text: strings.remainderInlineWord,
+              style: resultStyle?.copyWith(fontSize: 21),
+            ),
+            TextSpan(text: ' ${controller.remainderValue}'),
+          ],
+        ),
+        key: const Key('resultText'),
+        maxLines: 1,
+        textAlign: TextAlign.right,
         style: resultStyle,
       );
     }
