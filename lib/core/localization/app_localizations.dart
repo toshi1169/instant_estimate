@@ -3239,6 +3239,21 @@ class AppLocalizations {
     myanmar:
         'တရားဝင်ခန့်မှန်းစာတွင် အသုံးပြုမည့် ကုမ္ပဏီ သို့မဟုတ် လုပ်ငန်းအချက်အလက်ကို ထည့်ပါ။ အလွတ်အကွက်များကိုလည်း သိမ်းနိုင်သည်။',
   );
+  String get companyProfileTextGuidanceExceeded => _pick(
+    japanese: '帳票の推奨範囲を超えています。文字が縮小または表示範囲を超える場合があります。',
+    english:
+        'This exceeds the recommended range for documents. Text may be reduced or extend beyond the display area.',
+    simplifiedChinese: '已超出文档的建议范围。文字可能会缩小或超出显示范围。',
+    traditionalChinese: '已超出文件的建議範圍。文字可能會縮小或超出顯示範圍。',
+    vietnamese:
+        'Nội dung vượt quá phạm vi khuyến nghị cho chứng từ. Văn bản có thể bị thu nhỏ hoặc vượt ra ngoài vùng hiển thị.',
+    indonesian:
+        'Teks melebihi batas yang disarankan untuk dokumen. Teks mungkin diperkecil atau melampaui area tampilan.',
+    filipino:
+        'Lampas ito sa inirerekomendang saklaw para sa dokumento. Maaaring paliitin ang text o lumampas ito sa display area.',
+    myanmar:
+        'စာရွက်စာတမ်းအတွက် အကြံပြုအတိုင်းအတာကို ကျော်လွန်နေသည်။ စာသားကို သေးငယ်စေခြင်း သို့မဟုတ် ပြသဧရိယာကို ကျော်လွန်ခြင်း ဖြစ်နိုင်သည်။',
+  );
   String get companyNameOrTradeName => _pick(
     japanese: '会社名／屋号',
     english: 'Company / trade name',

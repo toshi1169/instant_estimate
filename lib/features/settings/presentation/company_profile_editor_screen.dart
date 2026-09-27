@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../domain/company_profile.dart';
+import 'company_profile_text_guidance.dart';
 
 class CompanyProfileEditorScreen extends StatefulWidget {
   const CompanyProfileEditorScreen({required this.initialProfile, super.key});
@@ -271,16 +272,22 @@ class _CompanyProfileEditorScreenState
         'Legacy address section must be expanded before display.',
       ),
     };
-    return TextField(
-      key: key,
-      controller: controller,
-      keyboardType: keyboardType,
-      textInputAction: action,
-      inputFormatters: inputFormatters,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          key: key,
+          controller: controller,
+          keyboardType: keyboardType,
+          textInputAction: action,
+          inputFormatters: inputFormatters,
+          decoration: InputDecoration(
+            labelText: label,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        CompanyProfileTextGuidance(controller: controller, section: section),
+      ],
     );
   }
 }

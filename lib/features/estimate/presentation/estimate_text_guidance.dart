@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_language.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/presentation/text_guidance_metrics.dart';
 
 enum EstimateTextGuidanceState { normal, caution, exceeded }
 
@@ -21,14 +22,10 @@ class EstimateTextGuidanceMetrics {
     int? japaneseCharacterLimit,
     int? japaneseLineLimit,
   }) {
-    final normalized = value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-    final lines = normalized.split('\n');
-    final characters = normalized.characters.length;
-    final longestLineCharacters = lines.fold<int>(
-      0,
-      (longest, line) =>
-          line.characters.length > longest ? line.characters.length : longest,
-    );
+    final metrics = TextGuidanceMetrics.fromText(value);
+    final characters = metrics.characters;
+    final lines = metrics.lines;
+    final longestLineCharacters = metrics.longestLineCharacters;
 
     final isCompactGuidance =
         language == AppLanguage.simplifiedChinese ||
@@ -54,24 +51,24 @@ class EstimateTextGuidanceMetrics {
     if (isCompactGuidance) {
       return EstimateTextGuidanceMetrics(
         characters: characters,
-        lines: lines.length,
+        lines: lines,
         longestLineCharacters: longestLineCharacters,
         characterLimit: characterLimit,
         lineLimit: lineLimit,
-        state: lines.length >= 2 || characters >= 21
+        state: lines >= 2 || characters >= 21
             ? EstimateTextGuidanceState.exceeded
             : EstimateTextGuidanceState.normal,
       );
     }
 
     if (language == AppLanguage.japanese) {
-      final exceeded = lines.length > lineLimit || characters > characterLimit;
+      final exceeded = lines > lineLimit || characters > characterLimit;
       final normal =
-          lines.length == 1 &&
+          lines == 1 &&
           longestLineCharacters <= (characterLimit < 20 ? characterLimit : 20);
       return EstimateTextGuidanceMetrics(
         characters: characters,
-        lines: lines.length,
+        lines: lines,
         longestLineCharacters: longestLineCharacters,
         characterLimit: characterLimit,
         lineLimit: lineLimit,
@@ -84,13 +81,13 @@ class EstimateTextGuidanceMetrics {
     }
 
     final exceeded =
-        lines.length >= 3 ||
+        lines >= 3 ||
         characters > characterLimit ||
         longestLineCharacters >= 29;
-    final normal = lines.length == 1 && longestLineCharacters <= 20;
+    final normal = lines == 1 && longestLineCharacters <= 20;
     return EstimateTextGuidanceMetrics(
       characters: characters,
-      lines: lines.length,
+      lines: lines,
       longestLineCharacters: longestLineCharacters,
       characterLimit: characterLimit,
       lineLimit: lineLimit,

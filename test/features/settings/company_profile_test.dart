@@ -95,6 +95,7 @@ void main() {
       final strings = AppLocalizations(language);
       expect(strings.companyProfile, isNotEmpty);
       expect(strings.companyProfileGuidance, isNotEmpty);
+      expect(strings.companyProfileTextGuidanceExceeded, isNotEmpty);
       expect(strings.companyNameOrTradeName, isNotEmpty);
       expect(strings.representativeName, isNotEmpty);
       expect(strings.postalCode, isNotEmpty);
