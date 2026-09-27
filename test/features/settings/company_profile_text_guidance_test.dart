@@ -110,6 +110,7 @@ void main() {
           AppLanguage.japanese,
           CompanyProfileSection.companyName,
         );
+        expect(trailing.characters, 3);
         expect(trailing.lines, 2);
         expect(trailing.exceeded, isTrue);
         expect(

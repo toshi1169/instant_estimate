@@ -11,7 +11,10 @@ class TextGuidanceMetrics {
     final normalized = value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     final lines = normalized.split('\n');
     return TextGuidanceMetrics(
-      characters: normalized.characters.length,
+      characters: lines.fold<int>(
+        0,
+        (total, line) => total + line.characters.length,
+      ),
       lines: lines.length,
       longestLineCharacters: lines.fold<int>(
         0,

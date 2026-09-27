@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:excel_plus/excel_plus.dart';
+import 'package:flutter/foundation.dart';
 
+import '../../../core/presentation/text_guidance_metrics.dart';
 import '../../settings/domain/company_profile.dart';
 import 'estimate_export_file_name.dart';
 import '../domain/estimate_info.dart';
@@ -410,7 +412,11 @@ class _BreakdownWriter {
         column,
         values[column],
         column == 1 || column == 2
-            ? _breakdownItemTextStyle(fontSize: fontSize)
+            ? _breakdownItemTextStyle(
+                fontSize: estimateExcelNameSpecificationFontSize(
+                  column == 1 ? item.name : item.specification,
+                ),
+              )
             : _detailStyle(
                 horizontal: alignment,
                 fontSize: fontSize,
@@ -935,6 +941,17 @@ int _detailFontSize(EstimateItem item) {
       .map((value) => value.split('\n').length)
       .fold<int>(1, (count, value) => value > count ? value : count);
   return longestLine > 20 || lineCount > 1 ? 10 : 11;
+}
+
+/// 名称・仕様の32文字幅セルを2行利用し、必要な場合だけ10ptへ下げる。
+@visibleForTesting
+int estimateExcelNameSpecificationFontSize(String value) {
+  final metrics = TextGuidanceMetrics.fromText(value);
+  if (metrics.lines > 2) return 10;
+  final charactersPerRenderedLine = metrics.lines == 1
+      ? (metrics.characters + 1) ~/ 2
+      : metrics.longestLineCharacters;
+  return charactersPerRenderedLine <= 20 ? 11 : 10;
 }
 
 String _sumCellReferences(String column, List<int> rows) {

@@ -26,10 +26,25 @@ void main() {
         '文字\n',
         AppLanguage.japanese,
       );
-      expect(trailing.characters, 3);
+      expect(trailing.characters, 2);
       expect(trailing.lines, 2);
       expect(trailing.longestLineCharacters, 2);
       expect(trailing.state, EstimateTextGuidanceState.caution);
+
+      final lineBreaks = EstimateTextGuidanceMetrics.evaluate(
+        'あいうえお\r\n\r\nかきくけこ\r',
+        AppLanguage.japanese,
+      );
+      expect(lineBreaks.characters, 10);
+      expect(lineBreaks.lines, 4);
+      expect(lineBreaks.longestLineCharacters, 5);
+
+      final combining = EstimateTextGuidanceMetrics.evaluate(
+        'e\u0301\n👨‍👩‍👧‍👦',
+        AppLanguage.japanese,
+      );
+      expect(combining.characters, 2);
+      expect(combining.lines, 2);
     });
 
     test('Japanese uses displayed character and explicit-line limits', () {
@@ -42,7 +57,7 @@ void main() {
       expect(within39.state, EstimateTextGuidanceState.caution);
 
       final within40TwoLines = EstimateTextGuidanceMetrics.evaluate(
-        '${_repeat('a', 20)}\n${_repeat('b', 19)}',
+        '${_repeat('a', 20)}\n${_repeat('b', 20)}',
         AppLanguage.japanese,
       );
       expect(within40TwoLines.characters, 40);
@@ -223,6 +238,8 @@ void main() {
       '${_repeat('長', 20)}\n${_repeat('文', 20)}\n末尾',
     );
     await tester.pump();
+    expect(find.text('42 / 40文字'), findsWidgets);
+    expect(find.text('3 / 2行'), findsWidgets);
     expect(find.textContaining('帳票の推奨範囲を超えています'), findsOneWidget);
 
     await _reveal(tester, find.byKey(const Key('saveEstimateInfo')));

@@ -101,6 +101,69 @@ void main() {
     }
   });
 
+  test('名称・仕様は2行の有効幅を使い長文だけ段階的に縮小する', () {
+    expect(estimatePdfNameSpecificationFontSize('短文'), 8.2);
+    expect(estimatePdfNameSpecificationFontSize(_repeatText('名', 44)), 8.2);
+    expect(estimatePdfNameSpecificationFontSize(_repeatText('名', 45)), 7);
+    expect(estimatePdfNameSpecificationFontSize(_repeatText('名', 53)), 6.2);
+    expect(
+      estimatePdfNameSpecificationFontSize(
+        '${_repeatText('名', 22)}\n${_repeatText('称', 22)}',
+      ),
+      8.2,
+    );
+    expect(
+      estimatePdfNameSpecificationFontSize(
+        '${_repeatText('仕', 23)}\n${_repeatText('様', 22)}',
+      ),
+      7,
+    );
+  });
+
+  test('名称・仕様の短文・境界・明示2行・超過長文でも列とページ割付を維持する', () async {
+    final items = [
+      _detailItem('short', name: '短い名称', specification: '標準仕様'),
+      _detailItem(
+        'near-width',
+        name: _repeatText('名', 44),
+        specification: _repeatText('仕', 44),
+      ),
+      _detailItem(
+        'explicit-lines',
+        name: '${_repeatText('名', 22)}\n${_repeatText('称', 22)}',
+        specification: '${_repeatText('仕', 22)}\n${_repeatText('様', 22)}',
+      ),
+      _detailItem(
+        'long-name',
+        name: _repeatText('名', 53),
+        specification: '標準仕様',
+      ),
+      _detailItem(
+        'long-specification',
+        name: '標準名称',
+        specification: _repeatText('仕', 53),
+      ),
+      _detailItem(
+        'both-long',
+        name: _repeatText('名', 53),
+        specification: _repeatText('仕', 53),
+      ),
+    ];
+
+    final bytes = await buildEstimatePdf(
+      info: EstimateInfo.initial(DateTime(2026, 9, 27)),
+      items: items,
+    );
+    expect(ascii.decode(bytes.take(4).toList()), '%PDF');
+    final layout = buildEstimatePdfBreakdownLayout(items);
+    expect(layout, hasLength(1));
+    expect(layout.single.rows, hasLength(17));
+    expect(
+      layout.single.rows.where((row) => row.type == EstimatePdfRowType.item),
+      hasLength(items.length),
+    );
+  });
+
   test('自社情報は設定順・表示設定を維持して空欄を詰め最大5項目にする', () {
     const profile = CompanyProfile(
       companyName: '山田建設',
@@ -202,6 +265,24 @@ EstimateItem _item(
 
 String _repeatText(String value, int count) =>
     List<String>.filled(count, value).join();
+
+EstimateItem _detailItem(
+  String id, {
+  required String name,
+  required String specification,
+}) => EstimateItem.fromDraft(
+  EstimateItemDraft(
+    trade: '帳票確認',
+    name: name,
+    specification: specification,
+    quantity: 1,
+    unit: '式',
+    unitPrice: 100,
+    description: '摘要',
+  ),
+  id: id,
+  createdAt: DateTime(2026, 9, 27),
+);
 
 EstimateItem _groupItem(
   String id, {

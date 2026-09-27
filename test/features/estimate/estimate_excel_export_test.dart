@@ -720,7 +720,7 @@ void main() {
     expect(_text(sheet, 'A25'), '');
   });
 
-  test('複数行の名称・仕様と摘要を保持し長文行は10ptで折り返す', () {
+  test('複数行の名称・仕様と摘要を保持しセルごとに2行幅を使う', () {
     final sheet = _workbook([
       _item(
         id: 'long',
@@ -738,7 +738,7 @@ void main() {
     expect(_text(sheet, 'B5'), '舗装工事\n下地調整を含む長い名称です');
     expect(_text(sheet, 'C5'), '密粒度アスファルト\nt=50mm');
     expect(_text(sheet, 'H5'), '材料・施工・運搬を含む長い摘要です');
-    expect(sheet.cell(CellIndex.indexByString('B5')).cellStyle?.fontSize, 10);
+    expect(sheet.cell(CellIndex.indexByString('B5')).cellStyle?.fontSize, 11);
     expect(
       sheet.cell(CellIndex.indexByString('B5')).cellStyle?.wrap,
       TextWrapping.WrapText,
@@ -755,6 +755,38 @@ void main() {
     expect(subtotalStyle.horizontalAlignment, HorizontalAlign.Right);
     expect(subtotalStyle.isBold, isFalse);
     expect(sheet.getRowHeight(4), closeTo(30, 0.001));
+  });
+
+  test('名称・仕様は別々に2行幅を判定し必要なセルだけ10ptにする', () {
+    final sheet = _workbook([
+      _item(
+        id: 'long-name',
+        trade: '工種',
+        location: '施工場所',
+        name: _repeat('名', 41),
+        specification: '標準仕様',
+        quantity: 1,
+        unit: '式',
+        unitPrice: 1000,
+      ),
+      _item(
+        id: 'long-spec',
+        trade: '工種',
+        location: '施工場所',
+        name: '標準名称',
+        specification: '${_repeat('仕', 21)}\n${_repeat('様', 20)}',
+        quantity: 1,
+        unit: '式',
+        unitPrice: 1000,
+      ),
+    ])['内訳'];
+
+    expect(sheet.cell(CellIndex.indexByString('B5')).cellStyle?.fontSize, 10);
+    expect(sheet.cell(CellIndex.indexByString('C5')).cellStyle?.fontSize, 11);
+    expect(sheet.cell(CellIndex.indexByString('B6')).cellStyle?.fontSize, 11);
+    expect(sheet.cell(CellIndex.indexByString('C6')).cellStyle?.fontSize, 10);
+    expect(estimateExcelNameSpecificationFontSize(_repeat('名', 40)), 11);
+    expect(estimateExcelNameSpecificationFontSize(_repeat('名', 41)), 10);
   });
 
   test('記号合計・消費税・合計は正式丸め済み小計を参照する', () {
@@ -1086,6 +1118,9 @@ void _expectThinBorders(CellStyle style) {
     expect(border.borderColorHex, 'FF000000');
   }
 }
+
+String _repeat(String value, int count) =>
+    List<String>.filled(count, value).join();
 
 EstimateItem _item({
   required String id,

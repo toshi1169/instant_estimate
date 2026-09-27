@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../../core/presentation/text_guidance_metrics.dart';
 import '../../settings/domain/company_profile.dart';
 import '../domain/estimate_info.dart';
 import '../domain/estimate_item.dart';
@@ -501,10 +502,13 @@ List<pw.Widget> _breakdownRowCells(
     final item = row.item!;
     return [
       _breakdownCell(''),
-      _breakdownCell(item.name, fontSize: _detailFontSize(item.name)),
+      _breakdownCell(
+        item.name,
+        fontSize: estimatePdfNameSpecificationFontSize(item.name),
+      ),
       _breakdownCell(
         item.specification,
-        fontSize: _detailFontSize(item.specification),
+        fontSize: estimatePdfNameSpecificationFontSize(item.specification),
       ),
       _breakdownCell(
         formatEstimatePdfQuantity(item.quantity, estimateDecimalPlaces),
@@ -666,6 +670,19 @@ double _detailFontSize(String value) {
   if (lines.length > 2 || longest > 28) return 6.2;
   if (lines.length > 1 || longest > 20) return 7;
   return 8.2;
+}
+
+/// 名称・仕様は約185ptの本文幅と2行を使い、収まらない場合だけ縮小する。
+@visibleForTesting
+double estimatePdfNameSpecificationFontSize(String value) {
+  final metrics = TextGuidanceMetrics.fromText(value);
+  if (metrics.lines > 2) return 6.2;
+  final charactersPerRenderedLine = metrics.lines == 1
+      ? (metrics.characters + 1) ~/ 2
+      : metrics.longestLineCharacters;
+  if (charactersPerRenderedLine <= 22) return 8.2;
+  if (charactersPerRenderedLine <= 26) return 7;
+  return 6.2;
 }
 
 String _moneyValue(double? value) => value == null ? '' : _money(value.round());
