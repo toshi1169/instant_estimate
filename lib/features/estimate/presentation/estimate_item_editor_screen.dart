@@ -555,6 +555,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 key: const Key('estimateNameField'),
                 maxLines: null,
                 guidanceKey: const Key('estimateNameGuidance'),
+                japaneseCharacterLimit: 52,
+                japaneseLineLimit: 2,
               ),
               _field(
                 _specification,
@@ -562,6 +564,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 key: const Key('estimateSpecificationField'),
                 maxLines: null,
                 guidanceKey: const Key('estimateSpecificationGuidance'),
+                japaneseCharacterLimit: 52,
+                japaneseLineLimit: 2,
               ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -664,6 +668,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 key: const Key('estimateDescriptionField'),
                 maxLines: null,
                 guidanceKey: const Key('estimateDescriptionGuidance'),
+                japaneseCharacterLimit: 44,
+                japaneseLineLimit: 2,
               ),
               _field(
                 _trade,
@@ -726,6 +732,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
     int? maxLines = 1,
     EdgeInsetsGeometry padding = const EdgeInsets.only(bottom: 12),
     Key? guidanceKey,
+    int? japaneseCharacterLimit,
+    int? japaneseLineLimit,
   }) {
     return Padding(
       padding: padding,
@@ -748,6 +756,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
             EstimateTextGuidance(
               controller: controller,
               counterKey: guidanceKey,
+              japaneseCharacterLimit: japaneseCharacterLimit,
+              japaneseLineLimit: japaneseLineLimit,
             ),
         ],
       ),

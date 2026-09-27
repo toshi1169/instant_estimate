@@ -368,6 +368,96 @@ void main() {
     }
   });
 
+  testWidgets(
+    'Japanese estimate item guidance uses 52 / 52 / 44 without counting newlines',
+    (tester) async {
+      tester.view.physicalSize = const Size(600, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _app(
+          home: const EstimateItemEditorScreen(
+            initialDraft: EstimateItemDraft(),
+            isEditing: true,
+          ),
+        ),
+      );
+
+      Future<void> verifyBoundary({
+        required Key fieldKey,
+        required Key guidanceKey,
+        required int limit,
+      }) async {
+        final field = find.byKey(fieldKey);
+        final guidance = find.byKey(guidanceKey);
+        final warning = find.byKey(
+          ValueKey('${guidanceKey.toString()}-warning'),
+        );
+        await _reveal(tester, field);
+
+        await tester.enterText(
+          field,
+          '${_repeat('境', limit ~/ 2)}\n${_repeat('界', limit - limit ~/ 2)}',
+        );
+        await tester.pump();
+        expect(
+          find.descendant(
+            of: guidance,
+            matching: find.text('$limit / $limit文字'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: guidance, matching: find.text('2 / 2行')),
+          findsOneWidget,
+        );
+        expect(warning, findsNothing);
+
+        await tester.enterText(field, _repeat('超', limit + 1));
+        await tester.pump();
+        expect(
+          find.descendant(
+            of: guidance,
+            matching: find.text('${limit + 1} / $limit文字'),
+          ),
+          findsOneWidget,
+        );
+        expect(warning, findsOneWidget);
+
+        await tester.enterText(field, 'a\nb\nc');
+        await tester.pump();
+        expect(
+          find.descendant(of: guidance, matching: find.text('3 / $limit文字')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: guidance, matching: find.text('3 / 2行')),
+          findsOneWidget,
+        );
+        expect(_editable(tester, field).controller.text, 'a\nb\nc');
+        expect(warning, findsOneWidget);
+      }
+
+      await verifyBoundary(
+        fieldKey: const Key('estimateNameField'),
+        guidanceKey: const Key('estimateNameGuidance'),
+        limit: 52,
+      );
+      await verifyBoundary(
+        fieldKey: const Key('estimateSpecificationField'),
+        guidanceKey: const Key('estimateSpecificationGuidance'),
+        limit: 52,
+      );
+      await verifyBoundary(
+        fieldKey: const Key('estimateDescriptionField'),
+        guidanceKey: const Key('estimateDescriptionGuidance'),
+        limit: 44,
+      );
+    },
+  );
+
   testWidgets('unit price master shows guidance for corresponding fields', (
     tester,
   ) async {
