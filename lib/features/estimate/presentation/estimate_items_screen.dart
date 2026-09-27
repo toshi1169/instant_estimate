@@ -30,6 +30,8 @@ enum _EstimateItemAction { duplicate, edit, delete }
 
 enum _EstimateOutputAction { print, pdf, excel }
 
+enum _EstimateMoreAction { editInfo, editCompanyProfile, copyTable }
+
 class EstimateItemsScreen extends StatefulWidget {
   const EstimateItemsScreen({
     required this.controller,
@@ -90,37 +92,50 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
               tapTargetSize: MaterialTapTargetSize.padded,
             ),
             onPressed: () => _showOutputOptions(context),
-            child: SizedBox(
-              width: 78,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  children: [
-                    const _EstimateOutputIcon(),
-                    const SizedBox(width: 5),
-                    Text(l10n.estimateOutput, maxLines: 1),
-                  ],
-                ),
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _EstimateOutputIcon(),
+                const SizedBox(width: 5),
+                Text(l10n.estimateOutput, maxLines: 1),
+              ],
             ),
           ),
-          IconButton(
-            key: const Key('copyEstimateTable'),
-            tooltip: l10n.copyTableForExcel,
-            onPressed: () => _copyTable(context),
-            icon: const Icon(Icons.table_view_outlined),
-          ),
-          IconButton(
-            key: const Key('editEstimateInfo'),
-            tooltip: l10n.text('見積基本情報'),
-            onPressed: () => _editInfo(context),
-            icon: const Icon(Icons.edit_note_outlined),
-          ),
-          IconButton(
-            key: const Key('editCompanyProfileFromEstimateItems'),
-            tooltip: l10n.companyProfile,
-            onPressed: () => _editCompanyProfile(context),
-            icon: const Icon(Icons.business_outlined),
+          Semantics(
+            container: true,
+            button: true,
+            label: l10n.estimateMoreActions,
+            child: PopupMenuButton<_EstimateMoreAction>(
+              key: const Key('estimateMoreActions'),
+              tooltip: l10n.estimateMoreActions,
+              onSelected: (action) => _handleMoreAction(context, action),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  key: const Key('editEstimateInfo'),
+                  value: _EstimateMoreAction.editInfo,
+                  child: ListTile(
+                    leading: const Icon(Icons.edit_note_outlined),
+                    title: Text(l10n.editEstimateInformation),
+                  ),
+                ),
+                PopupMenuItem(
+                  key: const Key('editCompanyProfileFromEstimateItems'),
+                  value: _EstimateMoreAction.editCompanyProfile,
+                  child: ListTile(
+                    leading: const Icon(Icons.business_outlined),
+                    title: Text(l10n.editCompanyProfile),
+                  ),
+                ),
+                PopupMenuItem(
+                  key: const Key('copyEstimateTable'),
+                  value: _EstimateMoreAction.copyTable,
+                  child: ListTile(
+                    leading: const Icon(Icons.table_view_outlined),
+                    title: Text(l10n.copyTableForExcel),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -262,6 +277,20 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
         await _shareEstimatePdf(context);
       case _EstimateOutputAction.excel:
         await _exportExcel(context);
+    }
+  }
+
+  Future<void> _handleMoreAction(
+    BuildContext context,
+    _EstimateMoreAction action,
+  ) async {
+    switch (action) {
+      case _EstimateMoreAction.editInfo:
+        await _editInfo(context);
+      case _EstimateMoreAction.editCompanyProfile:
+        await _editCompanyProfile(context);
+      case _EstimateMoreAction.copyTable:
+        await _copyTable(context);
     }
   }
 

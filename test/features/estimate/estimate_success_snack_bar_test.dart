@@ -21,10 +21,7 @@ void main() {
                         duration: const Duration(seconds: 5),
                         persist: false,
                         content: const Text('Undo notification'),
-                        action: SnackBarAction(
-                          label: 'Undo',
-                          onPressed: () {},
-                        ),
+                        action: SnackBarAction(label: 'Undo', onPressed: () {}),
                       ),
                     );
                 },
@@ -40,10 +37,7 @@ void main() {
                         duration: const Duration(seconds: 5),
                         persist: false,
                         content: const Text('Second undo notification'),
-                        action: SnackBarAction(
-                          label: 'Undo',
-                          onPressed: () {},
-                        ),
+                        action: SnackBarAction(label: 'Undo', onPressed: () {}),
                       ),
                     );
                 },
@@ -159,6 +153,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('estimateMoreActions')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('copyEstimateTable')));
     await tester.pump();
 

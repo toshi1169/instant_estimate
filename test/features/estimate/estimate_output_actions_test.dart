@@ -56,7 +56,8 @@ void main() {
     expect(find.byKey(const Key('printEstimatePdf')), findsOneWidget);
     expect(find.byKey(const Key('shareEstimatePdf')), findsOneWidget);
     expect(find.byKey(const Key('exportEstimateExcel')), findsOneWidget);
-    expect(find.byKey(const Key('copyEstimateTable')), findsOneWidget);
+    expect(find.byKey(const Key('copyEstimateTable')), findsNothing);
+    expect(find.byKey(const Key('estimateMoreActions')), findsOneWidget);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();

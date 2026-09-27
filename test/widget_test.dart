@@ -3079,6 +3079,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('estimateMoreActions')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('copyEstimateTable')));
     await tester.pumpAndSettle();
 
@@ -3367,6 +3369,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('estimateMoreActions')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('editEstimateInfo')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('estimateInfoEditor')), findsOneWidget);

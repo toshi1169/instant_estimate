@@ -2916,6 +2916,43 @@ class AppLocalizations {
     english: 'Copy table for Excel',
     simplifiedChinese: '复制Excel用表格',
     traditionalChinese: '複製Excel用表格',
+    vietnamese: 'Sao chép bảng cho Excel',
+    indonesian: 'Salin tabel untuk Excel',
+    filipino: 'Kopyahin ang talahanayan para sa Excel',
+    myanmar: 'Excel အတွက် ဇယားကို ကူးယူရန်',
+  );
+
+  String get estimateMoreActions => _pick(
+    japanese: '見積のその他の操作',
+    english: 'More estimate actions',
+    simplifiedChinese: '估价单的更多操作',
+    traditionalChinese: '估價單的其他操作',
+    vietnamese: 'Các thao tác báo giá khác',
+    indonesian: 'Tindakan estimasi lainnya',
+    filipino: 'Iba pang pagkilos sa estimasyon',
+    myanmar: 'ခန့်မှန်းချက်၏ အခြားလုပ်ဆောင်ချက်များ',
+  );
+
+  String get editEstimateInformation => _pick(
+    japanese: '見積基本情報を編集',
+    english: 'Edit estimate information',
+    simplifiedChinese: '编辑估价单基本信息',
+    traditionalChinese: '編輯估價單基本資料',
+    vietnamese: 'Chỉnh sửa thông tin báo giá',
+    indonesian: 'Edit informasi estimasi',
+    filipino: 'I-edit ang impormasyon ng estimasyon',
+    myanmar: 'ခန့်မှန်းချက်အချက်အလက်ကို ပြင်ဆင်ရန်',
+  );
+
+  String get editCompanyProfile => _pick(
+    japanese: '自社情報を編集',
+    english: 'Edit company information',
+    simplifiedChinese: '编辑公司信息',
+    traditionalChinese: '編輯公司資訊',
+    vietnamese: 'Chỉnh sửa thông tin doanh nghiệp',
+    indonesian: 'Edit informasi perusahaan',
+    filipino: 'I-edit ang impormasyon ng kumpanya',
+    myanmar: 'ကုမ္ပဏီအချက်အလက်ကို ပြင်ဆင်ရန်',
   );
 
   String copiedEstimateDetails(int count) => _pick(

@@ -108,11 +108,12 @@ void main() {
     expect(find.byKey(const Key('estimateOutputButton')), findsOneWidget);
     expect(find.text('出力'), findsOneWidget);
     expect(find.byKey(const Key('estimateOutputSheet')), findsNothing);
-    expect(find.byKey(const Key('copyEstimateTable')), findsOneWidget);
-    expect(find.byKey(const Key('editEstimateInfo')), findsOneWidget);
+    expect(find.byKey(const Key('estimateMoreActions')), findsOneWidget);
+    expect(find.byKey(const Key('copyEstimateTable')), findsNothing);
+    expect(find.byKey(const Key('editEstimateInfo')), findsNothing);
     expect(
       find.byKey(const Key('editCompanyProfileFromEstimateItems')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(tester.takeException(), isNull);
 

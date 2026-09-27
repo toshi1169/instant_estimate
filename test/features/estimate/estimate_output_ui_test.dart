@@ -22,6 +22,7 @@ void main() {
   });
 
   testWidgets('小画面と長い見積名で8ロケールの上部操作がoverflowしない', (tester) async {
+    final semantics = tester.ensureSemantics();
     tester.view.physicalSize = const Size(320, 568);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -47,17 +48,25 @@ void main() {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: EstimateItemsScreen(controller: controller),
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: EstimateItemsScreen(controller: controller),
+          ),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
       expect(find.byKey(const Key('estimateOutputButton')), findsOneWidget);
-      expect(find.byKey(const Key('copyEstimateTable')), findsOneWidget);
-      expect(find.byKey(const Key('editEstimateInfo')), findsOneWidget);
+      expect(find.byKey(const Key('estimateMoreActions')), findsOneWidget);
+      expect(find.byKey(const Key('copyEstimateTable')), findsNothing);
+      expect(find.byKey(const Key('editEstimateInfo')), findsNothing);
       expect(
         find.byKey(const Key('editCompanyProfileFromEstimateItems')),
+        findsNothing,
+      );
+      expect(
+        find.bySemanticsLabel(AppLocalizations(language).estimateMoreActions),
         findsOneWidget,
       );
       expect(find.byKey(const Key('estimateOutputSheet')), findsNothing);
@@ -84,6 +93,29 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('estimateOutputSheet')), findsNothing);
+      await tester.tap(find.byKey(const Key('estimateMoreActions')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('editEstimateInfo')), findsOneWidget);
+      expect(
+        find.text(AppLocalizations(language).editEstimateInformation),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('editCompanyProfileFromEstimateItems')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(AppLocalizations(language).editCompanyProfile),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('copyEstimateTable')), findsOneWidget);
+      expect(
+        find.text(AppLocalizations(language).copyTableForExcel),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull, reason: language.name);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       final displayedName = tester.widget<Text>(
         find.byKey(const Key('estimateInfoSummaryName')),
       );
@@ -92,6 +124,7 @@ void main() {
       expect(tester.takeException(), isNull, reason: language.name);
       controller.dispose();
     }
+    semantics.dispose();
   });
 
   testWidgets('見積情報カード全体から基本情報を編集できる', (tester) async {
@@ -131,6 +164,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('estimateMoreActions')));
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const Key('editCompanyProfileFromEstimateItems')),
     );
