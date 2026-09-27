@@ -1,0 +1,6 @@
+# Copy this file to android/key.properties. Never commit the copied file.
+# Use an absolute path to the upload keystore created and backed up on Windows.
+storeFile=C:\\Users\\YOUR_WINDOWS_USER\\secure\\upload-keystore.jks
+storePassword=REPLACE_WITH_STORE_PASSWORD
+keyAlias=upload
+keyPassword=REPLACE_WITH_KEY_PASSWORD
