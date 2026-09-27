@@ -544,6 +544,8 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                       guidanceKey: const Key(
                         'estimateConstructionLocationGuidance',
                       ),
+                      japaneseCharacterLimit: 52,
+                      japaneseLineLimit: 2,
                     ),
                   ),
                 ],

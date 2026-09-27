@@ -369,7 +369,7 @@ void main() {
   });
 
   testWidgets(
-    'Japanese estimate item guidance uses 52 / 52 / 44 without counting newlines',
+    'Japanese estimate item guidance uses 52 / 52 / 52 / 44 without counting newlines',
     (tester) async {
       tester.view.physicalSize = const Size(600, 1800);
       tester.view.devicePixelRatio = 1;
@@ -440,6 +440,11 @@ void main() {
         expect(warning, findsOneWidget);
       }
 
+      await verifyBoundary(
+        fieldKey: const Key('estimateConstructionLocationField'),
+        guidanceKey: const Key('estimateConstructionLocationGuidance'),
+        limit: 52,
+      );
       await verifyBoundary(
         fieldKey: const Key('estimateNameField'),
         guidanceKey: const Key('estimateNameGuidance'),
