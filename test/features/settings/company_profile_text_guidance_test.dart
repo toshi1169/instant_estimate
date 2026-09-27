@@ -11,12 +11,12 @@ void main() {
   group('company profile text guidance metrics', () {
     test('uses the six Japanese field limits', () {
       const expected = {
-        CompanyProfileSection.companyName: 14,
-        CompanyProfileSection.representativeName: 14,
-        CompanyProfileSection.postalCode: 24,
-        CompanyProfileSection.addressLine1: 14,
-        CompanyProfileSection.addressLine2: 14,
-        CompanyProfileSection.phoneNumber: 24,
+        CompanyProfileSection.companyName: 18,
+        CompanyProfileSection.representativeName: 18,
+        CompanyProfileSection.postalCode: 18,
+        CompanyProfileSection.addressLine1: 18,
+        CompanyProfileSection.addressLine2: 18,
+        CompanyProfileSection.phoneNumber: 18,
       };
 
       for (final entry in expected.entries) {
@@ -30,16 +30,22 @@ void main() {
           AppLanguage.japanese,
           entry.key,
         );
+        final twoLines = CompanyProfileTextGuidanceMetrics.evaluate(
+          '文\n字',
+          AppLanguage.japanese,
+          entry.key,
+        );
         expect(atLimit.characterLimit, entry.value, reason: entry.key.name);
         expect(atLimit.lineLimit, 1, reason: entry.key.name);
         expect(atLimit.exceeded, isFalse, reason: entry.key.name);
         expect(overLimit.exceeded, isTrue, reason: entry.key.name);
+        expect(twoLines.exceeded, isTrue, reason: entry.key.name);
       }
     });
 
     test('uses language-specific name and address limits', () {
       const expected = {
-        AppLanguage.japanese: 14,
+        AppLanguage.japanese: 18,
         AppLanguage.english: 24,
         AppLanguage.simplifiedChinese: 14,
         AppLanguage.traditionalChinese: 14,
@@ -61,19 +67,20 @@ void main() {
             reason: '${entry.key.name}/${section.name}',
           );
         }
+        final contactLimit = entry.key == AppLanguage.japanese ? 18 : 24;
         expect(
           companyProfileCharacterLimit(
             entry.key,
             CompanyProfileSection.postalCode,
           ),
-          24,
+          contactLimit,
         );
         expect(
           companyProfileCharacterLimit(
             entry.key,
             CompanyProfileSection.phoneNumber,
           ),
-          24,
+          contactLimit,
         );
       }
     });
@@ -126,7 +133,7 @@ void main() {
           AppLanguage.japanese,
           section,
         );
-        expect(metrics.characters, lessThanOrEqualTo(24));
+        expect(metrics.characters, lessThanOrEqualTo(18));
         expect(metrics.exceeded, isFalse);
       }
     });
@@ -159,12 +166,12 @@ void main() {
       await tester.pumpAndSettle();
 
       const expected = {
-        CompanyProfileSection.companyName: 14,
-        CompanyProfileSection.representativeName: 14,
-        CompanyProfileSection.postalCode: 24,
-        CompanyProfileSection.addressLine1: 14,
-        CompanyProfileSection.addressLine2: 14,
-        CompanyProfileSection.phoneNumber: 24,
+        CompanyProfileSection.companyName: 18,
+        CompanyProfileSection.representativeName: 18,
+        CompanyProfileSection.postalCode: 18,
+        CompanyProfileSection.addressLine1: 18,
+        CompanyProfileSection.addressLine2: 18,
+        CompanyProfileSection.phoneNumber: 18,
       };
       for (final entry in expected.entries) {
         final counter = find.byKey(

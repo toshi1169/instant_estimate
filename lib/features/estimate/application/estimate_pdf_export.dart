@@ -12,6 +12,17 @@ import '../domain/estimate_totals.dart';
 
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
 const _breakdownDataRows = 17;
+const double _coverValueRowWidth = 342;
+const double _coverValueLabelWidth = 95;
+const double _coverValueSpacing = 12;
+const double _coverValueFontSize = 12;
+
+@visibleForTesting
+const double estimatePdfCoverValueContentWidth =
+    _coverValueRowWidth - _coverValueLabelWidth - _coverValueSpacing;
+
+@visibleForTesting
+const double estimatePdfCoverNotesFontSize = _coverValueFontSize;
 const _columnWidths = <int, pw.TableColumnWidth>{
   0: pw.FlexColumnWidth(4.83),
   1: pw.FlexColumnWidth(32),
@@ -342,14 +353,14 @@ pw.Widget _coverPage({
             children: [
               pw.SizedBox(width: 24),
               pw.SizedBox(
-                width: 342,
+                width: _coverValueRowWidth,
                 child: pw.Column(
                   mainAxisAlignment: pw.MainAxisAlignment.end,
                   children: [
                     _coverValueRow('見 積 有 効 期 限', info.validityPeriod),
                     _coverValueRow('工 期', info.constructionPeriod),
                     _coverValueRow('御 支 払 条 件', info.paymentTerms),
-                    _coverValueRow('備 考', info.notes, height: 42, fontSize: 10),
+                    _coverValueRow('備 考', info.notes, height: 42),
                   ],
                 ),
               ),
@@ -384,7 +395,7 @@ pw.Widget _coverValueRow(
   String label,
   String value, {
   double height = 31,
-  double fontSize = 12,
+  double fontSize = _coverValueFontSize,
 }) => pw.Container(
   height: height,
   decoration: const pw.BoxDecoration(
@@ -394,13 +405,13 @@ pw.Widget _coverValueRow(
     crossAxisAlignment: pw.CrossAxisAlignment.end,
     children: [
       pw.SizedBox(
-        width: 95,
+        width: _coverValueLabelWidth,
         child: pw.Align(
           alignment: pw.Alignment.bottomCenter,
           child: pw.Text(label, style: pw.TextStyle(fontSize: fontSize)),
         ),
       ),
-      pw.SizedBox(width: 12),
+      pw.SizedBox(width: _coverValueSpacing),
       pw.Expanded(
         child: _fitText(
           value.trim(),

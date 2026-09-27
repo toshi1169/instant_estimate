@@ -42,15 +42,17 @@ int companyProfileCharacterLimit(
   AppLanguage language,
   CompanyProfileSection section,
 ) {
+  if (language == AppLanguage.japanese) {
+    return 18;
+  }
   if (section == CompanyProfileSection.postalCode ||
       section == CompanyProfileSection.phoneNumber) {
     return 24;
   }
   return switch (language) {
-    AppLanguage.japanese ||
-    AppLanguage.simplifiedChinese ||
-    AppLanguage.traditionalChinese => 14,
+    AppLanguage.simplifiedChinese || AppLanguage.traditionalChinese => 14,
     AppLanguage.myanmar => 20,
+    AppLanguage.japanese => 18,
     AppLanguage.english ||
     AppLanguage.vietnamese ||
     AppLanguage.indonesian ||

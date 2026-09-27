@@ -79,6 +79,28 @@ void main() {
     expect(formatEstimatePdfQuantity(null, 2), '');
   });
 
+  test('表紙備考は上3項目と同じ本文幅と基準文字サイズを使用する', () {
+    expect(estimatePdfCoverValueContentWidth, 235);
+    expect(estimatePdfCoverNotesFontSize, 12);
+  });
+
+  test('短文から40文字超の2行備考まで正式PDFを生成できる', () async {
+    for (final notes in [
+      '短文',
+      _repeatText('備', 20),
+      '${_repeatText('備', 20)}\n${_repeatText('考', 20)}',
+      '${_repeatText('備', 21)}\n${_repeatText('考', 20)}',
+    ]) {
+      final bytes = await buildEstimatePdf(
+        info: EstimateInfo.initial(
+          DateTime(2026, 9, 27),
+        ).copyWith(notes: notes),
+        items: const [],
+      );
+      expect(ascii.decode(bytes.take(4).toList()), '%PDF');
+    }
+  });
+
   test('自社情報は設定順・表示設定を維持して空欄を詰め最大5項目にする', () {
     const profile = CompanyProfile(
       companyName: '山田建設',
@@ -177,6 +199,9 @@ EstimateItem _item(
   id: id,
   createdAt: DateTime(2026, 8, 12),
 );
+
+String _repeatText(String value, int count) =>
+    List<String>.filled(count, value).join();
 
 EstimateItem _groupItem(
   String id, {
