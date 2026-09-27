@@ -60,20 +60,23 @@ void main() {
       expect(backupShare, contains('fileNameOverrides: [fileName]'));
     });
 
-    test('backup import uses the platform picker and validates its payload', () {
-      final backupImport = File(
-        'lib/features/backup/application/backup_file_import.dart',
-      ).readAsStringSync();
+    test(
+      'backup import uses the platform picker and validates its payload',
+      () {
+        final backupImport = File(
+          'lib/features/backup/application/backup_file_import.dart',
+        ).readAsStringSync();
 
-      expect(backupImport, contains('openFile('));
-      expect(backupImport, contains("extensions: <String>['genbacalc']"));
-      expect(
-        backupImport,
-        contains('maximumBackupFileBytes = 20 * 1024 * 1024'),
-      );
-      expect(backupImport, contains("root['format']"));
-      expect(backupImport, contains("root['backupVersion']"));
-    });
+        expect(backupImport, contains('openFile('));
+        expect(backupImport, contains("extensions: <String>['genbacalc']"));
+        expect(
+          backupImport,
+          contains('maximumBackupFileBytes = 20 * 1024 * 1024'),
+        );
+        expect(backupImport, contains("root['format']"));
+        expect(backupImport, contains("root['backupVersion']"));
+      },
+    );
 
     test('restore journal remains an atomic app-internal Android file', () {
       final activity = File(
@@ -83,9 +86,7 @@ void main() {
 
       expect(
         activity,
-        contains(
-          'AtomicFile(filesDir.resolve("backup_restore_journal.json"))',
-        ),
+        contains('AtomicFile(filesDir.resolve("backup_restore_journal.json"))'),
       );
       expect(activity, contains('stream.fd.sync()'));
       expect(activity, contains('journalFile.finishWrite(stream)'));

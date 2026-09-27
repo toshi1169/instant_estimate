@@ -127,9 +127,8 @@ Future<void> _pumpLine(
   await tester.pumpAndSettle();
 }
 
-Text _text(WidgetTester tester) => tester.widget<Text>(
-  find.byKey(const Key('calculatorHistoryVisibleText')),
-);
+Text _text(WidgetTester tester) =>
+    tester.widget<Text>(find.byKey(const Key('calculatorHistoryVisibleText')));
 
 String _visibleText(WidgetTester tester) =>
     _text(tester).textSpan!.toPlainText();
