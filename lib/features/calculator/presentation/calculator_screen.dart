@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/cupertino.dart' show CupertinoTextMagnifier;
+import 'package:flutter/cupertino.dart'
+    show CupertinoTextMagnifier, cupertinoTextSelectionControls;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -1678,9 +1679,19 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   String _lastExpressionSignature = '';
   Offset? _longPressOrigin;
   bool _didDragCaret = false;
+  OverlayEntry? _selectionHandlesOverlay;
+  Rect? _baseSelectionCaretRect;
+  Rect? _extentSelectionCaretRect;
+  Duration? _lastPointerDownTime;
+  Offset? _lastPointerDownPosition;
+  bool _suppressNextExpressionTap = false;
+  Timer? _tapSuppressionTimer;
 
   @override
   void dispose() {
+    _selectionHandlesOverlay?.remove();
+    _selectionHandlesOverlay = null;
+    _tapSuppressionTimer?.cancel();
     unawaited(_magnifierController.hide().whenComplete(_magnifierInfo.dispose));
     _scrollController.dispose();
     super.dispose();
@@ -1730,68 +1741,75 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         final visibleLineCount = math.min(2, math.max(1, lines.length));
         final lineHeight = constraints.maxHeight / visibleLineCount;
         _hitTargets = hitTargets;
-        return GestureDetector(
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _syncSelectionHandlesOverlay();
+        });
+        return Listener(
           key: _fieldKey,
           behavior: HitTestBehavior.opaque,
-          onLongPressStart: _startCaretDrag,
-          onLongPressMoveUpdate: _updateCaretDrag,
-          onLongPressEnd: _endCaretDrag,
-          onLongPressCancel: _cancelCaretDrag,
-          child: ClipRect(
-            child: SingleChildScrollView(
-              key: const Key('expressionVerticalScroll'),
-              controller: _scrollController,
-              scrollDirection: Axis.vertical,
-              child: SizedBox(
-                key: const Key('expressionText'),
-                width: constraints.maxWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (
-                      var lineIndex = 0;
-                      lineIndex < lines.length;
-                      lineIndex++
-                    )
-                      KeyedSubtree(
-                        key: Key('expressionLine-$lineIndex'),
-                        child: SizedBox(
-                          key: _lineKeys.putIfAbsent(
-                            lineIndex,
-                            () => GlobalKey(
-                              debugLabel: 'expressionLine-$lineIndex',
+          onPointerDown: _handleExpressionPointerDown,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onLongPressStart: _startCaretDrag,
+            onLongPressMoveUpdate: _updateCaretDrag,
+            onLongPressEnd: _endCaretDrag,
+            onLongPressCancel: _cancelCaretDrag,
+            child: ClipRect(
+              child: SingleChildScrollView(
+                key: const Key('expressionVerticalScroll'),
+                controller: _scrollController,
+                scrollDirection: Axis.vertical,
+                child: SizedBox(
+                  key: const Key('expressionText'),
+                  width: constraints.maxWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (
+                        var lineIndex = 0;
+                        lineIndex < lines.length;
+                        lineIndex++
+                      )
+                        KeyedSubtree(
+                          key: Key('expressionLine-$lineIndex'),
+                          child: SizedBox(
+                            key: _lineKeys.putIfAbsent(
+                              lineIndex,
+                              () => GlobalKey(
+                                debugLabel: 'expressionLine-$lineIndex',
+                              ),
                             ),
-                          ),
-                          height: lineHeight,
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: FittedBox(
-                              key: Key('expressionLineScale-$lineIndex'),
-                              fit: BoxFit.scaleDown,
+                            height: lineHeight,
+                            child: Align(
                               alignment: Alignment.centerRight,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  for (
-                                    var segmentIndex = 0;
-                                    segmentIndex < lines[lineIndex].length;
-                                    segmentIndex++
-                                  )
-                                    _buildSegment(
-                                      lines[lineIndex][segmentIndex],
-                                      style,
-                                      lineIndex,
-                                      segmentIndex,
-                                      hitTargets,
-                                    ),
-                                ],
+                              child: FittedBox(
+                                key: Key('expressionLineScale-$lineIndex'),
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    for (
+                                      var segmentIndex = 0;
+                                      segmentIndex < lines[lineIndex].length;
+                                      segmentIndex++
+                                    )
+                                      _buildSegment(
+                                        lines[lineIndex][segmentIndex],
+                                        style,
+                                        lineIndex,
+                                        segmentIndex,
+                                        hitTargets,
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1861,7 +1879,11 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       gestureKey: key,
       segment: segment,
       style: style,
-      onRawOffsetTap: widget.controller.moveCaretToRawOffset,
+      selectedRawRange: _selectedRawRange,
+      onRawOffsetTap: (offset) {
+        if (_consumeSuppressedTap()) return;
+        widget.controller.moveCaretToRawOffset(offset);
+      },
     );
   }
 
@@ -1972,18 +1994,34 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     return _InlineFraction(
       segment: segment,
       fontSize: _EditableExpressionLine._expressionFontSize,
+      fullySelected: _isFractionFullySelected(segment.marker),
+      wholeNumberSelection: _fractionFieldSelection(
+        segment.marker,
+        FractionField.wholeNumber,
+      ),
+      numeratorSelection: _fractionFieldSelection(
+        segment.marker,
+        FractionField.numerator,
+      ),
+      denominatorSelection: _fractionFieldSelection(
+        segment.marker,
+        FractionField.denominator,
+      ),
       beforeKey: beforeKey,
       afterKey: afterKey,
       wholeNumberKey: wholeKey,
       numeratorKey: numeratorKey,
       denominatorKey: denominatorKey,
       onBeforeFractionTap: () {
+        if (_consumeSuppressedTap()) return;
         widget.controller.moveCaretBeforeFraction(segment.marker);
       },
       onAfterFractionTap: () {
+        if (_consumeSuppressedTap()) return;
         widget.controller.moveCaretAfterFraction(segment.marker);
       },
       onFieldTap: (field, caretOffset) {
+        if (_consumeSuppressedTap()) return;
         widget.controller.activateFraction(
           segment.marker,
           field,
@@ -1999,10 +2037,363 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     height: 1,
   );
 
+  (int, int)? get _selectedRawRange {
+    final selection = widget.controller.selection;
+    if (selection == null ||
+        selection.base is! RawExpressionPosition ||
+        selection.extent is! RawExpressionPosition) {
+      return null;
+    }
+    final base = (selection.base as RawExpressionPosition).offset;
+    final extent = (selection.extent as RawExpressionPosition).offset;
+    return (math.min(base, extent), math.max(base, extent));
+  }
+
+  TextRange? _fractionFieldSelection(String marker, FractionField field) {
+    final selection = widget.controller.selection;
+    if (selection == null ||
+        selection.base is! FractionExpressionPosition ||
+        selection.extent is! FractionExpressionPosition) {
+      return null;
+    }
+    final base = selection.base as FractionExpressionPosition;
+    final extent = selection.extent as FractionExpressionPosition;
+    if (base.marker != marker ||
+        extent.marker != marker ||
+        base.field != field ||
+        extent.field != field) {
+      return null;
+    }
+    return TextRange(
+      start: math.min(base.offset, extent.offset),
+      end: math.max(base.offset, extent.offset),
+    );
+  }
+
+  bool _isFractionFullySelected(String marker) {
+    final range = _selectedRawRange;
+    if (range == null) return false;
+    final index = widget.controller.expression.indexOf(marker);
+    return index >= range.$1 && index < range.$2;
+  }
+
   GlobalKey _targetKey(String id) => _targetKeys.putIfAbsent(
     id,
     () => GlobalKey(debugLabel: 'expressionTarget-$id'),
   );
+
+  void _handleExpressionPointerDown(PointerDownEvent event) {
+    final previousTime = _lastPointerDownTime;
+    final previousPosition = _lastPointerDownPosition;
+    _lastPointerDownTime = event.timeStamp;
+    _lastPointerDownPosition = event.position;
+    if (previousTime == null || previousPosition == null) return;
+    final elapsed = event.timeStamp - previousTime;
+    if (elapsed > const Duration(milliseconds: 300) ||
+        (event.position - previousPosition).distance > 24) {
+      return;
+    }
+    _lastPointerDownTime = null;
+    _lastPointerDownPosition = null;
+    _suppressNextExpressionTap = true;
+    _handleDoubleTapAt(event.position);
+    _tapSuppressionTimer?.cancel();
+    _tapSuppressionTimer = Timer(const Duration(milliseconds: 400), () {
+      _suppressNextExpressionTap = false;
+    });
+  }
+
+  bool _consumeSuppressedTap() {
+    if (!_suppressNextExpressionTap) return false;
+    _suppressNextExpressionTap = false;
+    _tapSuppressionTimer?.cancel();
+    _tapSuppressionTimer = null;
+    return true;
+  }
+
+  void _handleDoubleTapAt(Offset globalPosition) {
+    final target = _closestHitTarget(globalPosition);
+    final resolved = target == null
+        ? null
+        : _resolveTarget(target, globalPosition);
+    if (target == null || resolved == null) return;
+    if (target.kind == _ExpressionHitTargetKind.text) {
+      final index = _characterIndexAt(target, globalPosition);
+      if (index != null && index < target.text.length) {
+        final rawIndex = target.rawOffsets[index];
+        if (rawIndex < widget.controller.expression.length &&
+            _isSelectableNumberCharacter(
+              widget.controller.expression[rawIndex],
+            )) {
+          final expression = widget.controller.expression;
+          var start = rawIndex;
+          var end = rawIndex + 1;
+          while (start > 0 &&
+              _isSelectableNumberCharacter(expression[start - 1])) {
+            start--;
+          }
+          while (end < expression.length &&
+              _isSelectableNumberCharacter(expression[end])) {
+            end++;
+          }
+          widget.controller.selectRange(
+            RawExpressionPosition(start),
+            RawExpressionPosition(end),
+          );
+          return;
+        }
+      }
+    } else if (target.kind == _ExpressionHitTargetKind.fractionField) {
+      final index = _characterIndexAt(target, globalPosition);
+      final value = target.fieldValue;
+      if (index != null &&
+          index < value.length &&
+          _isSelectableNumberCharacter(value[index])) {
+        var start = index;
+        var end = index + 1;
+        while (start > 0 && _isSelectableNumberCharacter(value[start - 1])) {
+          start--;
+        }
+        while (end < value.length && _isSelectableNumberCharacter(value[end])) {
+          end++;
+        }
+        widget.controller.selectRange(
+          FractionExpressionPosition(
+            marker: target.marker!,
+            field: target.field!,
+            offset: start,
+          ),
+          FractionExpressionPosition(
+            marker: target.marker!,
+            field: target.field!,
+            offset: end,
+          ),
+        );
+        return;
+      }
+    }
+    widget.controller.moveCaretToPosition(resolved.position);
+  }
+
+  bool _isSelectableNumberCharacter(String value) =>
+      value.length == 1 &&
+      ((value.codeUnitAt(0) >= 48 && value.codeUnitAt(0) <= 57) ||
+          value == '.');
+
+  int? _characterIndexAt(_ExpressionHitTarget target, Offset globalPosition) {
+    final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+    final style = target.style;
+    final text = target.kind == _ExpressionHitTargetKind.text
+        ? target.text
+        : target.fieldValue;
+    if (box == null || !box.hasSize || style == null || text.isEmpty) {
+      return null;
+    }
+    final local = box.globalToLocal(globalPosition);
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final textX = target.kind == _ExpressionHitTargetKind.fractionField
+        ? local.dx - 5
+        : local.dx;
+    for (var index = 0; index < text.length; index++) {
+      final boxes = painter.getBoxesForSelection(
+        TextSelection(baseOffset: index, extentOffset: index + 1),
+      );
+      if (boxes.any((box) => textX >= box.left && textX <= box.right)) {
+        return index;
+      }
+    }
+    return null;
+  }
+
+  void _syncSelectionHandlesOverlay() {
+    final selection = widget.controller.selection;
+    if (selection == null) {
+      _selectionHandlesOverlay?.remove();
+      _selectionHandlesOverlay = null;
+      return;
+    }
+    final baseRect = _caretRectForPosition(selection.base);
+    final extentRect = _caretRectForPosition(selection.extent);
+    if (baseRect == null || extentRect == null) {
+      _selectionHandlesOverlay?.remove();
+      _selectionHandlesOverlay = null;
+      return;
+    }
+    _baseSelectionCaretRect = baseRect;
+    _extentSelectionCaretRect = extentRect;
+    final overlay = Overlay.of(context, rootOverlay: true);
+    _selectionHandlesOverlay ??= OverlayEntry(
+      builder: _buildSelectionHandlesOverlay,
+    );
+    if (!_selectionHandlesOverlay!.mounted) {
+      overlay.insert(_selectionHandlesOverlay!);
+    } else {
+      _selectionHandlesOverlay!.markNeedsBuild();
+    }
+  }
+
+  Widget _buildSelectionHandlesOverlay(BuildContext overlayContext) {
+    final baseRect = _baseSelectionCaretRect;
+    final extentRect = _extentSelectionCaretRect;
+    if (baseRect == null || extentRect == null) return const SizedBox.shrink();
+    final baseBeforeExtent =
+        baseRect.top < extentRect.top - 1 ||
+        ((baseRect.top - extentRect.top).abs() <= 1 &&
+            baseRect.left <= extentRect.left);
+    return Stack(
+      children: [
+        _buildSelectionHandle(
+          overlayContext,
+          key: const Key('calculatorSelectionBaseHandle'),
+          endpoint: baseRect.bottomCenter,
+          type: baseBeforeExtent
+              ? TextSelectionHandleType.left
+              : TextSelectionHandleType.right,
+          movesBase: true,
+        ),
+        _buildSelectionHandle(
+          overlayContext,
+          key: const Key('calculatorSelectionExtentHandle'),
+          endpoint: extentRect.bottomCenter,
+          type: baseBeforeExtent
+              ? TextSelectionHandleType.right
+              : TextSelectionHandleType.left,
+          movesBase: false,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectionHandle(
+    BuildContext overlayContext, {
+    required Key key,
+    required Offset endpoint,
+    required TextSelectionHandleType type,
+    required bool movesBase,
+  }) {
+    const touchSize = 48.0;
+    const lineHeight = _EditableExpressionLine._expressionFontSize;
+    final screen = MediaQuery.sizeOf(overlayContext);
+    final left = (endpoint.dx - touchSize / 2)
+        .clamp(0.0, math.max(0.0, screen.width - touchSize))
+        .toDouble();
+    final top = (endpoint.dy - touchSize / 2)
+        .clamp(0.0, math.max(0.0, screen.height - touchSize))
+        .toDouble();
+    final controls = Theme.of(overlayContext).platform == TargetPlatform.iOS
+        ? cupertinoTextSelectionControls
+        : materialTextSelectionControls;
+    final anchor = controls.getHandleAnchor(type, lineHeight);
+    final handle = controls.buildHandle(overlayContext, type, lineHeight);
+    return Positioned(
+      left: left,
+      top: top,
+      width: touchSize,
+      height: touchSize,
+      child: GestureDetector(
+        key: key,
+        behavior: HitTestBehavior.opaque,
+        onPanUpdate: (details) =>
+            _dragSelectionHandle(details.globalPosition, movesBase: movesBase),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: touchSize / 2 - anchor.dx,
+              top: touchSize / 2 - anchor.dy,
+              child: handle,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _dragSelectionHandle(Offset globalPosition, {required bool movesBase}) {
+    final resolved = _resolvePosition(globalPosition);
+    final selection = widget.controller.selection;
+    if (resolved == null || selection == null) return;
+    if (movesBase) {
+      widget.controller.selectRange(resolved.position, selection.extent);
+    } else {
+      widget.controller.selectRange(selection.base, resolved.position);
+    }
+  }
+
+  Rect? _caretRectForPosition(ExpressionPosition position) {
+    for (final target in _hitTargets) {
+      if (position case RawExpressionPosition(:final offset)) {
+        if (target.kind == _ExpressionHitTargetKind.text) {
+          final index = target.rawOffsets.indexOf(offset);
+          if (index >= 0) return _caretRectForTargetOffset(target, index);
+        }
+        if (target.marker != null) {
+          final markerIndex = widget.controller.expression.indexOf(
+            target.marker!,
+          );
+          if (target.kind == _ExpressionHitTargetKind.fractionBefore &&
+              offset == markerIndex) {
+            return _edgeCaretRect(target, trailing: true);
+          }
+          if (target.kind == _ExpressionHitTargetKind.fractionAfter &&
+              offset == markerIndex + 1) {
+            return _edgeCaretRect(target, trailing: false);
+          }
+        }
+      } else if (position case FractionExpressionPosition(
+        :final marker,
+        :final field,
+        :final offset,
+      )) {
+        if (target.kind == _ExpressionHitTargetKind.fractionField &&
+            target.marker == marker &&
+            target.field == field) {
+          return _caretRectForTargetOffset(target, offset, horizontalInset: 5);
+        }
+      }
+    }
+    return null;
+  }
+
+  Rect? _caretRectForTargetOffset(
+    _ExpressionHitTarget target,
+    int offset, {
+    double horizontalInset = 0,
+  }) {
+    final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+    final style = target.style;
+    if (box == null || !box.hasSize || style == null) return null;
+    final text = target.kind == _ExpressionHitTargetKind.text
+        ? target.text
+        : target.fieldValue;
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final safeOffset = offset.clamp(0, text.length);
+    final x =
+        horizontalInset +
+        painter
+            .getOffsetForCaret(TextPosition(offset: safeOffset), Rect.zero)
+            .dx;
+    final top = box.localToGlobal(Offset(x, 0));
+    final bottom = box.localToGlobal(Offset(x, box.size.height));
+    return Rect.fromLTRB(top.dx - 1, top.dy, bottom.dx + 1, bottom.dy);
+  }
+
+  Rect? _edgeCaretRect(_ExpressionHitTarget target, {required bool trailing}) {
+    final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+    final x = trailing ? box.size.width : 0.0;
+    final top = box.localToGlobal(Offset(x, 0));
+    final bottom = box.localToGlobal(Offset(x, box.size.height));
+    return Rect.fromLTRB(top.dx - 1, top.dy, bottom.dx + 1, bottom.dy);
+  }
 
   void _startCaretDrag(LongPressStartDetails details) {
     _longPressOrigin = details.globalPosition;
@@ -2083,6 +2474,12 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   }
 
   _ResolvedExpressionPosition? _resolvePosition(Offset globalPosition) {
+    final closest = _closestHitTarget(globalPosition);
+    if (closest == null) return null;
+    return _resolveTarget(closest, globalPosition);
+  }
+
+  _ExpressionHitTarget? _closestHitTarget(Offset globalPosition) {
     _ExpressionHitTarget? closest;
     var closestDistance = double.infinity;
     for (final target in _hitTargets) {
@@ -2106,8 +2503,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         closest = target;
       }
     }
-    if (closest == null) return null;
-    return _resolveTarget(closest, globalPosition);
+    return closest;
   }
 
   _ResolvedExpressionPosition? _resolveTarget(
@@ -2219,12 +2615,14 @@ class _EditableExpressionText extends StatelessWidget {
     required this.gestureKey,
     required this.segment,
     required this.style,
+    required this.selectedRawRange,
     required this.onRawOffsetTap,
   });
 
   final GlobalKey gestureKey;
   final ExpressionTextSegment segment;
   final TextStyle style;
+  final (int, int)? selectedRawRange;
   final ValueChanged<int> onRawOffsetTap;
 
   @override
@@ -2235,6 +2633,21 @@ class _EditableExpressionText extends StatelessWidget {
       maxLines: 1,
     )..layout();
 
+    final selected = selectedRawRange;
+    final textWidget = selected == null
+        ? Text(segment.text, style: style, maxLines: 1)
+        : Text.rich(
+            TextSpan(
+              children: _selectionSpans(
+                context,
+                segment.text,
+                segment.rawOffsets,
+                style,
+                selected,
+              ),
+            ),
+            maxLines: 1,
+          );
     return GestureDetector(
       key: gestureKey,
       behavior: HitTestBehavior.opaque,
@@ -2250,9 +2663,49 @@ class _EditableExpressionText extends StatelessWidget {
         // A small vertical expansion makes short digits and operators easier
         // to hit without changing their visual spacing.
         padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(segment.text, style: style, maxLines: 1),
+        child: textWidget,
       ),
     );
+  }
+
+  List<InlineSpan> _selectionSpans(
+    BuildContext context,
+    String text,
+    List<int> rawOffsets,
+    TextStyle style,
+    (int, int) selected,
+  ) {
+    final spans = <InlineSpan>[];
+    final highlight = Theme.of(
+      context,
+    ).colorScheme.primary.withValues(alpha: 0.28);
+    var buffer = StringBuffer();
+    bool? highlighted;
+    void flush() {
+      if (buffer.isEmpty) return;
+      spans.add(
+        TextSpan(
+          text: buffer.toString(),
+          style: highlighted == true
+              ? style.copyWith(backgroundColor: highlight)
+              : style,
+        ),
+      );
+      buffer = StringBuffer();
+    }
+
+    for (var index = 0; index < text.length; index++) {
+      final rawStart = rawOffsets[index];
+      final rawEnd = rawOffsets[index + 1];
+      final isSelected = rawEnd > rawStart
+          ? rawStart >= selected.$1 && rawEnd <= selected.$2
+          : rawStart > selected.$1 && rawStart < selected.$2;
+      if (highlighted != null && highlighted != isSelected) flush();
+      highlighted = isSelected;
+      buffer.write(text[index]);
+    }
+    flush();
+    return spans;
   }
 }
 
@@ -2260,6 +2713,10 @@ class _InlineFraction extends StatelessWidget {
   const _InlineFraction({
     required this.segment,
     required this.fontSize,
+    required this.fullySelected,
+    required this.wholeNumberSelection,
+    required this.numeratorSelection,
+    required this.denominatorSelection,
     required this.beforeKey,
     required this.afterKey,
     required this.wholeNumberKey,
@@ -2272,6 +2729,10 @@ class _InlineFraction extends StatelessWidget {
 
   final ExpressionFractionSegment segment;
   final double fontSize;
+  final bool fullySelected;
+  final TextRange? wholeNumberSelection;
+  final TextRange? numeratorSelection;
+  final TextRange? denominatorSelection;
   final GlobalKey beforeKey;
   final GlobalKey afterKey;
   final GlobalKey wholeNumberKey;
@@ -2283,92 +2744,105 @@ class _InlineFraction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          GestureDetector(
-            key: beforeKey,
-            behavior: HitTestBehavior.opaque,
-            onTap: onBeforeFractionTap,
-            child: SizedBox(
-              key: const Key('fractionBeforeTapArea'),
-              width: 14,
-              height: fontSize * 2.1,
+    return DecoratedBox(
+      key: fullySelected ? const Key('selectedFractionNode') : null,
+      decoration: BoxDecoration(
+        color: fullySelected
+            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.28)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            GestureDetector(
+              key: beforeKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: onBeforeFractionTap,
+              child: SizedBox(
+                key: const Key('fractionBeforeTapArea'),
+                width: 14,
+                height: fontSize * 2.1,
+              ),
             ),
-          ),
-          if (segment.wholeNumber.isNotEmpty) ...[
-            _FractionFieldDisplay(
-              key: const Key('mixedFractionWholeNumber'),
-              caretSlotKey: const Key('mixedFractionWholeNumberCaretSlot'),
-              gestureKey: wholeNumberKey,
-              value: segment.wholeNumber,
-              active: segment.activeField == FractionField.wholeNumber,
-              caretOffset: segment.activeField == FractionField.wholeNumber
-                  ? segment.activeCaretOffset
-                  : null,
-              fontSize: fontSize,
-              onTap: (offset) {
-                onFieldTap(FractionField.wholeNumber, offset);
-              },
+            if (segment.wholeNumber.isNotEmpty) ...[
+              _FractionFieldDisplay(
+                key: const Key('mixedFractionWholeNumber'),
+                caretSlotKey: const Key('mixedFractionWholeNumberCaretSlot'),
+                gestureKey: wholeNumberKey,
+                value: segment.wholeNumber,
+                active: segment.activeField == FractionField.wholeNumber,
+                caretOffset: segment.activeField == FractionField.wholeNumber
+                    ? segment.activeCaretOffset
+                    : null,
+                fontSize: fontSize,
+                selection: wholeNumberSelection,
+                onTap: (offset) {
+                  onFieldTap(FractionField.wholeNumber, offset);
+                },
+              ),
+              const SizedBox(width: 2),
+            ],
+            IntrinsicWidth(
+              key: const Key('fractionDisplay'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _FractionFieldDisplay(
+                    key: const Key('fractionNumeratorField'),
+                    caretSlotKey: const Key('fractionNumeratorCaretSlot'),
+                    gestureKey: numeratorKey,
+                    value: segment.numerator,
+                    active: segment.activeField == FractionField.numerator,
+                    caretOffset: segment.activeField == FractionField.numerator
+                        ? segment.activeCaretOffset
+                        : null,
+                    fontSize: fontSize,
+                    selection: numeratorSelection,
+                    onTap: (offset) {
+                      onFieldTap(FractionField.numerator, offset);
+                    },
+                  ),
+                  Container(
+                    key: const Key('fractionBar'),
+                    height: 1.5,
+                    color: AppColors.accent,
+                  ),
+                  _FractionFieldDisplay(
+                    key: const Key('fractionDenominatorField'),
+                    caretSlotKey: const Key('fractionDenominatorCaretSlot'),
+                    gestureKey: denominatorKey,
+                    value: segment.denominator,
+                    active: segment.activeField == FractionField.denominator,
+                    caretOffset:
+                        segment.activeField == FractionField.denominator
+                        ? segment.activeCaretOffset
+                        : null,
+                    fontSize: fontSize,
+                    selection: denominatorSelection,
+                    onTap: (offset) {
+                      onFieldTap(FractionField.denominator, offset);
+                    },
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 2),
+            GestureDetector(
+              key: afterKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: onAfterFractionTap,
+              child: SizedBox(
+                key: const Key('fractionAfterTapArea'),
+                width: 24,
+                height: fontSize * 2.1,
+              ),
+            ),
           ],
-          IntrinsicWidth(
-            key: const Key('fractionDisplay'),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _FractionFieldDisplay(
-                  key: const Key('fractionNumeratorField'),
-                  caretSlotKey: const Key('fractionNumeratorCaretSlot'),
-                  gestureKey: numeratorKey,
-                  value: segment.numerator,
-                  active: segment.activeField == FractionField.numerator,
-                  caretOffset: segment.activeField == FractionField.numerator
-                      ? segment.activeCaretOffset
-                      : null,
-                  fontSize: fontSize,
-                  onTap: (offset) {
-                    onFieldTap(FractionField.numerator, offset);
-                  },
-                ),
-                Container(
-                  key: const Key('fractionBar'),
-                  height: 1.5,
-                  color: AppColors.accent,
-                ),
-                _FractionFieldDisplay(
-                  key: const Key('fractionDenominatorField'),
-                  caretSlotKey: const Key('fractionDenominatorCaretSlot'),
-                  gestureKey: denominatorKey,
-                  value: segment.denominator,
-                  active: segment.activeField == FractionField.denominator,
-                  caretOffset: segment.activeField == FractionField.denominator
-                      ? segment.activeCaretOffset
-                      : null,
-                  fontSize: fontSize,
-                  onTap: (offset) {
-                    onFieldTap(FractionField.denominator, offset);
-                  },
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            key: afterKey,
-            behavior: HitTestBehavior.opaque,
-            onTap: onAfterFractionTap,
-            child: SizedBox(
-              key: const Key('fractionAfterTapArea'),
-              width: 24,
-              height: fontSize * 2.1,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -2382,6 +2856,7 @@ class _FractionFieldDisplay extends StatelessWidget {
     required this.caretSlotKey,
     required this.gestureKey,
     required this.fontSize,
+    required this.selection,
     required this.onTap,
     super.key,
   });
@@ -2392,6 +2867,7 @@ class _FractionFieldDisplay extends StatelessWidget {
   final Key caretSlotKey;
   final GlobalKey gestureKey;
   final double fontSize;
+  final TextRange? selection;
   final ValueChanged<int> onTap;
 
   static const double _caretGap = 2;
@@ -2414,30 +2890,70 @@ class _FractionFieldDisplay extends StatelessWidget {
     final displayOffset = value.isEmpty ? 0 : offset;
     final prefix = displayValue.substring(0, displayOffset);
     final suffix = displayValue.substring(displayOffset);
+    void handleTap(TapUpDetails details) {
+      if (value.isEmpty) {
+        onTap(0);
+        return;
+      }
+      final painter = TextPainter(
+        text: TextSpan(text: value, style: textStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+      var localX = details.localPosition.dx - 5;
+      if (active &&
+          localX > _textWidth(value.substring(0, offset), textStyle)) {
+        localX -= _caretGap + _caretWidth;
+      }
+      final position = painter.getPositionForOffset(
+        Offset(localX.clamp(0.0, painter.width), 0),
+      );
+      onTap(position.offset.clamp(0, value.length));
+    }
+
+    if (selection != null && value.isNotEmpty) {
+      final range = TextRange(
+        start: selection!.start.clamp(0, value.length),
+        end: selection!.end.clamp(0, value.length),
+      );
+      final highlight = Theme.of(
+        context,
+      ).colorScheme.primary.withValues(alpha: 0.28);
+      return GestureDetector(
+        key: gestureKey,
+        behavior: HitTestBehavior.opaque,
+        onTapUp: handleTap,
+        child: SizedBox(
+          height: fontSize * 1.05,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: Align(
+              alignment: Alignment.center,
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: value.substring(0, range.start)),
+                    TextSpan(
+                      text: value.substring(range.start, range.end),
+                      style: textStyle.copyWith(backgroundColor: highlight),
+                    ),
+                    TextSpan(text: value.substring(range.end)),
+                  ],
+                  style: textStyle,
+                ),
+                key: Key('${caretSlotKey.toString()}-selection'),
+                maxLines: 1,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return GestureDetector(
       key: gestureKey,
       behavior: HitTestBehavior.opaque,
-      onTapUp: (details) {
-        if (value.isEmpty) {
-          onTap(0);
-          return;
-        }
-        final painter = TextPainter(
-          text: TextSpan(text: value, style: textStyle),
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-        )..layout();
-        var localX = details.localPosition.dx - 5;
-        if (active &&
-            localX > _textWidth(value.substring(0, offset), textStyle)) {
-          localX -= _caretGap + _caretWidth;
-        }
-        final position = painter.getPositionForOffset(
-          Offset(localX.clamp(0.0, painter.width), 0),
-        );
-        onTap(position.offset.clamp(0, value.length));
-      },
+      onTapUp: handleTap,
       child: SizedBox(
         height: fontSize * 1.05,
         child: Padding(

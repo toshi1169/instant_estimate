@@ -978,6 +978,7 @@ class CalculatorController extends ChangeNotifier {
     var lineCharacterCount = 0;
     for (var index = 0; index <= _expression.length; index++) {
       if (showCaret &&
+          !hasSelection &&
           _activeFractionMarker == null &&
           index == _caretPosition) {
         flushText();
