@@ -157,7 +157,7 @@ class CalculatorSideMenu extends StatelessWidget {
               ),
             const SizedBox(height: 18),
             Text(
-              'Version 1.0.0',
+              'Version 1.1.0',
               key: const Key('sideMenuVersion'),
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
