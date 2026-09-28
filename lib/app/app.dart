@@ -18,6 +18,7 @@ import '../features/onboarding/presentation/occupation_selection_screen.dart';
 import '../features/productivity/data/productivity_record_store.dart';
 import '../features/settings/data/app_settings_store.dart';
 import '../features/settings/domain/app_settings.dart';
+import '../features/settings/presentation/estimate_tax_settings_screen.dart';
 import '../features/subscription/data/app_access_state_store.dart';
 import '../features/subscription/domain/app_access_state.dart';
 import '../features/subscription/domain/purchase_store.dart';
@@ -287,6 +288,8 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
     }
   }
 
+  Future<void> _waitForSettingsSaves() => _settingsSaveQueue;
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -326,6 +329,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
                     accessPlan: _accessPlan,
                     settings: _settings,
                     onSettingsChanged: _changeSettings,
+                    onSettingsSaved: _waitForSettingsSaves,
                     onRequestRewardedAdAccess: _requestRewardedAdAccess,
                     isRewardedAdRequired: _isRewardedAdRequired,
                     onShowAdvertisingPrivacyOptions:
@@ -362,6 +366,7 @@ class _StartupGate extends StatefulWidget {
     required this.accessPlan,
     required this.settings,
     required this.onSettingsChanged,
+    required this.onSettingsSaved,
     required this.onRequestRewardedAdAccess,
     required this.isRewardedAdRequired,
     required this.onShowAdvertisingPrivacyOptions,
@@ -378,6 +383,7 @@ class _StartupGate extends StatefulWidget {
   final AppAccessPlan accessPlan;
   final AppSettings settings;
   final ValueChanged<AppSettings> onSettingsChanged;
+  final Future<void> Function() onSettingsSaved;
   final Future<bool> Function(RewardedAdEntryPoint) onRequestRewardedAdAccess;
   final bool Function(RewardedAdEntryPoint) isRewardedAdRequired;
   final Future<void> Function()? onShowAdvertisingPrivacyOptions;
@@ -404,6 +410,7 @@ class _StartupGateState extends State<_StartupGate> {
     return _StartupStatus(
       hasSelectedLanguage: hasSelectedLanguage,
       hasSelectedOccupation: hasSelectedOccupation,
+      hasConfiguredInitialTax: hasSelectedOccupation,
     );
   }
 
@@ -447,6 +454,33 @@ class _StartupGateState extends State<_StartupGate> {
               }
               if (!mounted) return;
               _replaceStatus(status.copyWith(hasSelectedLanguage: true));
+            },
+          );
+        }
+
+        if (!status.hasConfiguredInitialTax) {
+          return EstimateTaxSettingsScreen(
+            title: AppLocalizations.of(context).newEstimateTaxSettings,
+            taxEnabled: widget.settings.defaultEstimateTaxEnabled,
+            taxRateBasisPoints:
+                widget.settings.defaultEstimateTaxRateBasisPoints,
+            keyPrefix: 'initialEstimate',
+            onTaxEnabledChanged: (value) {
+              widget.onSettingsChanged(
+                widget.settings.copyWith(defaultEstimateTaxEnabled: value),
+              );
+            },
+            onTaxRateBasisPointsChanged: (value) {
+              widget.onSettingsChanged(
+                widget.settings.copyWith(
+                  defaultEstimateTaxRateBasisPoints: value,
+                ),
+              );
+            },
+            onContinue: () async {
+              await widget.onSettingsSaved();
+              if (!mounted) return;
+              _replaceStatus(status.copyWith(hasConfiguredInitialTax: true));
             },
           );
         }
@@ -519,19 +553,24 @@ class _StartupStatus {
   const _StartupStatus({
     required this.hasSelectedLanguage,
     required this.hasSelectedOccupation,
+    required this.hasConfiguredInitialTax,
   });
 
   final bool hasSelectedLanguage;
   final bool hasSelectedOccupation;
+  final bool hasConfiguredInitialTax;
 
   _StartupStatus copyWith({
     bool? hasSelectedLanguage,
     bool? hasSelectedOccupation,
+    bool? hasConfiguredInitialTax,
   }) {
     return _StartupStatus(
       hasSelectedLanguage: hasSelectedLanguage ?? this.hasSelectedLanguage,
       hasSelectedOccupation:
           hasSelectedOccupation ?? this.hasSelectedOccupation,
+      hasConfiguredInitialTax:
+          hasConfiguredInitialTax ?? this.hasConfiguredInitialTax,
     );
   }
 }

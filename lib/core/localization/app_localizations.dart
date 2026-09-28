@@ -105,6 +105,16 @@ class AppLocalizations {
     simplifiedChinese: '继续',
     traditionalChinese: '繼續',
   );
+  String get continueInitialTaxSetup => _pick(
+    japanese: '続ける',
+    english: 'Continue',
+    simplifiedChinese: '继续',
+    traditionalChinese: '繼續',
+    vietnamese: 'Tiếp tục',
+    indonesian: 'Lanjutkan',
+    filipino: 'Magpatuloy',
+    myanmar: 'ရှေ့ဆက်ရန်',
+  );
   String get japanese => _pick(
     japanese: '日本語',
     english: 'Japanese',

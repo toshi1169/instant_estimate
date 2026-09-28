@@ -53,6 +53,7 @@ class EstimateTaxSettingsScreen extends StatefulWidget {
     required this.taxRateBasisPoints,
     required this.onTaxEnabledChanged,
     required this.onTaxRateBasisPointsChanged,
+    this.onContinue,
     this.keyPrefix = 'defaultEstimate',
     super.key,
   });
@@ -62,6 +63,7 @@ class EstimateTaxSettingsScreen extends StatefulWidget {
   final int taxRateBasisPoints;
   final ValueChanged<bool> onTaxEnabledChanged;
   final ValueChanged<int> onTaxRateBasisPointsChanged;
+  final Future<void> Function()? onContinue;
   final String keyPrefix;
 
   @override
@@ -72,6 +74,8 @@ class EstimateTaxSettingsScreen extends StatefulWidget {
 class _EstimateTaxSettingsScreenState extends State<EstimateTaxSettingsScreen> {
   late bool _taxEnabled = widget.taxEnabled;
   late int _taxRateBasisPoints = widget.taxRateBasisPoints;
+  bool _isRateInputValid = true;
+  bool _isContinuing = false;
   late final TextEditingController _rateController = TextEditingController(
     text: formatTaxRateBasisPoints(_taxRateBasisPoints).replaceAll('%', ''),
   );
@@ -82,24 +86,41 @@ class _EstimateTaxSettingsScreenState extends State<EstimateTaxSettingsScreen> {
     super.dispose();
   }
 
-  void _commitRate() {
+  bool _commitRate({bool restoreInvalidValue = true}) {
     final parsed = parseTaxRateBasisPoints(_rateController.text);
     if (parsed == null) {
-      _rateController.text = formatTaxRateBasisPoints(
-        _taxRateBasisPoints,
-      ).replaceAll('%', '');
-      return;
+      if (restoreInvalidValue) {
+        _rateController.text = formatTaxRateBasisPoints(
+          _taxRateBasisPoints,
+        ).replaceAll('%', '');
+        setState(() => _isRateInputValid = true);
+      } else {
+        setState(() => _isRateInputValid = false);
+      }
+      return false;
     }
     _taxRateBasisPoints = parsed;
     widget.onTaxRateBasisPointsChanged(parsed);
     _rateController.text = formatTaxRateBasisPoints(parsed).replaceAll('%', '');
+    setState(() => _isRateInputValid = true);
+    return true;
   }
 
   void _updateRateIfValid(String value) {
     final parsed = parseTaxRateBasisPoints(value);
+    setState(() => _isRateInputValid = parsed != null);
     if (parsed == null || parsed == _taxRateBasisPoints) return;
     _taxRateBasisPoints = parsed;
     widget.onTaxRateBasisPointsChanged(parsed);
+  }
+
+  Future<void> _continue() async {
+    final onContinue = widget.onContinue;
+    if (onContinue == null || _isContinuing) return;
+    if (!_commitRate(restoreInvalidValue: false)) return;
+    setState(() => _isContinuing = true);
+    await onContinue();
+    if (mounted) setState(() => _isContinuing = false);
   }
 
   @override
@@ -121,6 +142,9 @@ class _EstimateTaxSettingsScreenState extends State<EstimateTaxSettingsScreen> {
                     title: Text(strings.applyTax),
                     value: _taxEnabled,
                     onChanged: (value) {
+                      if (!value && !_isRateInputValid) {
+                        _commitRate();
+                      }
                       setState(() => _taxEnabled = value);
                       widget.onTaxEnabledChanged(value);
                     },
@@ -160,6 +184,23 @@ class _EstimateTaxSettingsScreenState extends State<EstimateTaxSettingsScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: widget.onContinue == null
+          ? null
+          : SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: FilledButton(
+                key: const Key('completeInitialTaxSetup'),
+                onPressed: _isRateInputValid && !_isContinuing
+                    ? _continue
+                    : null,
+                child: _isContinuing
+                    ? const SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(strings.continueInitialTaxSetup),
+              ),
+            ),
     );
   }
 }

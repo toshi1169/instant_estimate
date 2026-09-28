@@ -243,6 +243,7 @@ void main() {
             taxRateBasisPoints: 825,
             onTaxEnabledChanged: (_) {},
             onTaxRateBasisPointsChanged: (_) {},
+            onContinue: () async {},
           ),
           textScale: 1.6,
         ),
@@ -253,9 +254,56 @@ void main() {
       expect(find.text(strings.applyTax), findsOneWidget);
       expect(find.text(strings.taxRate), findsOneWidget);
       expect(find.text(strings.taxRateNotice), findsOneWidget);
+      expect(find.text(strings.continueInitialTaxSetup), findsOneWidget);
+      expect(find.byKey(const Key('completeInitialTaxSetup')), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('初回税設定は不正入力では続行できず0〜100%を確定できる', (tester) async {
+    var completed = 0;
+    var rate = 1000;
+    const strings = AppLocalizations(AppLanguage.japanese);
+    await tester.pumpWidget(
+      _localizedApp(
+        AppLanguage.japanese,
+        EstimateTaxSettingsScreen(
+          title: strings.newEstimateTaxSettings,
+          taxEnabled: true,
+          taxRateBasisPoints: rate,
+          onTaxEnabledChanged: (_) {},
+          onTaxRateBasisPointsChanged: (value) => rate = value,
+          onContinue: () async => completed++,
+          keyPrefix: 'initialEstimate',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final field = find.byKey(const Key('initialEstimateTaxRateSetting'));
+    final continueButton = find.byKey(const Key('completeInitialTaxSetup'));
+    await tester.enterText(field, '');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(continueButton).onPressed, isNull);
+    expect(completed, 0);
+
+    for (final entry in const <String, int>{
+      '0': 0,
+      '8.25': 825,
+      '10': 1000,
+      '100': 10000,
+    }.entries) {
+      await tester.enterText(field, entry.key);
+      await tester.pump();
+      expect(rate, entry.value);
+      expect(tester.widget<FilledButton>(continueButton).onPressed, isNotNull);
+    }
+
+    await tester.showKeyboard(field);
+    await tester.pump();
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(tester.takeException(), isNull);
+  });
 
   for (final language in AppLanguage.values) {
     testWidgets('${language.name}の見積税メニューと合計が320px・大文字でもoverflowしない', (

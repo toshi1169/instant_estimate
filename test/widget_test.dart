@@ -861,13 +861,16 @@ void main() {
     expect(settings.roundingMode, CalculatorRoundingMode.floor);
   });
 
-  testWidgets('初回起動では業種選択を表示する', (tester) async {
+  testWidgets('初回起動では税設定を確認してから業種選択へ進む', (tester) async {
     final preferences = FakeOnboardingPreferences(hasSelected: false);
     await tester.pumpWidget(
       InstantEstimateApp(onboardingPreferences: preferences),
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('新規見積の税設定'), findsOneWidget);
+    expect(find.text('10'), findsOneWidget);
+    await _completeInitialTaxSetup(tester);
     expect(find.text('業種を選択'), findsOneWidget);
     expect(find.text('建築監督'), findsOneWidget);
   });
@@ -893,6 +896,8 @@ void main() {
 
     expect(preferences.savedLanguage, AppLanguage.english.name);
     expect(settingsStore.settings.language, AppLanguage.english);
+    expect(find.text('Tax settings for new estimates'), findsOneWidget);
+    await _completeInitialTaxSetup(tester);
     expect(find.text('Choose occupation'), findsOneWidget);
 
     await tester.tap(find.text('Civil supervisor'));
@@ -902,6 +907,151 @@ void main() {
 
     expect(preferences.savedOccupation, 'civilSupervisor');
     expect(find.byKey(const Key('historyPanel')), findsOneWidget);
+  });
+
+  testWidgets('新規利用者は日本語でも税設定を確認してから業種選択へ進む', (tester) async {
+    final preferences = FakeLanguageOnboardingPreferences(
+      hasSelected: false,
+      hasSelectedLanguageValue: false,
+    );
+    final settingsStore = FakeAppSettingsStore();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: preferences,
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('completeLanguageSelection')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('新規見積の税設定'), findsOneWidget);
+    expect(settingsStore.settings.defaultEstimateTaxEnabled, isTrue);
+    expect(settingsStore.settings.defaultEstimateTaxRateBasisPoints, 1000);
+    await _completeInitialTaxSetup(tester);
+    expect(find.text('業種を選択'), findsOneWidget);
+  });
+
+  testWidgets('初回税率8.25%を保存し業種前に中断しても同じ値を再表示する', (tester) async {
+    final preferences = FakeLanguageOnboardingPreferences(
+      hasSelected: false,
+      hasSelectedLanguageValue: true,
+    );
+    final settingsStore = FakeAppSettingsStore();
+
+    Future<void> pumpApp() async {
+      await tester.pumpWidget(
+        InstantEstimateApp(
+          onboardingPreferences: preferences,
+          appSettingsStore: settingsStore,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpApp();
+    final rate = find.byKey(const Key('initialEstimateTaxRateSetting'));
+    await tester.enterText(rate, '8.25');
+    await tester.pump();
+    expect(settingsStore.settings.defaultEstimateTaxRateBasisPoints, 825);
+    await _completeInitialTaxSetup(tester);
+    expect(find.text('業種を選択'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await pumpApp();
+
+    expect(find.text('新規見積の税設定'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const Key('initialEstimateTaxRateSetting')),
+          )
+          .controller
+          ?.text,
+      '8.25',
+    );
+  });
+
+  testWidgets('初回税OFFは税率を保持し業種完了後は再表示しない', (tester) async {
+    final preferences = FakeLanguageOnboardingPreferences(
+      hasSelected: false,
+      hasSelectedLanguageValue: true,
+    );
+    final settingsStore = FakeAppSettingsStore(
+      settings: const AppSettings(defaultEstimateTaxRateBasisPoints: 825),
+    );
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: preferences,
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('initialEstimateTaxEnabledSetting')));
+    await tester.pump();
+    expect(settingsStore.settings.defaultEstimateTaxEnabled, isFalse);
+    expect(settingsStore.settings.defaultEstimateTaxRateBasisPoints, 825);
+    await _completeInitialTaxSetup(tester);
+    await tester.tap(find.text('建築監督'));
+    await tester.pump();
+    await tester.tap(find.text('この業種で始める'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('historyPanel')), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: preferences,
+        appSettingsStore: settingsStore,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('completeInitialTaxSetup')), findsNothing);
+    expect(find.byKey(const Key('historyPanel')), findsOneWidget);
+    expect(settingsStore.settings.defaultEstimateTaxEnabled, isFalse);
+    expect(settingsStore.settings.defaultEstimateTaxRateBasisPoints, 825);
+  });
+
+  testWidgets('v1.1更新・旧/新バックアップ復元済みユーザーは初回税設定を表示しない', (tester) async {
+    final cases = <AppSettings>[
+      AppSettings.fromJson(const <String, Object?>{}),
+      const AppSettings(
+        defaultEstimateTaxEnabled: false,
+        defaultEstimateTaxRateBasisPoints: 825,
+      ),
+    ];
+    for (final settings in cases) {
+      final preferences = FakeLanguageOnboardingPreferences(
+        hasSelected: true,
+        hasSelectedLanguageValue: true,
+      );
+      final settingsStore = FakeAppSettingsStore(settings: settings);
+      await tester.pumpWidget(
+        InstantEstimateApp(
+          onboardingPreferences: preferences,
+          appSettingsStore: settingsStore,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('completeInitialTaxSetup')), findsNothing);
+      expect(find.byKey(const Key('historyPanel')), findsOneWidget);
+      expect(
+        settingsStore.settings.defaultEstimateTaxEnabled,
+        settings.defaultEstimateTaxEnabled,
+      );
+      expect(
+        settingsStore.settings.defaultEstimateTaxRateBasisPoints,
+        settings.defaultEstimateTaxRateBasisPoints,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('新規利用者は簡体字中国語を選択して保存できる', (tester) async {
@@ -924,6 +1074,8 @@ void main() {
 
     expect(preferences.savedLanguage, AppLanguage.simplifiedChinese.name);
     expect(settingsStore.settings.language, AppLanguage.simplifiedChinese);
+    expect(find.text('新估算的税费设置'), findsOneWidget);
+    await _completeInitialTaxSetup(tester);
     expect(find.text('选择行业'), findsOneWidget);
     expect(find.text('土木监理'), findsOneWidget);
   });
@@ -948,6 +1100,8 @@ void main() {
 
     expect(preferences.savedLanguage, AppLanguage.traditionalChinese.name);
     expect(settingsStore.settings.language, AppLanguage.traditionalChinese);
+    expect(find.text('新估價的稅務設定'), findsOneWidget);
+    await _completeInitialTaxSetup(tester);
     expect(find.text('選擇行業'), findsOneWidget);
     expect(find.text('土木監督'), findsOneWidget);
   });
@@ -972,6 +1126,10 @@ void main() {
 
     expect(preferences.savedLanguage, AppLanguage.vietnamese.name);
     expect(settingsStore.settings.language, AppLanguage.vietnamese);
+    expect(settingsStore.settings.defaultEstimateTaxEnabled, isTrue);
+    expect(settingsStore.settings.defaultEstimateTaxRateBasisPoints, 1000);
+    expect(find.text('Cài đặt thuế cho dự toán mới'), findsOneWidget);
+    await _completeInitialTaxSetup(tester);
     expect(find.text('Chọn ngành nghề'), findsOneWidget);
     expect(find.text('Giám sát công trình dân dụng'), findsOneWidget);
   });
@@ -996,6 +1154,8 @@ void main() {
 
     expect(preferences.savedLanguage, AppLanguage.indonesian.name);
     expect(settingsStore.settings.language, AppLanguage.indonesian);
+    expect(find.text('Pengaturan pajak untuk estimasi baru'), findsOneWidget);
+    await _completeInitialTaxSetup(tester);
     expect(find.text('Pilih bidang pekerjaan'), findsOneWidget);
     expect(find.text('Pengawas sipil'), findsOneWidget);
   });
@@ -1021,6 +1181,11 @@ void main() {
 
     expect(preferences.savedLanguage, AppLanguage.filipino.name);
     expect(settingsStore.settings.language, AppLanguage.filipino);
+    expect(
+      find.text('Mga setting ng buwis para sa bagong estimate'),
+      findsOneWidget,
+    );
+    await _completeInitialTaxSetup(tester);
     expect(find.text('Pumili ng larangan ng trabaho'), findsOneWidget);
     expect(find.text('Tagapangasiwa ng civil works'), findsOneWidget);
   });
@@ -1046,6 +1211,8 @@ void main() {
 
     expect(preferences.savedLanguage, AppLanguage.myanmar.name);
     expect(settingsStore.settings.language, AppLanguage.myanmar);
+    expect(find.text('ခန့်မှန်းချက်အသစ်အတွက် အခွန်ဆက်တင်များ'), findsOneWidget);
+    await _completeInitialTaxSetup(tester);
     expect(find.text('လုပ်ငန်းအမျိုးအစားရွေးရန်'), findsOneWidget);
     expect(find.text('မြို့ပြလုပ်ငန်း ကြီးကြပ်သူ'), findsOneWidget);
   });
@@ -1942,6 +2109,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await _completeInitialTaxSetup(tester);
     await tester.tap(find.text('土木監督'));
     await tester.pump();
     await tester.tap(find.text('この業種で始める'));
@@ -3703,6 +3871,13 @@ void main() {
       '4 + 5',
     );
   });
+}
+
+Future<void> _completeInitialTaxSetup(WidgetTester tester) async {
+  final button = find.byKey(const Key('completeInitialTaxSetup'));
+  expect(button, findsOneWidget);
+  await tester.tap(button);
+  await tester.pumpAndSettle();
 }
 
 String _menuSemanticsLabel(AppLanguage language) =>
