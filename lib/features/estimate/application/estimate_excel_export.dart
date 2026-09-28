@@ -181,6 +181,7 @@ void _writeCoverSheet(
   );
   _mergeText(sheet, 'B15', 'D15', '御 支 払 条 件', _coverLabelStyle());
   _mergeText(sheet, 'H15', 'M15', info.paymentTerms.trim(), _coverValueStyle());
+  _mergeText(sheet, 'B16', 'D16', '備考', _coverLabelStyle());
   _mergeText(sheet, 'H16', 'M16', info.notes.trim(), _coverNotesStyle());
 
   _writeCompanyProfile(sheet, companyProfile);

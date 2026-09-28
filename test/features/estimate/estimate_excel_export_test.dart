@@ -130,11 +130,25 @@ void main() {
     expect(_text(cover, 'H11'), '発行日より30日間');
     expect(_text(cover, 'H13'), '契約後30日以内');
     expect(_text(cover, 'H15'), '完了月末締め翌月末払い');
+    expect(_text(cover, 'B16'), '備考');
     expect(_text(cover, 'H16'), '既存備考');
     expect(
       cover.spannedItems,
-      containsAll(['H11:M11', 'H13:M13', 'H15:M15', 'H16:M16']),
+      containsAll([
+        'H11:M11',
+        'H13:M13',
+        'H15:M15',
+        'B16:D16',
+        'H16:M16',
+      ]),
     );
+    final remarksLabelStyle = cover
+        .cell(CellIndex.indexByString('B16'))
+        .cellStyle!;
+    expect(remarksLabelStyle.fontFamily, 'MS P明朝');
+    expect(remarksLabelStyle.fontSize, 12);
+    expect(remarksLabelStyle.horizontalAlignment, HorizontalAlign.Center);
+    expect(remarksLabelStyle.verticalAlignment, VerticalAlign.Bottom);
     expect(cover.spannedItems, isNot(contains('H16:N16')));
     for (final cell in ['H11', 'H13', 'H15']) {
       final style = cover.cell(CellIndex.indexByString(cell)).cellStyle!;
