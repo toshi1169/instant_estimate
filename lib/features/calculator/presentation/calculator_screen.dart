@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/cupertino.dart' show CupertinoTextMagnifier;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -1254,7 +1255,12 @@ class _ExpressionPanel extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Expanded(child: _EditableExpressionLine(controller: controller)),
+              Expanded(
+                child: _EditableExpressionLine(
+                  controller: controller,
+                  onStationaryLongPress: onLongPress,
+                ),
+              ),
               Expanded(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -1597,9 +1603,13 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
 }
 
 class _EditableExpressionLine extends StatefulWidget {
-  const _EditableExpressionLine({required this.controller});
+  const _EditableExpressionLine({
+    required this.controller,
+    required this.onStationaryLongPress,
+  });
 
   final CalculatorController controller;
+  final VoidCallback onStationaryLongPress;
   static const double _expressionFontSize = 42;
 
   @override
@@ -1607,12 +1617,71 @@ class _EditableExpressionLine extends StatefulWidget {
       _EditableExpressionLineState();
 }
 
+enum _ExpressionHitTargetKind {
+  text,
+  fractionBefore,
+  fractionField,
+  fractionAfter,
+  currentCaret,
+}
+
+class _ExpressionHitTarget {
+  const _ExpressionHitTarget({
+    required this.key,
+    required this.lineKey,
+    required this.kind,
+    this.text = '',
+    this.rawOffsets = const [],
+    this.style,
+    this.marker,
+    this.field,
+    this.fieldValue = '',
+    this.activeCaretOffset,
+    this.rawOffset,
+  });
+
+  final GlobalKey key;
+  final GlobalKey lineKey;
+  final _ExpressionHitTargetKind kind;
+  final String text;
+  final List<int> rawOffsets;
+  final TextStyle? style;
+  final String? marker;
+  final FractionField? field;
+  final String fieldValue;
+  final int? activeCaretOffset;
+  final int? rawOffset;
+}
+
+class _ResolvedExpressionPosition {
+  const _ResolvedExpressionPosition({
+    required this.position,
+    required this.caretRect,
+    required this.lineBounds,
+  });
+
+  final ExpressionPosition position;
+  final Rect caretRect;
+  final Rect lineBounds;
+}
+
 class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _fieldKey = GlobalKey();
+  final Map<String, GlobalKey> _targetKeys = {};
+  final Map<int, GlobalKey> _lineKeys = {};
+  final MagnifierController _magnifierController = MagnifierController();
+  final ValueNotifier<MagnifierInfo> _magnifierInfo = ValueNotifier(
+    MagnifierInfo.empty,
+  );
+  List<_ExpressionHitTarget> _hitTargets = const [];
   String _lastExpressionSignature = '';
+  Offset? _longPressOrigin;
+  bool _didDragCaret = false;
 
   @override
   void dispose() {
+    unawaited(_magnifierController.hide().whenComplete(_magnifierInfo.dispose));
     _scrollController.dispose();
     super.dispose();
   }
@@ -1625,6 +1694,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       fontWeight: FontWeight.w400,
     );
     final segments = widget.controller.displaySegments;
+    final hitTargets = <_ExpressionHitTarget>[];
     final lines = <List<ExpressionDisplaySegment>>[[]];
     for (final segment in segments) {
       if (segment is ExpressionLineBreakSegment) {
@@ -1659,39 +1729,70 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       builder: (context, constraints) {
         final visibleLineCount = math.min(2, math.max(1, lines.length));
         final lineHeight = constraints.maxHeight / visibleLineCount;
-        return ClipRect(
-          child: SingleChildScrollView(
-            key: const Key('expressionVerticalScroll'),
-            controller: _scrollController,
-            scrollDirection: Axis.vertical,
-            child: SizedBox(
-              key: const Key('expressionText'),
-              width: constraints.maxWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var lineIndex = 0; lineIndex < lines.length; lineIndex++)
-                    SizedBox(
-                      key: Key('expressionLine-$lineIndex'),
-                      height: lineHeight,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: FittedBox(
-                          key: Key('expressionLineScale-$lineIndex'),
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerRight,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              for (final segment in lines[lineIndex])
-                                _buildSegment(segment, style),
-                            ],
+        _hitTargets = hitTargets;
+        return GestureDetector(
+          key: _fieldKey,
+          behavior: HitTestBehavior.opaque,
+          onLongPressStart: _startCaretDrag,
+          onLongPressMoveUpdate: _updateCaretDrag,
+          onLongPressEnd: _endCaretDrag,
+          onLongPressCancel: _cancelCaretDrag,
+          child: ClipRect(
+            child: SingleChildScrollView(
+              key: const Key('expressionVerticalScroll'),
+              controller: _scrollController,
+              scrollDirection: Axis.vertical,
+              child: SizedBox(
+                key: const Key('expressionText'),
+                width: constraints.maxWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (
+                      var lineIndex = 0;
+                      lineIndex < lines.length;
+                      lineIndex++
+                    )
+                      KeyedSubtree(
+                        key: Key('expressionLine-$lineIndex'),
+                        child: SizedBox(
+                          key: _lineKeys.putIfAbsent(
+                            lineIndex,
+                            () => GlobalKey(
+                              debugLabel: 'expressionLine-$lineIndex',
+                            ),
+                          ),
+                          height: lineHeight,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: FittedBox(
+                              key: Key('expressionLineScale-$lineIndex'),
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  for (
+                                    var segmentIndex = 0;
+                                    segmentIndex < lines[lineIndex].length;
+                                    segmentIndex++
+                                  )
+                                    _buildSegment(
+                                      lines[lineIndex][segmentIndex],
+                                      style,
+                                      lineIndex,
+                                      segmentIndex,
+                                      hitTargets,
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1700,51 +1801,428 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
   }
 
-  Widget _buildSegment(ExpressionDisplaySegment segment, TextStyle style) {
+  Widget _buildSegment(
+    ExpressionDisplaySegment segment,
+    TextStyle style,
+    int lineIndex,
+    int segmentIndex,
+    List<_ExpressionHitTarget> hitTargets,
+  ) {
+    final lineKey = _lineKeys.putIfAbsent(
+      lineIndex,
+      () => GlobalKey(debugLabel: 'expressionLine-$lineIndex'),
+    );
     return switch (segment) {
-      ExpressionTextSegment() => _EditableExpressionText(
-        segment: segment,
-        style: style,
-        onRawOffsetTap: widget.controller.moveCaretToRawOffset,
+      ExpressionTextSegment() => _buildTextSegment(
+        segment,
+        style,
+        lineKey,
+        lineIndex,
+        segmentIndex,
+        hitTargets,
       ),
-      ExpressionCaretSegment() => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 2),
-        child: SizedBox(
-          key: Key('calculatorCaret'),
-          width: 2,
-          height: 46,
-          child: ColoredBox(color: AppColors.accent),
-        ),
+      ExpressionCaretSegment() => _buildCaretSegment(
+        lineKey,
+        lineIndex,
+        segmentIndex,
+        hitTargets,
       ),
-      ExpressionFractionSegment() => _InlineFraction(
-        segment: segment,
-        fontSize: _EditableExpressionLine._expressionFontSize,
-        onBeforeFractionTap: () {
-          widget.controller.moveCaretBeforeFraction(segment.marker);
-        },
-        onAfterFractionTap: () {
-          widget.controller.moveCaretAfterFraction(segment.marker);
-        },
-        onFieldTap: (field, caretOffset) {
-          widget.controller.activateFraction(
-            segment.marker,
-            field,
-            caretOffset: caretOffset,
-          );
-        },
+      ExpressionFractionSegment() => _buildFractionSegment(
+        segment,
+        lineKey,
+        lineIndex,
+        segmentIndex,
+        hitTargets,
       ),
       ExpressionLineBreakSegment() => const SizedBox.shrink(),
     };
+  }
+
+  Widget _buildTextSegment(
+    ExpressionTextSegment segment,
+    TextStyle style,
+    GlobalKey lineKey,
+    int lineIndex,
+    int segmentIndex,
+    List<_ExpressionHitTarget> hitTargets,
+  ) {
+    final key = _targetKey('text-$lineIndex-$segmentIndex');
+    hitTargets.add(
+      _ExpressionHitTarget(
+        key: key,
+        lineKey: lineKey,
+        kind: _ExpressionHitTargetKind.text,
+        text: segment.text,
+        rawOffsets: segment.rawOffsets,
+        style: style,
+      ),
+    );
+    return _EditableExpressionText(
+      gestureKey: key,
+      segment: segment,
+      style: style,
+      onRawOffsetTap: widget.controller.moveCaretToRawOffset,
+    );
+  }
+
+  Widget _buildCaretSegment(
+    GlobalKey lineKey,
+    int lineIndex,
+    int segmentIndex,
+    List<_ExpressionHitTarget> hitTargets,
+  ) {
+    final key = _targetKey('caret-$lineIndex-$segmentIndex');
+    hitTargets.add(
+      _ExpressionHitTarget(
+        key: key,
+        lineKey: lineKey,
+        kind: _ExpressionHitTargetKind.currentCaret,
+        rawOffset: widget.controller.caretPosition,
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: SizedBox(
+        key: key,
+        width: 2,
+        height: 46,
+        child: const ColoredBox(
+          key: Key('calculatorCaret'),
+          color: AppColors.accent,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFractionSegment(
+    ExpressionFractionSegment segment,
+    GlobalKey lineKey,
+    int lineIndex,
+    int segmentIndex,
+    List<_ExpressionHitTarget> hitTargets,
+  ) {
+    final prefix =
+        'fraction-$lineIndex-$segmentIndex-${segment.marker.codeUnitAt(0)}';
+    final beforeKey = _targetKey('$prefix-before');
+    final afterKey = _targetKey('$prefix-after');
+    final wholeKey = _targetKey('$prefix-whole');
+    final numeratorKey = _targetKey('$prefix-numerator');
+    final denominatorKey = _targetKey('$prefix-denominator');
+    hitTargets
+      ..add(
+        _ExpressionHitTarget(
+          key: beforeKey,
+          lineKey: lineKey,
+          kind: _ExpressionHitTargetKind.fractionBefore,
+          marker: segment.marker,
+        ),
+      )
+      ..add(
+        _ExpressionHitTarget(
+          key: numeratorKey,
+          lineKey: lineKey,
+          kind: _ExpressionHitTargetKind.fractionField,
+          marker: segment.marker,
+          field: FractionField.numerator,
+          fieldValue: segment.numerator,
+          activeCaretOffset: segment.activeField == FractionField.numerator
+              ? segment.activeCaretOffset
+              : null,
+          style: _fractionTextStyle(context),
+        ),
+      )
+      ..add(
+        _ExpressionHitTarget(
+          key: denominatorKey,
+          lineKey: lineKey,
+          kind: _ExpressionHitTargetKind.fractionField,
+          marker: segment.marker,
+          field: FractionField.denominator,
+          fieldValue: segment.denominator,
+          activeCaretOffset: segment.activeField == FractionField.denominator
+              ? segment.activeCaretOffset
+              : null,
+          style: _fractionTextStyle(context),
+        ),
+      )
+      ..add(
+        _ExpressionHitTarget(
+          key: afterKey,
+          lineKey: lineKey,
+          kind: _ExpressionHitTargetKind.fractionAfter,
+          marker: segment.marker,
+        ),
+      );
+    if (segment.wholeNumber.isNotEmpty) {
+      hitTargets.add(
+        _ExpressionHitTarget(
+          key: wholeKey,
+          lineKey: lineKey,
+          kind: _ExpressionHitTargetKind.fractionField,
+          marker: segment.marker,
+          field: FractionField.wholeNumber,
+          fieldValue: segment.wholeNumber,
+          activeCaretOffset: segment.activeField == FractionField.wholeNumber
+              ? segment.activeCaretOffset
+              : null,
+          style: _fractionTextStyle(context),
+        ),
+      );
+    }
+    return _InlineFraction(
+      segment: segment,
+      fontSize: _EditableExpressionLine._expressionFontSize,
+      beforeKey: beforeKey,
+      afterKey: afterKey,
+      wholeNumberKey: wholeKey,
+      numeratorKey: numeratorKey,
+      denominatorKey: denominatorKey,
+      onBeforeFractionTap: () {
+        widget.controller.moveCaretBeforeFraction(segment.marker);
+      },
+      onAfterFractionTap: () {
+        widget.controller.moveCaretAfterFraction(segment.marker);
+      },
+      onFieldTap: (field, caretOffset) {
+        widget.controller.activateFraction(
+          segment.marker,
+          field,
+          caretOffset: caretOffset,
+        );
+      },
+    );
+  }
+
+  TextStyle _fractionTextStyle(BuildContext context) => TextStyle(
+    color: Theme.of(context).colorScheme.onSurface,
+    fontSize: _EditableExpressionLine._expressionFontSize,
+    height: 1,
+  );
+
+  GlobalKey _targetKey(String id) => _targetKeys.putIfAbsent(
+    id,
+    () => GlobalKey(debugLabel: 'expressionTarget-$id'),
+  );
+
+  void _startCaretDrag(LongPressStartDetails details) {
+    _longPressOrigin = details.globalPosition;
+    _didDragCaret = false;
+    _moveCaretForDrag(details.globalPosition);
+    _showMagnifier();
+  }
+
+  void _updateCaretDrag(LongPressMoveUpdateDetails details) {
+    final origin = _longPressOrigin;
+    if (origin != null && (details.globalPosition - origin).distance >= 6) {
+      _didDragCaret = true;
+    }
+    _moveCaretForDrag(details.globalPosition);
+  }
+
+  void _endCaretDrag(LongPressEndDetails details) {
+    _moveCaretForDrag(details.globalPosition);
+    final showMenu = !_didDragCaret;
+    _longPressOrigin = null;
+    _didDragCaret = false;
+    unawaited(_finishCaretDrag(showMenu: showMenu));
+  }
+
+  void _cancelCaretDrag() {
+    _longPressOrigin = null;
+    _didDragCaret = false;
+    unawaited(_magnifierController.hide());
+  }
+
+  Future<void> _finishCaretDrag({required bool showMenu}) async {
+    await _magnifierController.hide();
+    if (showMenu && mounted) widget.onStationaryLongPress();
+  }
+
+  void _showMagnifier() {
+    if (_magnifierController.shown) return;
+    unawaited(
+      _magnifierController.show(
+        context: context,
+        debugRequiredFor: widget,
+        builder: (overlayContext) {
+          final platform = Theme.of(overlayContext).platform;
+          final magnifier = switch (platform) {
+            TargetPlatform.iOS => CupertinoTextMagnifier(
+              controller: _magnifierController,
+              magnifierInfo: _magnifierInfo,
+            ),
+            TargetPlatform.android => TextMagnifier(
+              magnifierInfo: _magnifierInfo,
+            ),
+            _ => TextMagnifier(magnifierInfo: _magnifierInfo),
+          };
+          return KeyedSubtree(
+            key: const Key('calculatorMagnifier'),
+            child: magnifier,
+          );
+        },
+      ),
+    );
+  }
+
+  void _moveCaretForDrag(Offset globalPosition) {
+    final resolved = _resolvePosition(globalPosition);
+    if (resolved == null) return;
+    if (widget.controller.expressionPosition != resolved.position) {
+      widget.controller.moveCaretToPosition(resolved.position);
+    }
+    final fieldBox = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (fieldBox == null || !fieldBox.hasSize) return;
+    final fieldTopLeft = fieldBox.localToGlobal(Offset.zero);
+    _magnifierInfo.value = MagnifierInfo(
+      globalGesturePosition: globalPosition,
+      caretRect: resolved.caretRect,
+      fieldBounds: fieldTopLeft & fieldBox.size,
+      currentLineBoundaries: resolved.lineBounds,
+    );
+  }
+
+  _ResolvedExpressionPosition? _resolvePosition(Offset globalPosition) {
+    _ExpressionHitTarget? closest;
+    var closestDistance = double.infinity;
+    for (final target in _hitTargets) {
+      final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) continue;
+      final topLeft = box.localToGlobal(Offset.zero);
+      final rect = topLeft & box.size;
+      final dx = globalPosition.dx < rect.left
+          ? rect.left - globalPosition.dx
+          : globalPosition.dx > rect.right
+          ? globalPosition.dx - rect.right
+          : 0.0;
+      final dy = globalPosition.dy < rect.top
+          ? rect.top - globalPosition.dy
+          : globalPosition.dy > rect.bottom
+          ? globalPosition.dy - rect.bottom
+          : 0.0;
+      final distance = dx * dx + dy * dy;
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closest = target;
+      }
+    }
+    if (closest == null) return null;
+    return _resolveTarget(closest, globalPosition);
+  }
+
+  _ResolvedExpressionPosition? _resolveTarget(
+    _ExpressionHitTarget target,
+    Offset globalPosition,
+  ) {
+    final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+    final lineBox =
+        target.lineKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || lineBox == null || !box.hasSize || !lineBox.hasSize) {
+      return null;
+    }
+    final local = box.globalToLocal(globalPosition);
+    late final ExpressionPosition position;
+    late final double caretX;
+    switch (target.kind) {
+      case _ExpressionHitTargetKind.text:
+        final painter = TextPainter(
+          text: TextSpan(text: target.text, style: target.style),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+        )..layout();
+        final textOffset = painter
+            .getPositionForOffset(Offset(local.dx.clamp(0.0, painter.width), 0))
+            .offset
+            .clamp(0, target.text.length);
+        position = RawExpressionPosition(target.rawOffsets[textOffset]);
+        caretX = painter
+            .getOffsetForCaret(TextPosition(offset: textOffset), Rect.zero)
+            .dx;
+      case _ExpressionHitTargetKind.fractionField:
+        final value = target.fieldValue;
+        final painter = TextPainter(
+          text: TextSpan(text: value, style: target.style),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+        )..layout();
+        var textX = local.dx - 5;
+        final activeOffset = target.activeCaretOffset;
+        if (activeOffset != null &&
+            textX >
+                _textWidthForStyle(
+                  value.substring(0, activeOffset.clamp(0, value.length)),
+                  target.style!,
+                )) {
+          textX -=
+              _FractionFieldDisplay._caretGap +
+              _FractionFieldDisplay._caretWidth;
+        }
+        final fieldOffset = value.isEmpty
+            ? 0
+            : painter
+                  .getPositionForOffset(
+                    Offset(textX.clamp(0.0, painter.width), 0),
+                  )
+                  .offset
+                  .clamp(0, value.length);
+        position = FractionExpressionPosition(
+          marker: target.marker!,
+          field: target.field!,
+          offset: fieldOffset,
+        );
+        caretX =
+            5 +
+            painter
+                .getOffsetForCaret(TextPosition(offset: fieldOffset), Rect.zero)
+                .dx;
+      case _ExpressionHitTargetKind.fractionBefore:
+        position = RawExpressionPosition(
+          widget.controller.expression.indexOf(target.marker!),
+        );
+        caretX = box.size.width;
+      case _ExpressionHitTargetKind.fractionAfter:
+        position = RawExpressionPosition(
+          widget.controller.expression.indexOf(target.marker!) + 1,
+        );
+        caretX = 0;
+      case _ExpressionHitTargetKind.currentCaret:
+        position = RawExpressionPosition(target.rawOffset!);
+        caretX = box.size.width / 2;
+    }
+    final caretTop = box.localToGlobal(Offset(caretX, 0));
+    final caretBottom = box.localToGlobal(Offset(caretX, box.size.height));
+    final lineTopLeft = lineBox.localToGlobal(Offset.zero);
+    return _ResolvedExpressionPosition(
+      position: position,
+      caretRect: Rect.fromLTRB(
+        caretTop.dx - 1,
+        caretTop.dy,
+        caretBottom.dx + 1,
+        caretBottom.dy,
+      ),
+      lineBounds: lineTopLeft & lineBox.size,
+    );
+  }
+
+  double _textWidthForStyle(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    return painter.width;
   }
 }
 
 class _EditableExpressionText extends StatelessWidget {
   const _EditableExpressionText({
+    required this.gestureKey,
     required this.segment,
     required this.style,
     required this.onRawOffsetTap,
   });
 
+  final GlobalKey gestureKey;
   final ExpressionTextSegment segment;
   final TextStyle style;
   final ValueChanged<int> onRawOffsetTap;
@@ -1758,6 +2236,7 @@ class _EditableExpressionText extends StatelessWidget {
     )..layout();
 
     return GestureDetector(
+      key: gestureKey,
       behavior: HitTestBehavior.opaque,
       onTapUp: (details) {
         final localX = details.localPosition.dx.clamp(0.0, painter.width);
@@ -1781,6 +2260,11 @@ class _InlineFraction extends StatelessWidget {
   const _InlineFraction({
     required this.segment,
     required this.fontSize,
+    required this.beforeKey,
+    required this.afterKey,
+    required this.wholeNumberKey,
+    required this.numeratorKey,
+    required this.denominatorKey,
     required this.onBeforeFractionTap,
     required this.onAfterFractionTap,
     required this.onFieldTap,
@@ -1788,6 +2272,11 @@ class _InlineFraction extends StatelessWidget {
 
   final ExpressionFractionSegment segment;
   final double fontSize;
+  final GlobalKey beforeKey;
+  final GlobalKey afterKey;
+  final GlobalKey wholeNumberKey;
+  final GlobalKey numeratorKey;
+  final GlobalKey denominatorKey;
   final VoidCallback onBeforeFractionTap;
   final VoidCallback onAfterFractionTap;
   final void Function(FractionField field, int caretOffset) onFieldTap;
@@ -1801,15 +2290,20 @@ class _InlineFraction extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           GestureDetector(
-            key: const Key('fractionBeforeTapArea'),
+            key: beforeKey,
             behavior: HitTestBehavior.opaque,
             onTap: onBeforeFractionTap,
-            child: SizedBox(width: 14, height: fontSize * 2.1),
+            child: SizedBox(
+              key: const Key('fractionBeforeTapArea'),
+              width: 14,
+              height: fontSize * 2.1,
+            ),
           ),
           if (segment.wholeNumber.isNotEmpty) ...[
             _FractionFieldDisplay(
               key: const Key('mixedFractionWholeNumber'),
               caretSlotKey: const Key('mixedFractionWholeNumberCaretSlot'),
+              gestureKey: wholeNumberKey,
               value: segment.wholeNumber,
               active: segment.activeField == FractionField.wholeNumber,
               caretOffset: segment.activeField == FractionField.wholeNumber
@@ -1831,6 +2325,7 @@ class _InlineFraction extends StatelessWidget {
                 _FractionFieldDisplay(
                   key: const Key('fractionNumeratorField'),
                   caretSlotKey: const Key('fractionNumeratorCaretSlot'),
+                  gestureKey: numeratorKey,
                   value: segment.numerator,
                   active: segment.activeField == FractionField.numerator,
                   caretOffset: segment.activeField == FractionField.numerator
@@ -1849,6 +2344,7 @@ class _InlineFraction extends StatelessWidget {
                 _FractionFieldDisplay(
                   key: const Key('fractionDenominatorField'),
                   caretSlotKey: const Key('fractionDenominatorCaretSlot'),
+                  gestureKey: denominatorKey,
                   value: segment.denominator,
                   active: segment.activeField == FractionField.denominator,
                   caretOffset: segment.activeField == FractionField.denominator
@@ -1863,10 +2359,14 @@ class _InlineFraction extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            key: const Key('fractionAfterTapArea'),
+            key: afterKey,
             behavior: HitTestBehavior.opaque,
             onTap: onAfterFractionTap,
-            child: SizedBox(width: 24, height: fontSize * 2.1),
+            child: SizedBox(
+              key: const Key('fractionAfterTapArea'),
+              width: 24,
+              height: fontSize * 2.1,
+            ),
           ),
         ],
       ),
@@ -1880,6 +2380,7 @@ class _FractionFieldDisplay extends StatelessWidget {
     required this.active,
     required this.caretOffset,
     required this.caretSlotKey,
+    required this.gestureKey,
     required this.fontSize,
     required this.onTap,
     super.key,
@@ -1889,6 +2390,7 @@ class _FractionFieldDisplay extends StatelessWidget {
   final bool active;
   final int? caretOffset;
   final Key caretSlotKey;
+  final GlobalKey gestureKey;
   final double fontSize;
   final ValueChanged<int> onTap;
 
@@ -1914,6 +2416,7 @@ class _FractionFieldDisplay extends StatelessWidget {
     final suffix = displayValue.substring(displayOffset);
 
     return GestureDetector(
+      key: gestureKey,
       behavior: HitTestBehavior.opaque,
       onTapUp: (details) {
         if (value.isEmpty) {
