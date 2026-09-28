@@ -1694,6 +1694,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   Rect? _baseSelectionCaretRect;
   Rect? _extentSelectionCaretRect;
   bool _selectionToolbarRequested = false;
+  bool _selectionOverlaySyncScheduled = false;
+  bool _selectionHandleDragActive = false;
   Duration? _lastPointerDownTime;
   Offset? _lastPointerDownPosition;
   bool _suppressNextExpressionTap = false;
@@ -1755,9 +1757,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         final visibleLineCount = math.min(2, math.max(1, lines.length));
         final lineHeight = constraints.maxHeight / visibleLineCount;
         _hitTargets = hitTargets;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _syncSelectionHandlesOverlay();
-        });
+        _scheduleSelectionOverlaySync();
         return Listener(
           key: _fieldKey,
           behavior: HitTestBehavior.opaque,
@@ -2232,6 +2232,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     if (selection == null) {
       _selectionHandlesOverlay?.remove();
       _selectionHandlesOverlay = null;
+      _baseSelectionCaretRect = null;
+      _extentSelectionCaretRect = null;
       _selectionToolbarRequested = false;
       _removeSelectionToolbar();
       return;
@@ -2241,8 +2243,15 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     if (baseRect == null || extentRect == null) {
       _selectionHandlesOverlay?.remove();
       _selectionHandlesOverlay = null;
+      _baseSelectionCaretRect = null;
+      _extentSelectionCaretRect = null;
+      _selectionToolbarRequested = false;
+      _removeSelectionToolbar();
       return;
     }
+    final handlesMoved =
+        _baseSelectionCaretRect != baseRect ||
+        _extentSelectionCaretRect != extentRect;
     _baseSelectionCaretRect = baseRect;
     _extentSelectionCaretRect = extentRect;
     final overlay = Overlay.of(context, rootOverlay: true);
@@ -2251,19 +2260,31 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
     if (!_selectionHandlesOverlay!.mounted) {
       overlay.insert(_selectionHandlesOverlay!);
-    } else {
+    } else if (handlesMoved) {
       _selectionHandlesOverlay!.markNeedsBuild();
     }
-    if (_selectionToolbarRequested) {
+    if (_selectionToolbarRequested && !_selectionHandleDragActive) {
       _selectionToolbarOverlay ??= OverlayEntry(
         builder: _buildSelectionToolbarOverlay,
       );
       if (!_selectionToolbarOverlay!.mounted) {
-        overlay.insert(_selectionToolbarOverlay!);
-      } else {
+        overlay.insert(
+          _selectionToolbarOverlay!,
+          below: _selectionHandlesOverlay,
+        );
+      } else if (handlesMoved) {
         _selectionToolbarOverlay!.markNeedsBuild();
       }
     }
+  }
+
+  void _scheduleSelectionOverlaySync() {
+    if (_selectionOverlaySyncScheduled) return;
+    _selectionOverlaySyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _selectionOverlaySyncScheduled = false;
+      if (mounted) _syncSelectionHandlesOverlay();
+    });
   }
 
   void _removeSelectionToolbar() {
@@ -2385,7 +2406,14 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     const touchSize = 48.0;
     const lineHeight = _EditableExpressionLine._expressionFontSize;
     final screen = MediaQuery.sizeOf(overlayContext);
-    final left = (endpoint.dx - touchSize / 2)
+    // Keep the two 48pt hit targets on the outside of their endpoints. When
+    // both were centered, short selections made them overlap and the later
+    // extent handle consumed every pointer intended for the base handle.
+    const endpointInset = 8.0;
+    final desiredLeft = type == TextSelectionHandleType.left
+        ? endpoint.dx - touchSize + endpointInset
+        : endpoint.dx - endpointInset;
+    final left = desiredLeft
         .clamp(0.0, math.max(0.0, screen.width - touchSize))
         .toDouble();
     final top = (endpoint.dy - touchSize / 2)
@@ -2405,24 +2433,30 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         key: key,
         behavior: HitTestBehavior.opaque,
         onPanStart: (_) {
+          _selectionHandleDragActive = true;
           _selectionToolbarRequested = false;
           _removeSelectionToolbar();
         },
         onPanUpdate: (details) =>
             _dragSelectionHandle(details.globalPosition, movesBase: movesBase),
         onPanEnd: (_) {
+          _selectionHandleDragActive = false;
           if (!widget.controller.hasSelection) return;
           _selectionToolbarRequested = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _syncSelectionHandlesOverlay();
-          });
+          _scheduleSelectionOverlaySync();
+        },
+        onPanCancel: () {
+          _selectionHandleDragActive = false;
+          if (!widget.controller.hasSelection) return;
+          _selectionToolbarRequested = true;
+          _scheduleSelectionOverlaySync();
         },
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              left: touchSize / 2 - anchor.dx,
-              top: touchSize / 2 - anchor.dy,
+              left: endpoint.dx - left - anchor.dx,
+              top: endpoint.dy - top - anchor.dy,
               child: handle,
             ),
           ],
