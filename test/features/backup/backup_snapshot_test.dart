@@ -112,6 +112,120 @@ void main() {
       );
     });
 
+    test('v1.0バックアップは税設定キー欠損をON・10%で復元する', () {
+      final json =
+          jsonDecode(
+                _snapshot(workspace: _workspace(estimateCount: 1)).encode(),
+              )
+              as Map<String, dynamic>;
+      final data = json['data'] as Map<String, dynamic>;
+      final settings = data['settings'] as Map<String, dynamic>;
+      settings.remove('defaultEstimateTaxEnabled');
+      settings.remove('defaultEstimateTaxRateBasisPoints');
+      final estimate =
+          ((data['estimateWorkspace'] as Map<String, dynamic>)['estimates']
+                      as List)
+                  .single
+              as Map<String, dynamic>;
+      final info = estimate['info'] as Map<String, dynamic>;
+      info.remove('taxEnabled');
+      info.remove('taxRateBasisPoints');
+
+      final restored = BackupSnapshot.decode(jsonEncode(json));
+
+      expect(restored.toJson()['backupVersion'], 1);
+      expect(restored.data.settings.defaultEstimateTaxEnabled, isTrue);
+      expect(restored.data.settings.defaultEstimateTaxRateBasisPoints, 1000);
+      expect(
+        restored.data.estimateWorkspace.estimates.single.info.taxEnabled,
+        isTrue,
+      );
+      expect(
+        restored
+            .data
+            .estimateWorkspace
+            .estimates
+            .single
+            .info
+            .taxRateBasisPoints,
+        1000,
+      );
+    });
+
+    test('新しい税設定をbackupVersion 1のまま往復する', () {
+      final json =
+          jsonDecode(
+                _snapshot(
+                  settings: const AppSettings(
+                    defaultEstimateTaxEnabled: false,
+                    defaultEstimateTaxRateBasisPoints: 825,
+                  ),
+                  workspace: _workspace(estimateCount: 1),
+                ).encode(),
+              )
+              as Map<String, dynamic>;
+      final data = json['data'] as Map<String, dynamic>;
+      final estimate =
+          ((data['estimateWorkspace'] as Map<String, dynamic>)['estimates']
+                      as List)
+                  .single
+              as Map<String, dynamic>;
+      final info = estimate['info'] as Map<String, dynamic>;
+      info['taxEnabled'] = false;
+      info['taxRateBasisPoints'] = 1200;
+
+      final restored = BackupSnapshot.decode(jsonEncode(json));
+
+      expect(restored.toJson()['backupVersion'], 1);
+      expect(restored.data.settings.defaultEstimateTaxEnabled, isFalse);
+      expect(restored.data.settings.defaultEstimateTaxRateBasisPoints, 825);
+      expect(
+        restored.data.estimateWorkspace.estimates.single.info.taxEnabled,
+        isFalse,
+      );
+      expect(
+        restored
+            .data
+            .estimateWorkspace
+            .estimates
+            .single
+            .info
+            .taxRateBasisPoints,
+        1200,
+      );
+    });
+
+    test('バックアップの税設定は不正型と範囲外を拒否する', () {
+      final valid =
+          jsonDecode(
+                _snapshot(workspace: _workspace(estimateCount: 1)).encode(),
+              )
+              as Map<String, dynamic>;
+      final invalidSettings = _deepCopy(valid);
+      final settings =
+          (invalidSettings['data'] as Map<String, dynamic>)['settings']
+              as Map<String, dynamic>;
+      settings['defaultEstimateTaxEnabled'] = 'true';
+      expect(
+        () => BackupSnapshot.decode(jsonEncode(invalidSettings)),
+        throwsA(isA<BackupValidationException>()),
+      );
+
+      final invalidEstimate = _deepCopy(valid);
+      final data = invalidEstimate['data'] as Map<String, dynamic>;
+      final estimate =
+          ((data['estimateWorkspace'] as Map<String, dynamic>)['estimates']
+                      as List)
+                  .single
+              as Map<String, dynamic>;
+      final info = estimate['info'] as Map<String, dynamic>;
+      info['taxRateBasisPoints'] = 10001;
+      expect(
+        () => BackupSnapshot.decode(jsonEncode(invalidEstimate)),
+        throwsA(isA<BackupValidationException>()),
+      );
+    });
+
     test('旧履歴は余りキー欠損を許可し、存在時は文字列だけを許可する', () {
       final json =
           jsonDecode(_snapshot(history: [_history(1)]).encode())

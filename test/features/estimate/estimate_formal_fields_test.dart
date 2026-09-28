@@ -41,6 +41,8 @@ void main() {
       expect(info.validityPeriod, isEmpty);
       expect(info.constructionPeriod, isEmpty);
       expect(info.paymentTerms, isEmpty);
+      expect(info.taxEnabled, isTrue);
+      expect(info.taxRateBasisPoints, 1000);
       expect(info.displayName, '既存見積');
       expect(info.toJson()['siteName'], '旧現場名');
       expect(info.toJson()['clientName'], '旧宛名');
@@ -79,6 +81,32 @@ void main() {
       expect(restored.validityPeriod, '発行日より30日間');
       expect(restored.constructionPeriod, '契約後30日以内');
       expect(restored.paymentTerms, '完了月末締め翌月末払い');
+    });
+
+    test('見積税設定を保存・復元し不正型と範囲外を拒否する', () {
+      final original = EstimateInfo.initial(
+        DateTime(2026, 8, 12),
+        taxEnabled: false,
+        taxRateBasisPoints: 825,
+      );
+      final restored = EstimateInfo.fromJson(original.toJson());
+
+      expect(restored.taxEnabled, isFalse);
+      expect(restored.taxRateBasisPoints, 825);
+      expect(
+        () => EstimateInfo.fromJson({
+          ...original.toJson(),
+          'taxEnabled': 'false',
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => EstimateInfo.fromJson({
+          ...original.toJson(),
+          'taxRateBasisPoints': 10001,
+        }),
+        throwsFormatException,
+      );
     });
   });
 

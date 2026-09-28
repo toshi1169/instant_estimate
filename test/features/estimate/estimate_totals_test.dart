@@ -19,6 +19,32 @@ void main() {
     expect(estimateTax(12345), 1234);
   });
 
+  test('basis point税率0・5・8・8.25・10・12%を1円未満切り捨てで計算する', () {
+    const subtotal = 12345;
+
+    expect(estimateTax(subtotal, taxRateBasisPoints: 0), 0);
+    expect(estimateTax(subtotal, taxRateBasisPoints: 500), 617);
+    expect(estimateTax(subtotal, taxRateBasisPoints: 800), 987);
+    expect(estimateTax(subtotal, taxRateBasisPoints: 825), 1018);
+    expect(estimateTax(subtotal, taxRateBasisPoints: 1000), 1234);
+    expect(estimateTax(subtotal, taxRateBasisPoints: 1200), 1481);
+  });
+
+  test('税OFFは保存税率にかかわらず税額0・最終合計は税抜合計になる', () {
+    final items = [_item('1', quantity: 1, unitPrice: 12345)];
+
+    expect(estimateTax(12345, taxEnabled: false, taxRateBasisPoints: 825), 0);
+    expect(
+      estimateGrandTotal(items, taxEnabled: false, taxRateBasisPoints: 825),
+      12345,
+    );
+  });
+
+  test('税率の範囲外は拒否する', () {
+    expect(() => estimateTax(100, taxRateBasisPoints: -1), throwsRangeError);
+    expect(() => estimateTax(100, taxRateBasisPoints: 10001), throwsRangeError);
+  });
+
   test('行金額は0.5を絶対値の大きい整数へ丸める', () {
     expect(estimateLineAmount(_item('1', quantity: 1.5, unitPrice: 1)), 2);
     expect(estimateLineAmount(_item('2', quantity: 2.5, unitPrice: 1)), 3);

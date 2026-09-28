@@ -7,6 +7,7 @@ import '../../../core/domain/transport_vehicle.dart';
 import '../../../core/localization/app_language.dart';
 import '../../density/domain/weight_calculator.dart';
 import '../../estimate/domain/estimate_quantity.dart';
+import '../../estimate/domain/estimate_totals.dart' as estimate_tax;
 import 'company_profile.dart';
 
 enum AppThemeSelection { system, light, gray, dark }
@@ -26,6 +27,9 @@ class AppSettings {
     this.remainderResultEnabled = true,
     this.estimateDecimalPlaces = 2,
     this.estimateRoundingMode = EstimateQuantityRoundingMode.halfUp,
+    this.defaultEstimateTaxEnabled = true,
+    this.defaultEstimateTaxRateBasisPoints =
+        estimate_tax.defaultEstimateTaxRateBasisPoints,
     this.angleUnit = AngleUnit.degrees,
     this.historySortOrder = HistorySortOrder.ascending,
     this.confirmHistoryDeletion = true,
@@ -45,6 +49,8 @@ class AppSettings {
   final bool remainderResultEnabled;
   final int estimateDecimalPlaces;
   final EstimateQuantityRoundingMode estimateRoundingMode;
+  final bool defaultEstimateTaxEnabled;
+  final int defaultEstimateTaxRateBasisPoints;
   final AngleUnit angleUnit;
   final HistorySortOrder historySortOrder;
   final bool confirmHistoryDeletion;
@@ -91,6 +97,8 @@ class AppSettings {
     bool? remainderResultEnabled,
     int? estimateDecimalPlaces,
     EstimateQuantityRoundingMode? estimateRoundingMode,
+    bool? defaultEstimateTaxEnabled,
+    int? defaultEstimateTaxRateBasisPoints,
     AngleUnit? angleUnit,
     HistorySortOrder? historySortOrder,
     bool? confirmHistoryDeletion,
@@ -100,6 +108,10 @@ class AppSettings {
     List<DensityMaterialPreset>? customDensityMaterials,
     CompanyProfile? companyProfile,
   }) {
+    final resolvedDefaultTaxRate =
+        defaultEstimateTaxRateBasisPoints ??
+        this.defaultEstimateTaxRateBasisPoints;
+    estimate_tax.validateEstimateTaxRateBasisPoints(resolvedDefaultTaxRate);
     return AppSettings(
       language: language ?? this.language,
       theme: theme ?? this.theme,
@@ -114,6 +126,9 @@ class AppSettings {
       estimateDecimalPlaces:
           estimateDecimalPlaces ?? this.estimateDecimalPlaces,
       estimateRoundingMode: estimateRoundingMode ?? this.estimateRoundingMode,
+      defaultEstimateTaxEnabled:
+          defaultEstimateTaxEnabled ?? this.defaultEstimateTaxEnabled,
+      defaultEstimateTaxRateBasisPoints: resolvedDefaultTaxRate,
       angleUnit: angleUnit ?? this.angleUnit,
       historySortOrder: historySortOrder ?? this.historySortOrder,
       confirmHistoryDeletion:
@@ -130,29 +145,36 @@ class AppSettings {
     );
   }
 
-  Map<String, Object> toJson() => <String, Object>{
-    'language': language.name,
-    'theme': theme.name,
-    'decimalPlaces': decimalPlaces,
-    'roundingMode': roundingMode.name,
-    'improperFractionResultEnabled': improperFractionResultEnabled,
-    'mixedFractionResultEnabled': mixedFractionResultEnabled,
-    'remainderResultEnabled': remainderResultEnabled,
-    'estimateDecimalPlaces': estimateDecimalPlaces,
-    'estimateRoundingMode': estimateRoundingMode.name,
-    'angleUnit': angleUnit.name,
-    'historySortOrder': historySortOrder.name,
-    'confirmHistoryDeletion': confirmHistoryDeletion,
-    'calculatorTapSoundEnabled': calculatorTapSoundEnabled,
-    'calculatorHapticsEnabled': calculatorHapticsEnabled,
-    'customTransportVehicles': customTransportVehicles
-        .map((vehicle) => vehicle.toJson())
-        .toList(growable: false),
-    'customDensityMaterials': customDensityMaterials
-        .map((material) => material.toJson())
-        .toList(growable: false),
-    'companyProfile': companyProfile.toJson(),
-  };
+  Map<String, Object> toJson() {
+    estimate_tax.validateEstimateTaxRateBasisPoints(
+      defaultEstimateTaxRateBasisPoints,
+    );
+    return <String, Object>{
+      'language': language.name,
+      'theme': theme.name,
+      'decimalPlaces': decimalPlaces,
+      'roundingMode': roundingMode.name,
+      'improperFractionResultEnabled': improperFractionResultEnabled,
+      'mixedFractionResultEnabled': mixedFractionResultEnabled,
+      'remainderResultEnabled': remainderResultEnabled,
+      'estimateDecimalPlaces': estimateDecimalPlaces,
+      'estimateRoundingMode': estimateRoundingMode.name,
+      'defaultEstimateTaxEnabled': defaultEstimateTaxEnabled,
+      'defaultEstimateTaxRateBasisPoints': defaultEstimateTaxRateBasisPoints,
+      'angleUnit': angleUnit.name,
+      'historySortOrder': historySortOrder.name,
+      'confirmHistoryDeletion': confirmHistoryDeletion,
+      'calculatorTapSoundEnabled': calculatorTapSoundEnabled,
+      'calculatorHapticsEnabled': calculatorHapticsEnabled,
+      'customTransportVehicles': customTransportVehicles
+          .map((vehicle) => vehicle.toJson())
+          .toList(growable: false),
+      'customDensityMaterials': customDensityMaterials
+          .map((material) => material.toJson())
+          .toList(growable: false),
+      'companyProfile': companyProfile.toJson(),
+    };
+  }
 
   factory AppSettings.fromJson(Map<String, Object?> json) {
     T enumValue<T extends Enum>(List<T> values, Object? raw, T fallback) {
@@ -196,6 +218,15 @@ class AppSettings {
         EstimateQuantityRoundingMode.values,
         json['estimateRoundingMode'],
         EstimateQuantityRoundingMode.halfUp,
+      ),
+      defaultEstimateTaxEnabled: _optionalBool(
+        json,
+        'defaultEstimateTaxEnabled',
+        true,
+      ),
+      defaultEstimateTaxRateBasisPoints: _optionalTaxRateBasisPoints(
+        json,
+        'defaultEstimateTaxRateBasisPoints',
       ),
       angleUnit: enumValue(
         AngleUnit.values,
@@ -248,4 +279,25 @@ class AppSettings {
       },
     );
   }
+}
+
+bool _optionalBool(Map<String, Object?> json, String key, bool fallback) {
+  if (!json.containsKey(key)) return fallback;
+  final value = json[key];
+  if (value is! bool) throw FormatException('$key must be a boolean');
+  return value;
+}
+
+int _optionalTaxRateBasisPoints(Map<String, Object?> json, String key) {
+  if (!json.containsKey(key)) {
+    return estimate_tax.defaultEstimateTaxRateBasisPoints;
+  }
+  final value = json[key];
+  if (value is! int) throw FormatException('$key must be an integer');
+  try {
+    estimate_tax.validateEstimateTaxRateBasisPoints(value);
+  } on RangeError {
+    throw FormatException('$key is out of range');
+  }
+  return value;
 }

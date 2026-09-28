@@ -53,7 +53,11 @@ class EstimateController extends ChangeNotifier {
   }
 
   int get subtotalAmount => estimateSubtotal(_items);
-  int get taxAmount => estimateTax(subtotalAmount);
+  int get taxAmount => estimateTax(
+    subtotalAmount,
+    taxEnabled: _info.taxEnabled,
+    taxRateBasisPoints: _info.taxRateBasisPoints,
+  );
   int get grandTotalAmount => subtotalAmount + taxAmount;
   List<EstimateItemGroup> get groups {
     final locationsBySymbol = _constructionLocationsBySymbol(_items);
@@ -332,6 +336,8 @@ class EstimateController extends ChangeNotifier {
       validityPeriod: source.info.validityPeriod,
       constructionPeriod: source.info.constructionPeriod,
       paymentTerms: source.info.paymentTerms,
+      taxEnabled: source.info.taxEnabled,
+      taxRateBasisPoints: source.info.taxRateBasisPoints,
     );
     final usedItemIds = {
       for (final estimate in currentWorkspace.estimates)

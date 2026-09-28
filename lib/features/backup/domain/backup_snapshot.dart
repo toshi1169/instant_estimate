@@ -218,6 +218,8 @@ class _BackupV1Validator {
         'improperFractionResultEnabled',
         'mixedFractionResultEnabled',
         'remainderResultEnabled',
+        'defaultEstimateTaxEnabled',
+        'defaultEstimateTaxRateBasisPoints',
       },
       path,
     );
@@ -256,6 +258,12 @@ class _BackupV1Validator {
     }
     if (json.containsKey('remainderResultEnabled')) {
       _boolean(json, 'remainderResultEnabled', path);
+    }
+    if (json.containsKey('defaultEstimateTaxEnabled')) {
+      _boolean(json, 'defaultEstimateTaxEnabled', path);
+    }
+    if (json.containsKey('defaultEstimateTaxRateBasisPoints')) {
+      _rangedInteger(json, 'defaultEstimateTaxRateBasisPoints', path, 0, 10000);
     }
 
     final vehicleIds = <String>{};
@@ -445,19 +453,24 @@ class _BackupV1Validator {
   }
 
   void _validateEstimateInfo(Map<String, Object?> json, String path) {
-    _exactKeys(json, const {
-      'id',
-      'estimateName',
-      'siteName',
-      'clientName',
-      'createdDate',
-      'estimateNumber',
-      'notes',
-      'proviso',
-      'validityPeriod',
-      'constructionPeriod',
-      'paymentTerms',
-    }, path);
+    _keysWithOptional(
+      json,
+      const {
+        'id',
+        'estimateName',
+        'siteName',
+        'clientName',
+        'createdDate',
+        'estimateNumber',
+        'notes',
+        'proviso',
+        'validityPeriod',
+        'constructionPeriod',
+        'paymentTerms',
+      },
+      const {'taxEnabled', 'taxRateBasisPoints'},
+      path,
+    );
     _nonEmptyString(json, 'id', path);
     for (final key in const [
       'estimateName',
@@ -473,6 +486,12 @@ class _BackupV1Validator {
       _string(json, key, path);
     }
     _date(json, 'createdDate', path);
+    if (json.containsKey('taxEnabled')) {
+      _boolean(json, 'taxEnabled', path);
+    }
+    if (json.containsKey('taxRateBasisPoints')) {
+      _rangedInteger(json, 'taxRateBasisPoints', path, 0, 10000);
+    }
   }
 
   void _validateEstimateItem(Map<String, Object?> json, String path) {

@@ -444,6 +444,8 @@ void main() {
         clientName: '○○様',
         estimateNumber: '2026-001',
         notes: '既存見積',
+        taxEnabled: false,
+        taxRateBasisPoints: 825,
       ),
     );
     await controller.add(
@@ -470,6 +472,9 @@ void main() {
     expect(copied.info.clientName, '○○様');
     expect(copied.info.estimateNumber, isEmpty);
     expect(copied.info.notes, '既存見積');
+    expect(copied.info.taxEnabled, isFalse);
+    expect(copied.info.taxRateBasisPoints, 825);
+    expect(controller.taxAmount, 0);
     expect(copied.items.single.id, isNot(sourceItemId));
     expect(copied.items.single.constructionSymbol, '①');
     expect(copied.items.single.constructionLocation, '北側通路');

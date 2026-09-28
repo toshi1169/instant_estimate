@@ -13,6 +13,41 @@ void main() {
     expect(settings.improperFractionResultEnabled, isTrue);
     expect(settings.mixedFractionResultEnabled, isFalse);
     expect(settings.remainderResultEnabled, isTrue);
+    expect(settings.defaultEstimateTaxEnabled, isTrue);
+    expect(settings.defaultEstimateTaxRateBasisPoints, 1000);
+  });
+
+  test('新規見積用税設定を保存・復元し旧JSONはON・10%を補完する', () {
+    const settings = AppSettings(
+      defaultEstimateTaxEnabled: false,
+      defaultEstimateTaxRateBasisPoints: 825,
+    );
+
+    final restored = AppSettings.fromJson(settings.toJson());
+    final legacy = AppSettings.fromJson(const {});
+
+    expect(restored.defaultEstimateTaxEnabled, isFalse);
+    expect(restored.defaultEstimateTaxRateBasisPoints, 825);
+    expect(legacy.defaultEstimateTaxEnabled, isTrue);
+    expect(legacy.defaultEstimateTaxRateBasisPoints, 1000);
+  });
+
+  test('新規見積用税設定の不正型と範囲外を拒否する', () {
+    expect(
+      () => AppSettings.fromJson(const {'defaultEstimateTaxEnabled': 'true'}),
+      throwsFormatException,
+    );
+    expect(
+      () => AppSettings.fromJson(const {
+        'defaultEstimateTaxRateBasisPoints': 8.25,
+      }),
+      throwsFormatException,
+    );
+    expect(
+      () =>
+          AppSettings.fromJson(const {'defaultEstimateTaxRateBasisPoints': -1}),
+      throwsFormatException,
+    );
   });
 
   test('言語設定を保存・復元し、旧データは日本語として扱う', () {
