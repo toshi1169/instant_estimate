@@ -470,7 +470,9 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
     if (!context.mounted) return;
     try {
       await Clipboard.setData(
-        ClipboardData(text: buildEstimateTableText(controller.items)),
+        ClipboardData(
+          text: buildEstimateTableText(controller.items, info: controller.info),
+        ),
       );
       if (context.mounted) {
         showEstimateSuccessSnackBar(

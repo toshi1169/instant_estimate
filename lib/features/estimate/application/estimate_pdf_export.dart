@@ -51,7 +51,11 @@ Future<Uint8List> buildEstimatePdf({
   final document = pw.Document(
     theme: pw.ThemeData.withFont(base: regular, bold: bold),
   );
-  final pages = buildEstimatePdfBreakdownLayout(itemList);
+  final pages = buildEstimatePdfBreakdownLayout(
+    itemList,
+    taxEnabled: info.taxEnabled,
+    taxRateBasisPoints: info.taxRateBasisPoints,
+  );
 
   document.addPage(
     pw.Page(
@@ -126,8 +130,10 @@ class EstimatePdfPageLayout {
 /// 正式XLSXと同じ17帳票行（20行雛形の4～20行）でページを割り付ける。
 @visibleForTesting
 List<EstimatePdfPageLayout> buildEstimatePdfBreakdownLayout(
-  Iterable<EstimateItem> items,
-) {
+  Iterable<EstimateItem> items, {
+  bool taxEnabled = true,
+  int taxRateBasisPoints = defaultEstimateTaxRateBasisPoints,
+}) {
   final itemList = items.toList(growable: false);
   final groups = _groupItemsByLocation(itemList);
   final pages = <List<EstimatePdfRow>>[<EstimatePdfRow>[]];
@@ -163,14 +169,28 @@ List<EstimatePdfPageLayout> buildEstimatePdfBreakdownLayout(
     add(const EstimatePdfRow.blank());
   }
   final subtotal = estimateSubtotal(itemList);
-  final tax = estimateTax(subtotal);
-  add(
-    EstimatePdfRow.summary(
-      _subtotalLabel(groups.keys.map((key) => key.$1)),
-      subtotal,
-    ),
+  final tax = estimateTax(
+    subtotal,
+    taxEnabled: taxEnabled,
+    taxRateBasisPoints: taxRateBasisPoints,
   );
-  add(EstimatePdfRow.summary('消費税$estimateTaxPercentage%', tax));
+  if (taxEnabled) {
+    add(
+      EstimatePdfRow.summary(
+        _subtotalLabel(groups.keys.map((key) => key.$1)),
+        subtotal,
+      ),
+    );
+    add(
+      EstimatePdfRow.summary(
+        '消費税${formatEstimateTaxRate(taxRateBasisPoints)}',
+        tax,
+      ),
+    );
+  } else {
+    add(const EstimatePdfRow.blank());
+    add(const EstimatePdfRow.blank());
+  }
   add(EstimatePdfRow.total(subtotal + tax));
 
   for (final page in pages) {
@@ -193,7 +213,11 @@ pw.Widget _coverPage({
   required CompanyProfile companyProfile,
 }) {
   final subtotal = estimateSubtotal(items);
-  final tax = estimateTax(subtotal);
+  final tax = estimateTax(
+    subtotal,
+    taxEnabled: info.taxEnabled,
+    taxRateBasisPoints: info.taxRateBasisPoints,
+  );
   final companyLines = estimatePdfCompanyProfileLines(companyProfile);
   return pw.Container(
     decoration: pw.BoxDecoration(border: pw.Border.all(width: 0.8)),

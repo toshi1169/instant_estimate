@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_table_export.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_item_draft.dart';
+import 'package:instant_estimate/features/estimate/domain/estimate_info.dart';
 import 'package:instant_estimate/features/estimate/domain/estimate_totals.dart';
 
 void main() {
@@ -33,7 +34,10 @@ void main() {
     ];
 
     expect(
-      buildEstimateTableText(items),
+      buildEstimateTableText(
+        items,
+        info: _info(taxEnabled: true, taxRateBasisPoints: 1000),
+      ),
       '記号\t名称\t仕様\t数量\t単位\t単価\t金額\t摘要\n'
       '①\t根切り\tW1.2 × H0.5\t7.2\tm³\t4500\t=ROUND(D2*F2,0)\t小運搬含む\n'
       '\t\t\t\t\t小計\t=SUM(G2:G2)\t\n'
@@ -42,7 +46,7 @@ void main() {
       '\t\t\t\t\t小計\t=SUM(G5:G5)\t\n'
       '\t\t\t\t\t\t\t\n'
       '\t\t\t\t\t税抜合計\t=SUM(G3,G6)\t\n'
-      '\t\t\t\t\t消費税（10%）\t=INT(G8*10%)\t\n'
+      '\t\t\t\t\t消費税（10%）\t=INT(G8*1000/10000)\t\n'
       '\t\t\t\t\t税込総額\t=G8+G9\t',
     );
   });
@@ -62,9 +66,10 @@ void main() {
       createdAt: DateTime(2026, 8, 3),
     );
 
-    final row = buildEstimateTableText([
-      item,
-    ]).split('\n').firstWhere((row) => row.contains("'=1+1"));
+    final row = buildEstimateTableText(
+      [item],
+      info: _info(taxEnabled: true, taxRateBasisPoints: 1000),
+    ).split('\n').firstWhere((row) => row.contains("'=1+1"));
     expect(row, "①\t'=1+1\t既存 撤去\t1\t式\t-500\t=ROUND(D2*F2,0)\t'@SUM(A1:A2)");
   });
 
@@ -94,7 +99,10 @@ void main() {
       ),
     ];
 
-    final text = buildEstimateTableText(items);
+    final text = buildEstimateTableText(
+      items,
+      info: _info(taxEnabled: true, taxRateBasisPoints: 1000),
+    );
     expect(text, isNot(contains('ブロック工事')));
     expect(RegExp('①').allMatches(text), hasLength(1));
     expect(text, isNot(contains('②')));
@@ -110,7 +118,10 @@ void main() {
       _item('2', quantity: 2.5, unitPrice: 1),
       _item('3', quantity: 199.4, unitPrice: 10),
     ];
-    final text = buildEstimateTableText(items);
+    final text = buildEstimateTableText(
+      items,
+      info: _info(taxEnabled: true, taxRateBasisPoints: 1000),
+    );
 
     expect(estimateSubtotal(items), 1999);
     expect(estimateTax(estimateSubtotal(items)), 199);
@@ -120,18 +131,53 @@ void main() {
     expect(text, contains('=ROUND(D4*F4,0)'));
     expect(text, contains('小計\t=SUM(G2:G4)'));
     expect(text, contains('税抜合計\t=SUM(G5)'));
-    expect(text, contains('消費税（10%）\t=INT(G7*10%)'));
+    expect(text, contains('消費税（10%）\t=INT(G7*1000/10000)'));
     expect(text, contains('税込総額\t=G7+G8'));
   });
 
   test('Excelコピーは正式数量を再丸めせず行金額数式から参照する', () {
     final item = _item('formal', quantity: 12.346, unitPrice: 100);
-    final text = buildEstimateTableText([item]);
+    final text = buildEstimateTableText([
+      item,
+    ], info: _info(taxEnabled: true, taxRateBasisPoints: 1000));
 
     expect(text, contains('\t12.346\t式\t100\t=ROUND(D2*F2,0)'));
     expect(estimateSubtotal([item]), 1235);
   });
+
+  test('Excelコピーは見積税率を使用し税OFFでは合計だけを出力する', () {
+    final item = _item('tax', quantity: 12.345, unitPrice: 100);
+    final taxed = buildEstimateTableText([
+      item,
+    ], info: _info(taxEnabled: true, taxRateBasisPoints: 825));
+    expect(taxed, contains('税抜合計'));
+    expect(taxed, contains('消費税（8.25%）\t=INT(G5*825/10000)'));
+    expect(taxed, contains('税込総額\t=G5+G6'));
+
+    final untaxed = buildEstimateTableText([
+      item,
+    ], info: _info(taxEnabled: false, taxRateBasisPoints: 825));
+    expect(untaxed, contains('\t合計\t=SUM(G3)'));
+    expect(untaxed, isNot(contains('税抜')));
+    expect(untaxed, isNot(contains('消費税')));
+    expect(untaxed, isNot(contains('税込')));
+  });
 }
+
+EstimateInfo _info({
+  required bool taxEnabled,
+  required int taxRateBasisPoints,
+}) => EstimateInfo(
+  id: 'estimate-tax',
+  estimateName: '税設定確認',
+  siteName: '',
+  clientName: '',
+  createdDate: DateTime(2026, 9, 28),
+  estimateNumber: '',
+  notes: '',
+  taxEnabled: taxEnabled,
+  taxRateBasisPoints: taxRateBasisPoints,
+);
 
 EstimateItem _item(
   String id, {

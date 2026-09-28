@@ -1,6 +1,5 @@
 import 'estimate_item.dart';
 
-const estimateTaxPercentage = 10;
 const defaultEstimateTaxRateBasisPoints = 1000;
 const minEstimateTaxRateBasisPoints = 0;
 const maxEstimateTaxRateBasisPoints = 10000;
@@ -39,8 +38,22 @@ String estimateLineAmountSpreadsheetFormula(
   String unitPriceCell,
 ) => 'ROUND($quantityCell*$unitPriceCell,0)';
 
-String estimateTaxSpreadsheetFormula(String subtotalCell) =>
-    'INT($subtotalCell*$estimateTaxPercentage%)';
+String formatEstimateTaxRate(int taxRateBasisPoints) {
+  validateEstimateTaxRateBasisPoints(taxRateBasisPoints);
+  final whole = taxRateBasisPoints ~/ 100;
+  final fraction = taxRateBasisPoints % 100;
+  if (fraction == 0) return '$whole%';
+  if (fraction % 10 == 0) return '$whole.${fraction ~/ 10}%';
+  return '$whole.${fraction.toString().padLeft(2, '0')}%';
+}
+
+String estimateTaxSpreadsheetFormula(
+  String subtotalCell, {
+  int taxRateBasisPoints = defaultEstimateTaxRateBasisPoints,
+}) {
+  validateEstimateTaxRateBasisPoints(taxRateBasisPoints);
+  return 'INT($subtotalCell*$taxRateBasisPoints/10000)';
+}
 
 int estimateGrandTotal(
   Iterable<EstimateItem> items, {

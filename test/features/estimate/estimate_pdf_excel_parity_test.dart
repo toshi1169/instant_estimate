@@ -138,7 +138,7 @@ void main() {
     expect(_formula(breakdown, 'G11'), 'SUM(G5,G6,G7,G8,G9,G10)');
     expect(_formula(breakdown, 'G24'), 'SUM(G14,G15,G16,G17,G18,G19,G20)');
     expect(_formula(breakdown, 'G26'), 'SUM(G11,G24)');
-    expect(_formula(breakdown, 'G27'), 'INT(G26*10%)');
+    expect(_formula(breakdown, 'G27'), 'INT(G26*1000/10000)');
     expect(_formula(breakdown, 'G28'), 'G26+G27');
     expect(
       excel.definedNames

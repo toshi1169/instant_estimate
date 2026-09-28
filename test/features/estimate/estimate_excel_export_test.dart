@@ -674,7 +674,7 @@ void main() {
     expect(_text(sheet, 'B26'), '①+② 計');
     expect(_formula(sheet, 'G26'), 'SUM(G11,G24)');
     expect(_text(sheet, 'B27'), '消費税10%');
-    expect(_formula(sheet, 'G27'), 'INT(G26*10%)');
+    expect(_formula(sheet, 'G27'), 'INT(G26*1000/10000)');
     expect(_text(sheet, 'B28'), '合計');
     expect(_formula(sheet, 'G28'), 'G26+G27');
     expect(
@@ -822,9 +822,54 @@ void main() {
     expect(_text(sheet, 'B9'), '① 計');
     expect(_formula(sheet, 'G9'), 'SUM(G7)');
     expect(_text(sheet, 'B10'), '消費税10%');
-    expect(_formula(sheet, 'G10'), 'INT(G9*10%)');
+    expect(_formula(sheet, 'G10'), 'INT(G9*1000/10000)');
     expect(_text(sheet, 'B11'), '合計');
     expect(_formula(sheet, 'G11'), 'G9+G10');
+  });
+
+  test('保存税率をXLSX数式へ反映し税OFFでも20行構造と定義名を維持する', () {
+    final items = [
+      _item(
+        id: 'tax',
+        symbol: '①',
+        trade: '工種',
+        location: '場所',
+        name: '税設定確認',
+        quantity: 12.345,
+        unit: '式',
+        unitPrice: 100,
+      ),
+    ];
+    for (final rate in [0, 500, 800, 825, 1000, 1200]) {
+      final excel = _workbook(
+        items,
+        info: _formalInfo(taxRateBasisPoints: rate),
+      );
+      final sheet = excel['内訳'];
+      expect(_text(sheet, 'B9'), '消費税${formatEstimateTaxRate(rate)}');
+      expect(_formula(sheet, 'G9'), 'INT(G8*$rate/10000)');
+      expect(_formula(sheet, 'G10'), 'G8+G9');
+      expect(sheet.printArea, 'A1:K20');
+    }
+
+    final excel = _workbook(
+      items,
+      info: _formalInfo(taxEnabled: false, taxRateBasisPoints: 825),
+    );
+    final sheet = excel['内訳'];
+    expect(_text(sheet, 'B8'), '');
+    expect(_text(sheet, 'B9'), '');
+    expect(_text(sheet, 'B10'), '合計');
+    expect(_formula(sheet, 'G10'), 'SUM(G6)');
+    expect(sheet.printArea, 'A1:K20');
+    expect(sheet.rowPageBreaks, isEmpty);
+    expect(
+      excel.definedNames
+          .singleWhere((name) => name.name == 'EstimateGrandTotal')
+          .refersTo,
+      "'内訳'!\$G\$10",
+    );
+    expect(_formula(excel['御見積書'], 'H6'), 'EstimateGrandTotal');
   });
 
   test('1～3グループの使用記号を自然順で最終集計名へ反映する', () {
@@ -1067,7 +1112,10 @@ Excel _workbook(
   );
 }
 
-EstimateInfo _formalInfo() => EstimateInfo(
+EstimateInfo _formalInfo({
+  bool taxEnabled = true,
+  int taxRateBasisPoints = defaultEstimateTaxRateBasisPoints,
+}) => EstimateInfo(
   id: 'estimate-formal',
   estimateName: '○○邸 正式見積',
   siteName: '○○邸',
@@ -1079,6 +1127,8 @@ EstimateInfo _formalInfo() => EstimateInfo(
   validityPeriod: '発行日より30日間',
   constructionPeriod: '契約後30日以内',
   paymentTerms: '完了月末締め翌月末払い',
+  taxEnabled: taxEnabled,
+  taxRateBasisPoints: taxRateBasisPoints,
 );
 
 String _text(Sheet sheet, String cell) {

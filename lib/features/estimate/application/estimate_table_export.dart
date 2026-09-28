@@ -1,10 +1,14 @@
 import '../domain/estimate_item.dart';
+import '../domain/estimate_info.dart';
 import '../domain/estimate_quantity.dart';
 import '../domain/estimate_totals.dart';
 
 const _headers = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
 
-String buildEstimateTableText(Iterable<EstimateItem> items) {
+String buildEstimateTableText(
+  Iterable<EstimateItem> items, {
+  required EstimateInfo info,
+}) {
   final groupedItems = _groupItems(items);
   final rows = <List<String>>[_headers];
   final subtotalRows = <int>[];
@@ -39,31 +43,29 @@ String buildEstimateTableText(Iterable<EstimateItem> items) {
     groupNumber++;
   }
 
-  final subtotalRow = rows.length + 1;
-  rows.add([
-    '',
-    '',
-    '',
-    '',
-    '',
-    '税抜合計',
-    subtotalRows.isEmpty
-        ? '0'
-        : '=SUM(${subtotalRows.map((row) => 'G$row').join(',')})',
-    '',
-  ]);
-  final taxRow = rows.length + 1;
-  rows.add([
-    '',
-    '',
-    '',
-    '',
-    '',
-    '消費税（10%）',
-    '=${estimateTaxSpreadsheetFormula('G$subtotalRow')}',
-    '',
-  ]);
-  rows.add(['', '', '', '', '', '税込総額', '=G$subtotalRow+G$taxRow', '']);
+  final subtotalFormula = subtotalRows.isEmpty
+      ? '0'
+      : '=SUM(${subtotalRows.map((row) => 'G$row').join(',')})';
+  final taxEnabled = info.taxEnabled;
+  final taxRateBasisPoints = info.taxRateBasisPoints;
+  if (taxEnabled) {
+    final subtotalRow = rows.length + 1;
+    rows.add(['', '', '', '', '', '税抜合計', subtotalFormula, '']);
+    final taxRow = rows.length + 1;
+    rows.add([
+      '',
+      '',
+      '',
+      '',
+      '',
+      '消費税（${formatEstimateTaxRate(taxRateBasisPoints)}）',
+      '=${estimateTaxSpreadsheetFormula('G$subtotalRow', taxRateBasisPoints: taxRateBasisPoints)}',
+      '',
+    ]);
+    rows.add(['', '', '', '', '', '税込総額', '=G$subtotalRow+G$taxRow', '']);
+  } else {
+    rows.add(['', '', '', '', '', '合計', subtotalFormula, '']);
+  }
 
   return rows.map((row) => row.join('\t')).join('\n');
 }

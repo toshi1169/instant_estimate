@@ -226,6 +226,39 @@ void main() {
     expect(pages.single.rows[15].amount, estimateGrandTotal(items));
   });
 
+  test('保存税率をPDF集計へ反映し税OFFでは合計だけを表示する', () {
+    final items = [
+      _groupItem('tax', symbol: '①', location: '北面', quantity: 12.345),
+    ];
+    final subtotal = estimateSubtotal(items);
+    for (final rate in [0, 500, 800, 825, 1000, 1200]) {
+      final rows = buildEstimatePdfBreakdownLayout(
+        items,
+        taxRateBasisPoints: rate,
+      ).expand((page) => page.rows).toList();
+      final taxRow = rows.singleWhere((row) => row.label.startsWith('消費税'));
+      expect(taxRow.label, '消費税${formatEstimateTaxRate(rate)}');
+      expect(taxRow.amount, estimateTax(subtotal, taxRateBasisPoints: rate));
+      expect(
+        rows.singleWhere((row) => row.type == EstimatePdfRowType.total).amount,
+        subtotal + estimateTax(subtotal, taxRateBasisPoints: rate),
+      );
+    }
+
+    final offRows = buildEstimatePdfBreakdownLayout(
+      items,
+      taxEnabled: false,
+      taxRateBasisPoints: 825,
+    ).expand((page) => page.rows).toList();
+    expect(offRows.where((row) => row.label.contains('税')), isEmpty);
+    expect(offRows.where((row) => row.label.contains('税込')), isEmpty);
+    expect(
+      offRows.singleWhere((row) => row.type == EstimatePdfRowType.total).amount,
+      subtotal,
+    );
+    expect(offRows, hasLength(17));
+  });
+
   test('ページ境界でもXLSXと同じ17帳票行で連番ページだけを生成する', () {
     final items = [
       for (var index = 0; index < 13; index++)

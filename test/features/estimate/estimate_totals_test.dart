@@ -75,7 +75,23 @@ void main() {
 
   test('表計算数式はDartと同じ行丸めと税のfloorを使用する', () {
     expect(estimateLineAmountSpreadsheetFormula('D2', 'F2'), 'ROUND(D2*F2,0)');
-    expect(estimateTaxSpreadsheetFormula('G8'), 'INT(G8*10%)');
+    expect(estimateTaxSpreadsheetFormula('G8'), 'INT(G8*1000/10000)');
+  });
+
+  test('税率表示は不要な末尾ゼロを付けない', () {
+    expect(formatEstimateTaxRate(0), '0%');
+    expect(formatEstimateTaxRate(500), '5%');
+    expect(formatEstimateTaxRate(800), '8%');
+    expect(formatEstimateTaxRate(825), '8.25%');
+    expect(formatEstimateTaxRate(1000), '10%');
+    expect(formatEstimateTaxRate(1200), '12%');
+  });
+
+  test('表計算税式はbasis pointを整数のまま参照する', () {
+    expect(
+      estimateTaxSpreadsheetFormula('G8', taxRateBasisPoints: 825),
+      'INT(G8*825/10000)',
+    );
   });
 }
 

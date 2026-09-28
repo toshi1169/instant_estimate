@@ -38,6 +38,8 @@ List<int> buildEstimateWorkbook({
   final grandTotalRow = _writeBreakdownSheet(
     breakdownSheet,
     itemList,
+    taxEnabled: info.taxEnabled,
+    taxRateBasisPoints: info.taxRateBasisPoints,
     estimateDecimalPlaces: estimateDecimalPlaces,
   );
   excel.setDefinedName(
@@ -241,6 +243,8 @@ void _writeCompanyProfile(Sheet sheet, CompanyProfile profile) {
 int _writeBreakdownSheet(
   Sheet sheet,
   List<EstimateItem> items, {
+  required bool taxEnabled,
+  required int taxRateBasisPoints,
   required int estimateDecimalPlaces,
 }) {
   const widths = [
@@ -292,7 +296,11 @@ int _writeBreakdownSheet(
     if (writer.remainingDataRows < 4) writer.startNextPage();
     writer.writeBlankRow();
   }
-  final grandTotalRow = writer.writeSummaryRows(subtotalLabel: subtotalLabel);
+  final grandTotalRow = writer.writeSummaryRows(
+    subtotalLabel: subtotalLabel,
+    taxEnabled: taxEnabled,
+    taxRateBasisPoints: taxRateBasisPoints,
+  );
   writer.finish();
   return grandTotalRow;
 }
@@ -453,27 +461,49 @@ class _BreakdownWriter {
     usedDataRows++;
   }
 
-  int writeSummaryRows({required String subtotalLabel}) {
+  int writeSummaryRows({
+    required String subtotalLabel,
+    required bool taxEnabled,
+    required int taxRateBasisPoints,
+  }) {
     final taxExcludedRow = _nextRow;
-    _writeSummaryRow(taxExcludedRow, subtotalLabel);
-    _setCell(
-      sheet,
-      taxExcludedRow,
-      6,
-      FormulaCellValue(_sumCellReferences('G', subtotalRows)),
-      _summaryStyle(numberFormat: _moneyFormat),
-    );
+    if (taxEnabled) {
+      _writeSummaryRow(taxExcludedRow, subtotalLabel);
+      _setCell(
+        sheet,
+        taxExcludedRow,
+        6,
+        FormulaCellValue(_sumCellReferences('G', subtotalRows)),
+        _summaryStyle(numberFormat: _moneyFormat),
+      );
+    } else {
+      _writeEmptyBreakdownRow(sheet, taxExcludedRow, style: _summaryStyle());
+      sheet.setRowHeight(taxExcludedRow, 30);
+    }
     usedDataRows++;
 
     final taxRow = _nextRow;
-    _writeSummaryRow(taxRow, '消費税$estimateTaxPercentage%');
-    _setCell(
-      sheet,
-      taxRow,
-      6,
-      FormulaCellValue(estimateTaxSpreadsheetFormula('G${taxExcludedRow + 1}')),
-      _summaryStyle(numberFormat: _moneyFormat),
-    );
+    if (taxEnabled) {
+      _writeSummaryRow(
+        taxRow,
+        '消費税${formatEstimateTaxRate(taxRateBasisPoints)}',
+      );
+      _setCell(
+        sheet,
+        taxRow,
+        6,
+        FormulaCellValue(
+          estimateTaxSpreadsheetFormula(
+            'G${taxExcludedRow + 1}',
+            taxRateBasisPoints: taxRateBasisPoints,
+          ),
+        ),
+        _summaryStyle(numberFormat: _moneyFormat),
+      );
+    } else {
+      _writeEmptyBreakdownRow(sheet, taxRow, style: _summaryStyle());
+      sheet.setRowHeight(taxRow, 30);
+    }
     usedDataRows++;
 
     final totalRow = _nextRow;
@@ -482,7 +512,11 @@ class _BreakdownWriter {
       sheet,
       totalRow,
       6,
-      FormulaCellValue('G${taxExcludedRow + 1}+G${taxRow + 1}'),
+      FormulaCellValue(
+        taxEnabled
+            ? 'G${taxExcludedRow + 1}+G${taxRow + 1}'
+            : _sumCellReferences('G', subtotalRows),
+      ),
       _totalStyle(numberFormat: _moneyFormat),
     );
     usedDataRows++;
