@@ -224,6 +224,47 @@ class FormattedExpression {
 
 enum FractionField { wholeNumber, numerator, denominator }
 
+sealed class ExpressionPosition {
+  const ExpressionPosition();
+}
+
+/// A position between characters in the raw expression string.
+class RawExpressionPosition extends ExpressionPosition {
+  const RawExpressionPosition(this.offset);
+
+  final int offset;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RawExpressionPosition && other.offset == offset;
+
+  @override
+  int get hashCode => offset.hashCode;
+}
+
+/// A position inside one field of a structured fraction marker.
+class FractionExpressionPosition extends ExpressionPosition {
+  const FractionExpressionPosition({
+    required this.marker,
+    required this.field,
+    required this.offset,
+  });
+
+  final String marker;
+  final FractionField field;
+  final int offset;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FractionExpressionPosition &&
+      other.marker == marker &&
+      other.field == field &&
+      other.offset == offset;
+
+  @override
+  int get hashCode => Object.hash(marker, field, offset);
+}
+
 sealed class ExpressionDisplaySegment {
   const ExpressionDisplaySegment();
 }
@@ -341,11 +382,8 @@ class CalculatorController extends ChangeNotifier {
   _RemainderResult? _remainderResult;
   _ExactRational? _exactResult;
   String? _pendingNotice;
-  int _caretPosition = 0;
+  ExpressionPosition _expressionPosition = const RawExpressionPosition(0);
   final Map<String, FractionInputState> _fractions = {};
-  String? _activeFractionMarker;
-  FractionField? _activeFractionField;
-  int _activeFractionCaretOffset = 0;
   int _nextFractionId = 0;
   bool _isProcessingKeyPress = false;
   bool _keyPressNotificationPending = false;
@@ -360,10 +398,50 @@ class CalculatorController extends ChangeNotifier {
   ResultDisplayMode get resultDisplayMode => _resultDisplayMode;
   int? get resultFractionNumerator => _resultFraction?.numerator;
   int? get resultFractionDenominator => _resultFraction?.denominator;
+  ExpressionPosition get expressionPosition => _expressionPosition;
   int get caretPosition => _caretPosition;
-  bool get isEditingFraction => _activeFractionMarker != null;
+  bool get isEditingFraction =>
+      _expressionPosition is FractionExpressionPosition;
   FractionInputState? get activeFractionInput =>
       _activeFractionMarker == null ? null : _fractions[_activeFractionMarker];
+
+  int get _caretPosition => switch (_expressionPosition) {
+    RawExpressionPosition(:final offset) => offset,
+    FractionExpressionPosition(:final marker) => _expression.indexOf(marker),
+  };
+
+  String? get _activeFractionMarker => switch (_expressionPosition) {
+    RawExpressionPosition() => null,
+    FractionExpressionPosition(:final marker) => marker,
+  };
+
+  FractionField? get _activeFractionField => switch (_expressionPosition) {
+    RawExpressionPosition() => null,
+    FractionExpressionPosition(:final field) => field,
+  };
+
+  int get _activeFractionCaretOffset => switch (_expressionPosition) {
+    RawExpressionPosition() => 0,
+    FractionExpressionPosition(:final offset) => offset,
+  };
+
+  void _setRawPosition(int offset) {
+    _expressionPosition = RawExpressionPosition(
+      offset.clamp(0, _expression.length),
+    );
+  }
+
+  void _setFractionPosition(String marker, FractionField field, int offset) {
+    final fraction = _fractions[marker];
+    if (fraction == null) return;
+    final value = _fractionFieldValue(fraction, field);
+    _expressionPosition = FractionExpressionPosition(
+      marker: marker,
+      field: field,
+      offset: offset.clamp(0, value.length),
+    );
+  }
+
   @visibleForTesting
   FractionInputState? fractionInputForMarker(String marker) =>
       _fractions[marker];
@@ -785,10 +863,7 @@ class CalculatorController extends ChangeNotifier {
     final marker = String.fromCharCode(0xE000 + _nextFractionId++);
     _fractions[marker] = const FractionInputState(numeratorText: '1');
     _insertAtCaret(marker);
-    _activeFractionMarker = marker;
-    _activeFractionField = FractionField.denominator;
-    _activeFractionCaretOffset = 0;
-    _caretPosition = _expression.indexOf(marker);
+    _setFractionPosition(marker, FractionField.denominator, 0);
     _state = CalculatorState.input;
     _result = '0';
     _isPreviewResult = false;
@@ -820,10 +895,7 @@ class CalculatorController extends ChangeNotifier {
       _resultFraction = _findSimpleFraction(value);
       _remainderResult = _findRemainderResult(_expressionForCalculation());
       _resultDisplayMode = ResultDisplayMode.decimal;
-      _caretPosition = _expression.length;
-      _activeFractionMarker = null;
-      _activeFractionField = null;
-      _activeFractionCaretOffset = 0;
+      _setRawPosition(_expression.length);
       _history.add(
         CalculationHistoryEntry(
           expression: displayExpression,
@@ -865,22 +937,33 @@ class CalculatorController extends ChangeNotifier {
         bestRawOffset = rawOffset;
       }
     }
-    _caretPosition = bestRawOffset;
-    _activeFractionMarker = null;
-    _activeFractionField = null;
-    _activeFractionCaretOffset = 0;
-    notifyListeners();
+    moveCaretToPosition(RawExpressionPosition(bestRawOffset));
   }
 
   void moveCaretToRawOffset(int rawOffset) {
+    moveCaretToPosition(RawExpressionPosition(rawOffset));
+  }
+
+  /// Moves the session-only caret to a raw expression or fraction-field
+  /// position. This is the common entry point for future pointer interactions.
+  void moveCaretToPosition(ExpressionPosition position) {
     if (_state == CalculatorState.error) return;
+    if (position case FractionExpressionPosition(:final marker)) {
+      if (!_fractions.containsKey(marker)) return;
+    }
     if (_state == CalculatorState.result) {
       _state = CalculatorState.input;
     }
-    _caretPosition = rawOffset.clamp(0, _expression.length);
-    _activeFractionMarker = null;
-    _activeFractionField = null;
-    _activeFractionCaretOffset = 0;
+    switch (position) {
+      case RawExpressionPosition(:final offset):
+        _setRawPosition(offset);
+      case FractionExpressionPosition(
+        :final marker,
+        :final field,
+        :final offset,
+      ):
+        _setFractionPosition(marker, field, offset);
+    }
     notifyListeners();
   }
 
@@ -890,42 +973,26 @@ class CalculatorController extends ChangeNotifier {
     int? caretOffset,
   }) {
     if (!_fractions.containsKey(marker)) return;
-    _state = CalculatorState.input;
-    _activeFractionMarker = marker;
-    _activeFractionField = field;
     final value = _fractionFieldValue(_fractions[marker]!, field);
-    _activeFractionCaretOffset = (caretOffset ?? value.length).clamp(
-      0,
-      value.length,
+    moveCaretToPosition(
+      FractionExpressionPosition(
+        marker: marker,
+        field: field,
+        offset: caretOffset ?? value.length,
+      ),
     );
-    _caretPosition = _expression.indexOf(marker);
-    notifyListeners();
   }
 
   void moveCaretBeforeFraction(String marker) {
     final markerIndex = _expression.indexOf(marker);
     if (markerIndex < 0) return;
-    if (_state == CalculatorState.result) {
-      _state = CalculatorState.input;
-    }
-    _activeFractionMarker = null;
-    _activeFractionField = null;
-    _activeFractionCaretOffset = 0;
-    _caretPosition = markerIndex;
-    notifyListeners();
+    moveCaretToPosition(RawExpressionPosition(markerIndex));
   }
 
   void moveCaretAfterFraction(String marker) {
     final markerIndex = _expression.indexOf(marker);
     if (markerIndex < 0) return;
-    if (_state == CalculatorState.result) {
-      _state = CalculatorState.input;
-    }
-    _activeFractionMarker = null;
-    _activeFractionField = null;
-    _activeFractionCaretOffset = 0;
-    _caretPosition = markerIndex + 1;
-    notifyListeners();
+    moveCaretToPosition(RawExpressionPosition(markerIndex + 1));
   }
 
   void pressFractionButton() {
@@ -939,16 +1006,19 @@ class CalculatorController extends ChangeNotifier {
     if (activeMarker != null) {
       final fraction = _fractions[activeMarker]!;
       if (_activeFractionField == FractionField.wholeNumber) {
-        _activeFractionField = FractionField.numerator;
-        _activeFractionCaretOffset = fraction.numeratorText.length;
+        _setFractionPosition(
+          activeMarker,
+          FractionField.numerator,
+          fraction.numeratorText.length,
+        );
       } else if (_activeFractionField == FractionField.numerator) {
-        _activeFractionField = FractionField.denominator;
-        _activeFractionCaretOffset = fraction.denominatorText.length;
+        _setFractionPosition(
+          activeMarker,
+          FractionField.denominator,
+          fraction.denominatorText.length,
+        );
       } else if (fraction.denominatorText.isNotEmpty) {
-        _activeFractionMarker = null;
-        _activeFractionField = null;
-        _activeFractionCaretOffset = 0;
-        _caretPosition = _expression.indexOf(activeMarker) + 1;
+        _setRawPosition(_expression.indexOf(activeMarker) + 1);
       }
       notifyListeners();
       return;
@@ -969,16 +1039,13 @@ class CalculatorController extends ChangeNotifier {
       _expression =
           '${_expression.substring(0, start)}'
           '${_expression.substring(_caretPosition)}';
-      _caretPosition = start;
+      _setRawPosition(start);
     }
 
     final marker = String.fromCharCode(0xE000 + _nextFractionId++);
     _fractions[marker] = FractionInputState(wholeNumberText: wholeNumber);
     _insertAtCaret(marker);
-    _activeFractionMarker = marker;
-    _activeFractionField = FractionField.numerator;
-    _activeFractionCaretOffset = 0;
-    _caretPosition = _expression.indexOf(marker);
+    _setFractionPosition(marker, FractionField.numerator, 0);
     notifyListeners();
   }
 
@@ -998,7 +1065,7 @@ class CalculatorController extends ChangeNotifier {
       _expression =
           '${_expression.substring(0, _caretPosition - functionToken.length)}'
           '${_expression.substring(_caretPosition)}';
-      _caretPosition -= functionToken.length;
+      _setRawPosition(_caretPosition - functionToken.length);
       _updatePreviewResult();
       notifyListeners();
       return;
@@ -1011,7 +1078,7 @@ class CalculatorController extends ChangeNotifier {
     if (_isFractionMarker(removedCharacter)) {
       _fractions.remove(removedCharacter);
     }
-    _caretPosition--;
+    _setRawPosition(_caretPosition - 1);
     _updatePreviewResult();
     notifyListeners();
   }
@@ -1025,10 +1092,7 @@ class CalculatorController extends ChangeNotifier {
         if (_isFractionMarker(character)) _fractions.remove(character);
       }
       _expression = _expression.substring(markerIndex + 1);
-      _activeFractionMarker = null;
-      _activeFractionField = null;
-      _activeFractionCaretOffset = 0;
-      _caretPosition = 0;
+      _setRawPosition(0);
       _updatePreviewResult();
       notifyListeners();
       return;
@@ -1044,10 +1108,7 @@ class CalculatorController extends ChangeNotifier {
       if (_isFractionMarker(character)) _fractions.remove(character);
     }
     _expression = _expression.substring(_caretPosition);
-    _caretPosition = 0;
-    _activeFractionMarker = null;
-    _activeFractionField = null;
-    _activeFractionCaretOffset = 0;
+    _setRawPosition(0);
     _updatePreviewResult();
     notifyListeners();
   }
@@ -1065,20 +1126,15 @@ class CalculatorController extends ChangeNotifier {
     _remainderResult = null;
     _remainderResult = null;
     _exactResult = null;
-    _caretPosition = 0;
+    _setRawPosition(0);
     _fractions.clear();
-    _activeFractionMarker = null;
-    _activeFractionField = null;
-    _activeFractionCaretOffset = 0;
     notifyListeners();
   }
 
   void editHistoryEntry(CalculationHistoryEntry entry) {
     _expression = '';
     _fractions.clear();
-    _activeFractionMarker = null;
-    _activeFractionField = null;
-    _activeFractionCaretOffset = 0;
+    _setRawPosition(0);
 
     final fractionPattern = RegExp(r'(-?\d+)\s+(\d+)\/(\d+)|(-?\d+)\/(\d+)');
     var sourceOffset = 0;
@@ -1107,7 +1163,7 @@ class CalculatorController extends ChangeNotifier {
     _isPreviewResult = false;
     _resultDisplayMode = ResultDisplayMode.decimal;
     _resultFraction = null;
-    _caretPosition = _expression.length;
+    _setRawPosition(_expression.length);
     _updatePreviewResult();
     notifyListeners();
   }
@@ -1184,7 +1240,7 @@ class CalculatorController extends ChangeNotifier {
           '${_expression.substring(0, _caretPosition)}'
           '$insertion'
           '${_expression.substring(_caretPosition)}';
-      _caretPosition += accepted.length;
+      _setRawPosition(_caretPosition + accepted.length);
       notifyListeners();
       return;
     }
@@ -1255,7 +1311,7 @@ class CalculatorController extends ChangeNotifier {
     final fraction = _resultFraction;
     if (_resultDisplayMode == ResultDisplayMode.decimal || fraction == null) {
       _expression = _rawResult;
-      _caretPosition = _expression.length;
+      _setRawPosition(_expression.length);
     } else {
       _fractions.clear();
       final marker = String.fromCharCode(0xE000 + _nextFractionId++);
@@ -1280,14 +1336,11 @@ class CalculatorController extends ChangeNotifier {
         );
       }
       _expression = marker;
-      _caretPosition = 1;
+      _setRawPosition(1);
     }
     _state = CalculatorState.input;
     _resultDisplayMode = ResultDisplayMode.decimal;
     _resultFraction = null;
-    _activeFractionMarker = null;
-    _activeFractionField = null;
-    _activeFractionCaretOffset = 0;
   }
 
   void _insertParenthesis() {
@@ -1332,7 +1385,7 @@ class CalculatorController extends ChangeNotifier {
         '${_expression.substring(0, _caretPosition)}'
         '$value'
         '${_expression.substring(_caretPosition)}';
-    _caretPosition += value.length;
+    _setRawPosition(_caretPosition + value.length);
   }
 
   void _insertFractionDigits(String digits) {
@@ -1356,11 +1409,11 @@ class CalculatorController extends ChangeNotifier {
         '${target.substring(0, offset)}'
         '$accepted'
         '${target.substring(offset)}';
-    _activeFractionCaretOffset = offset + accepted.length;
     if (accepted.length < normalizedDigits.length) {
       _pendingNotice = digitLimitNotice;
     }
     _setFractionFieldValue(marker, field, value);
+    _setFractionPosition(marker, field, offset + accepted.length);
   }
 
   void _insertFractionDecimalPoint() {
@@ -1424,7 +1477,6 @@ class CalculatorController extends ChangeNotifier {
     _expression =
         '${_expression.substring(0, markerIndex)}'
         '−${_expression.substring(markerIndex)}';
-    _caretPosition = markerIndex + 1;
     notifyListeners();
   }
 
@@ -1516,7 +1568,11 @@ class CalculatorController extends ChangeNotifier {
     final updated =
         '${value.substring(0, offset)}$insertion${value.substring(offset)}';
     _setFractionFieldValue(_activeFractionMarker!, field, updated);
-    _activeFractionCaretOffset = offset + insertion.length;
+    _setFractionPosition(
+      _activeFractionMarker!,
+      field,
+      offset + insertion.length,
+    );
     notifyListeners();
   }
 
@@ -1533,7 +1589,7 @@ class CalculatorController extends ChangeNotifier {
             '${value.substring(0, offset - functionToken.length)}'
             '${value.substring(offset)}';
         _setFractionFieldValue(marker, field, updated);
-        _activeFractionCaretOffset = offset - functionToken.length;
+        _setFractionPosition(marker, field, offset - functionToken.length);
         _updatePreviewResult();
         notifyListeners();
         return;
@@ -1541,34 +1597,34 @@ class CalculatorController extends ChangeNotifier {
       final updated =
           '${value.substring(0, offset - 1)}${value.substring(offset)}';
       _setFractionFieldValue(marker, field, updated);
-      _activeFractionCaretOffset = offset - 1;
+      _setFractionPosition(marker, field, offset - 1);
       _updatePreviewResult();
       notifyListeners();
       return;
     }
 
     if (field == FractionField.denominator) {
-      _activeFractionField = FractionField.numerator;
-      _activeFractionCaretOffset = fraction.numeratorText.length;
+      _setFractionPosition(
+        marker,
+        FractionField.numerator,
+        fraction.numeratorText.length,
+      );
     } else if (field == FractionField.numerator &&
         fraction.wholeNumberText.isNotEmpty) {
-      _activeFractionField = FractionField.wholeNumber;
-      _activeFractionCaretOffset = fraction.wholeNumberText.length;
+      _setFractionPosition(
+        marker,
+        FractionField.wholeNumber,
+        fraction.wholeNumberText.length,
+      );
     } else if (field == FractionField.wholeNumber) {
-      _activeFractionMarker = null;
-      _activeFractionField = null;
-      _activeFractionCaretOffset = 0;
-      _caretPosition = _expression.indexOf(marker);
+      _setRawPosition(_expression.indexOf(marker));
     } else {
       final index = _expression.indexOf(marker);
       _expression =
           '${_expression.substring(0, index)}'
           '${_expression.substring(index + 1)}';
       _fractions.remove(marker);
-      _activeFractionMarker = null;
-      _activeFractionField = null;
-      _activeFractionCaretOffset = 0;
-      _caretPosition = index;
+      _setRawPosition(index);
     }
     _updatePreviewResult();
     notifyListeners();

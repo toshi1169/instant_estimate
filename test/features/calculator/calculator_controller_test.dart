@@ -235,6 +235,154 @@ void main() {
       expect(controller.caretPosition, 2);
     });
 
+    test('通常式の先頭・途中・末尾をraw論理位置で保持する', () {
+      final controller = CalculatorController();
+      controller.insertFunction('sin');
+      for (final key in ['1', '2', '()', '+', '3']) {
+        controller.press(key);
+      }
+      expect(controller.expression, 'sin(12)+3');
+
+      for (final offset in [0, 4, 7, controller.expression.length]) {
+        controller.moveCaretToPosition(RawExpressionPosition(offset));
+        expect(controller.expressionPosition, RawExpressionPosition(offset));
+        expect(controller.caretPosition, offset);
+      }
+
+      controller.moveCaretToPosition(const RawExpressionPosition(999));
+      expect(
+        controller.expressionPosition,
+        RawExpressionPosition(controller.expression.length),
+      );
+    });
+
+    test('表示用空白があっても演算子前後をraw位置へ変換する', () {
+      final controller = CalculatorController();
+      controller.pasteAtCaret('12+34');
+      expect(controller.displayExpression, '12 + 34');
+
+      controller.moveCaretToDisplayOffset(3);
+      expect(controller.expressionPosition, const RawExpressionPosition(2));
+
+      controller.moveCaretToDisplayOffset(5);
+      expect(controller.expressionPosition, const RawExpressionPosition(3));
+    });
+
+    test('帯分数の整数部・分子・分母を共通論理位置で識別する', () {
+      final controller = CalculatorController();
+      for (final key in ['1', '2', 'a/b', '3', '4', 'a/b', '5', '6']) {
+        controller.press(key);
+      }
+      final fraction = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single;
+
+      for (final position in [
+        FractionExpressionPosition(
+          marker: fraction.marker,
+          field: FractionField.wholeNumber,
+          offset: 1,
+        ),
+        FractionExpressionPosition(
+          marker: fraction.marker,
+          field: FractionField.numerator,
+          offset: 1,
+        ),
+        FractionExpressionPosition(
+          marker: fraction.marker,
+          field: FractionField.denominator,
+          offset: 1,
+        ),
+      ]) {
+        controller.moveCaretToPosition(position);
+        expect(controller.expressionPosition, position);
+        expect(
+          controller.caretPosition,
+          controller.expression.indexOf(fraction.marker),
+        );
+      }
+    });
+
+    test('複数分数のmarkerと分数前後のraw位置を区別する', () {
+      final controller = CalculatorController();
+      for (final key in [
+        'a/b',
+        '1',
+        'a/b',
+        '2',
+        'a/b',
+        '+',
+        'a/b',
+        '3',
+        'a/b',
+        '4',
+      ]) {
+        controller.press(key);
+      }
+      final fractions = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .toList();
+      expect(fractions, hasLength(2));
+
+      controller.activateFraction(
+        fractions.last.marker,
+        FractionField.denominator,
+        caretOffset: 1,
+      );
+      expect(
+        controller.expressionPosition,
+        FractionExpressionPosition(
+          marker: fractions.last.marker,
+          field: FractionField.denominator,
+          offset: 1,
+        ),
+      );
+
+      controller.moveCaretBeforeFraction(fractions.first.marker);
+      expect(
+        controller.expressionPosition,
+        RawExpressionPosition(
+          controller.expression.indexOf(fractions.first.marker),
+        ),
+      );
+      controller.moveCaretAfterFraction(fractions.first.marker);
+      expect(
+        controller.expressionPosition,
+        RawExpressionPosition(
+          controller.expression.indexOf(fractions.first.marker) + 1,
+        ),
+      );
+    });
+
+    test('分数内Backspaceとfield間移動で論理位置を維持する', () {
+      final controller = CalculatorController();
+      for (final key in ['a/b', '1', '2', 'a/b', '3']) {
+        controller.press(key);
+      }
+      final marker = controller.displaySegments
+          .whereType<ExpressionFractionSegment>()
+          .single
+          .marker;
+
+      controller.activateFraction(
+        marker,
+        FractionField.numerator,
+        caretOffset: 1,
+      );
+      controller.backspace();
+      expect(
+        controller.expressionPosition,
+        FractionExpressionPosition(
+          marker: marker,
+          field: FractionField.numerator,
+          offset: 0,
+        ),
+      );
+
+      controller.backspace();
+      expect(controller.expressionPosition, const RawExpressionPosition(0));
+    });
+
     test('バックボタンはキャレット左側の1文字を削除する', () {
       final controller = CalculatorController();
       for (final key in ['1', '2', '3']) {
