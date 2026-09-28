@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
 import 'package:instant_estimate/features/calculator/presentation/calculator_screen.dart';
@@ -96,6 +97,30 @@ void _expectHandles() {
   );
 }
 
+Finder _toolbarAction(String label) => find.descendant(
+  of: find.byKey(const Key('calculatorSelectionToolbar')),
+  matching: find.text(label),
+);
+
+void _mockClipboard({String initialText = ''}) {
+  var clipboardText = initialText;
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        switch (call.method) {
+          case 'Clipboard.setData':
+            clipboardText =
+                (call.arguments as Map<Object?, Object?>)['text'] as String;
+          case 'Clipboard.getData':
+            return <String, dynamic>{'text': clipboardText};
+        }
+        return null;
+      });
+  addTearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null),
+  );
+}
+
 void main() {
   testWidgets('ダブルタップした通常式の数値部分だけを選択する', (tester) async {
     final controller = CalculatorController()
@@ -108,7 +133,90 @@ void main() {
     expect(controller.selectedClipboardText, '429');
     expect(find.byKey(const Key('calculatorCaret')), findsNothing);
     _expectHandles();
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('選択メニューのコピーは選択を維持しカットは選択範囲だけ削除する', (tester) async {
+    _mockClipboard();
+    final controller = CalculatorController()..pasteAtCaret('123456789+429÷25');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    final expression = _expressionTextContaining('429');
+    await _doubleTapAt(tester, _characterCenter(tester, expression, '429'));
+    await tester.tap(_toolbarAction('コピー'));
+    await tester.pumpAndSettle();
+
+    expect((await Clipboard.getData(Clipboard.kTextPlain))?.text, '429');
+    expect(controller.selectedClipboardText, '429');
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
+
+    await tester.tap(_toolbarAction('カット'));
+    await tester.pumpAndSettle();
+
+    expect((await Clipboard.getData(Clipboard.kTextPlain))?.text, '429');
+    expect(controller.expression, '123456789+÷25');
+    expect(controller.selection, isNull);
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+  });
+
+  testWidgets('選択メニューの外部ペーストは選択範囲を置換し消去は選択だけ削除する', (tester) async {
+    _mockClipboard(initialText: '88');
+    final controller = CalculatorController()..pasteAtCaret('123+42.75÷5');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    var expression = _expressionTextContaining('42.75');
+    await _doubleTapAt(tester, _characterCenter(tester, expression, '42.75'));
+    await tester.tap(_toolbarAction('ペースト'));
+    await tester.pumpAndSettle();
+
+    expect(controller.expression, '123+88÷5');
+    expect(controller.selection, isNull);
+
+    expression = _expressionTextContaining('88');
+    await _doubleTapAt(tester, _characterCenter(tester, expression, '88'));
+    await tester.tap(_toolbarAction('消去'));
+    await tester.pumpAndSettle();
+
+    expect(controller.expression, '123+÷5');
+    expect(controller.selection, isNull);
+  });
+
+  testWidgets('選択中の見積送信は文字欄だけを候補にし数量と解形式を出さない', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('123+429÷25');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    final expression = _expressionTextContaining('429');
+    await _doubleTapAt(tester, _characterCenter(tester, expression, '429'));
+    await tester.tap(_toolbarAction('見積へ送る'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('estimateContentSelector')), findsNothing);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('estimateTransferPreview')))
+          .data,
+      '429',
+    );
+    await tester.tap(find.byKey(const Key('estimateDestinationSelector')));
+    await tester.pumpAndSettle();
+    expect(find.text('数量'), findsNothing);
+    expect(find.text('名称'), findsOneWidget);
+    expect(find.text('仕様'), findsOneWidget);
+    expect(find.text('摘要'), findsWidgets);
+    await tester.tap(find.text('摘要').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateTransferNext')));
+    await tester.pumpAndSettle();
+
+    final description = tester.widget<TextFormField>(
+      find.byKey(const Key('estimateDescriptionField')),
+    );
+    final quantity = tester.widget<TextFormField>(
+      find.byKey(const Key('estimateQuantityField')),
+    );
+    expect(description.controller?.text, '429');
+    expect(quantity.controller?.text, isEmpty);
   });
 
   testWidgets('小数点を含む数値全体を選択し演算子は選択しない', (tester) async {
@@ -156,6 +264,7 @@ void main() {
   });
 
   testWidgets('分数fieldの選択ハンドルを外へ広げると分数全体へsnapする', (tester) async {
+    _mockClipboard();
     final controller = CalculatorController()..pasteAtCaret('7+');
     _enterFraction(controller, '23', '45');
     controller.pasteAtCaret('+9');
@@ -179,6 +288,25 @@ void main() {
     expect(controller.selection!.extent, isA<RawExpressionPosition>());
     expect(controller.selectedClipboardText, contains('23/45'));
     expect(find.byKey(const Key('selectedFractionNode')), findsOneWidget);
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
+
+    await tester.tap(_toolbarAction('コピー'));
+    await tester.pumpAndSettle();
+    final copied = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+    expect(copied, contains('23/45'));
+    expect(
+      copied.runes.any((rune) => rune >= 0xE000 && rune <= 0xF8FF),
+      isFalse,
+    );
+
+    final markerBeforePaste = controller.expression;
+    await tester.tap(_toolbarAction('ペースト'));
+    await tester.pumpAndSettle();
+    expect(controller.displayExpression, '7 + 23/45 + 9');
+    expect(controller.expression, isNot(markerBeforePaste));
+    expect(find.byKey(const Key('fractionNumeratorField')), findsOneWidget);
+    expect(find.byKey(const Key('fractionDenominatorField')), findsOneWidget);
+    expect(controller.selection, isNull);
   });
 
   testWidgets('baseとextentが逆向きでも両端ハンドルを表示する', (tester) async {

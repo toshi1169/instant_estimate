@@ -120,6 +120,8 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Timer? _digitLimitCooldownTimer;
   bool _digitLimitNoticeVisible = false;
   bool _digitLimitNoticeCoolingDown = false;
+  ExpressionFragment? _internalClipboardFragment;
+  String? _internalClipboardText;
   late final CalculatorController _controller =
       widget.controller ??
       CalculatorController(historyStore: widget.historyStore);
@@ -515,34 +517,69 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
-  Future<void> _showCalculationMenu() async {
-    final action = await showModalBottomSheet<_CalculationMenuAction>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => const _CalculationMenuSheet(),
-    );
-    if (action == null || !mounted) return;
-
+  Future<void> _handleSelectionMenuAction(_SelectionMenuAction action) async {
     switch (action) {
-      case _CalculationMenuAction.copy:
-        await Clipboard.setData(ClipboardData(text: _controller.clipboardText));
-        _showMessage('コピーしました');
-      case _CalculationMenuAction.cut:
-        await Clipboard.setData(
-          ClipboardData(text: _controller.displayExpression),
-        );
-        _controller.clear();
-        _showMessage('カットしました');
-      case _CalculationMenuAction.paste:
+      case _SelectionMenuAction.copy:
+        final fragment = _controller.copySelectionFragment();
+        final text = _controller.selectedClipboardText;
+        if (fragment == null || text.isEmpty) return;
+        await Clipboard.setData(ClipboardData(text: text));
+        _internalClipboardFragment = fragment;
+        _internalClipboardText = text;
+        if (mounted) _showMessage('コピーしました');
+      case _SelectionMenuAction.cut:
+        final fragment = _controller.copySelectionFragment();
+        final text = _controller.selectedClipboardText;
+        if (fragment == null || text.isEmpty) return;
+        await Clipboard.setData(ClipboardData(text: text));
+        _internalClipboardFragment = fragment;
+        _internalClipboardText = text;
+        _controller.deleteSelection();
+        if (mounted) _showMessage('カットしました');
+      case _SelectionMenuAction.paste:
         final data = await Clipboard.getData(Clipboard.kTextPlain);
         if (!mounted) return;
-        final pasted = _controller.pasteAtCaret(data?.text ?? '');
+        final text = data?.text ?? '';
+        final internalFragment = text == _internalClipboardText
+            ? _internalClipboardFragment
+            : null;
+        final pasted = internalFragment != null
+            ? _controller.pasteFragment(internalFragment)
+            : _controller.pasteAtCaret(text);
         _showMessage(pasted ? 'ペーストしました' : '貼り付けできる計算式がありません');
-      case _CalculationMenuAction.clear:
-        _controller.clear();
-      case _CalculationMenuAction.sendToEstimate:
-        await _showEstimateTransferSheet();
+      case _SelectionMenuAction.delete:
+        _controller.deleteSelection();
+      case _SelectionMenuAction.sendToEstimate:
+        final selectedText = _controller.selectedClipboardText;
+        if (selectedText.isEmpty) return;
+        await _showSelectedEstimateTransferSheet(selectedText);
     }
+  }
+
+  Future<void> _showSelectedEstimateTransferSheet(String expression) async {
+    final request = await showModalBottomSheet<_EstimateTransferRequest>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _EstimateTransferSheet(
+        expressionText: expression,
+        resultText: '',
+        selectionOnly: true,
+      ),
+    );
+    if (request == null || !mounted) return;
+    final draft = EstimateItemDraft(
+      name: request.destination == _EstimateDestination.name ? expression : '',
+      specification: request.destination == _EstimateDestination.specification
+          ? expression
+          : '',
+      description: request.destination == _EstimateDestination.description
+          ? expression
+          : '',
+      calculationBasis: expression,
+    );
+    await _sendDraftToEstimate(draft);
+    _controller.clearSelection();
   }
 
   Future<void> _showEstimateTransferSheet({
@@ -943,7 +980,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                           height: expressionHeight,
                           child: _ExpressionPanel(
                             controller: _controller,
-                            onLongPress: _showCalculationMenu,
+                            onSelectionMenuAction: _handleSelectionMenuAction,
                           ),
                         ),
                         const SizedBox(height: sectionGap),
@@ -1230,47 +1267,47 @@ class _HistoryMenuSheet extends StatelessWidget {
 }
 
 class _ExpressionPanel extends StatelessWidget {
-  const _ExpressionPanel({required this.controller, required this.onLongPress});
+  const _ExpressionPanel({
+    required this.controller,
+    required this.onSelectionMenuAction,
+  });
 
   final CalculatorController controller;
-  final VoidCallback onLongPress;
+  final Future<void> Function(_SelectionMenuAction action)
+  onSelectionMenuAction;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
+    return DecoratedBox(
       key: const Key('calculationSpace'),
-      behavior: HitTestBehavior.opaque,
-      onLongPress: onLongPress,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.brightness == Brightness.dark
-              ? Colors.black
-              : Colors.white,
-          border: Border.all(color: theme.colorScheme.outlineVariant),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: _EditableExpressionLine(
-                  controller: controller,
-                  onStationaryLongPress: onLongPress,
-                ),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? Colors.black
+            : Colors.white,
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: _EditableExpressionLine(
+                controller: controller,
+                onSelectionMenuAction: onSelectionMenuAction,
               ),
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: _ResultLine(controller: controller),
-                ),
+            ),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: _ResultLine(controller: controller),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1407,41 +1444,7 @@ double? _parseEstimateNumber(String value) {
   return parsed != null && parsed.isFinite ? parsed : null;
 }
 
-enum _CalculationMenuAction { copy, cut, paste, clear, sendToEstimate }
-
-class _CalculationMenuSheet extends StatelessWidget {
-  const _CalculationMenuSheet();
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
-    const items = <(_CalculationMenuAction, IconData, String)>[
-      (_CalculationMenuAction.copy, Icons.copy_outlined, 'コピー'),
-      (_CalculationMenuAction.cut, Icons.content_cut, 'カット'),
-      (_CalculationMenuAction.paste, Icons.content_paste, 'ペースト'),
-      (_CalculationMenuAction.clear, Icons.delete_outline, '消去'),
-      (
-        _CalculationMenuAction.sendToEstimate,
-        Icons.receipt_long_outlined,
-        '見積へ送る',
-      ),
-    ];
-
-    return SafeArea(
-      child: ListView(
-        shrinkWrap: true,
-        children: [
-          for (final item in items)
-            ListTile(
-              leading: Icon(item.$2),
-              title: Text(strings.text(item.$3)),
-              onTap: () => Navigator.of(context).pop(item.$1),
-            ),
-        ],
-      ),
-    );
-  }
-}
+enum _SelectionMenuAction { copy, cut, paste, delete, sendToEstimate }
 
 enum _EstimateContent {
   expression('式'),
@@ -1476,17 +1479,21 @@ class _EstimateTransferSheet extends StatefulWidget {
   const _EstimateTransferSheet({
     required this.expressionText,
     required this.resultText,
+    this.selectionOnly = false,
   });
 
   final String expressionText;
   final String resultText;
+  final bool selectionOnly;
 
   @override
   State<_EstimateTransferSheet> createState() => _EstimateTransferSheetState();
 }
 
 class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
-  _EstimateContent _content = _EstimateContent.expressionAndResult;
+  late _EstimateContent _content = widget.selectionOnly
+      ? _EstimateContent.expression
+      : _EstimateContent.expressionAndResult;
   _EstimateDestination _destination = _EstimateDestination.description;
 
   String get _preview {
@@ -1518,23 +1525,25 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            Text(strings.text('送信内容')),
-            const SizedBox(height: 8),
-            SegmentedButton<_EstimateContent>(
-              key: const Key('estimateContentSelector'),
-              segments: [
-                for (final content in _EstimateContent.values)
-                  ButtonSegment(
-                    value: content,
-                    label: Text(strings.text(content.label)),
-                  ),
-              ],
-              selected: {_content},
-              onSelectionChanged: (selection) {
-                setState(() => _content = selection.first);
-              },
-            ),
-            const SizedBox(height: 16),
+            if (!widget.selectionOnly) ...[
+              Text(strings.text('送信内容')),
+              const SizedBox(height: 8),
+              SegmentedButton<_EstimateContent>(
+                key: const Key('estimateContentSelector'),
+                segments: [
+                  for (final content in _EstimateContent.values)
+                    ButtonSegment(
+                      value: content,
+                      label: Text(strings.text(content.label)),
+                    ),
+                ],
+                selected: {_content},
+                onSelectionChanged: (selection) {
+                  setState(() => _content = selection.first);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
             Text(strings.text('送信先')),
             const SizedBox(height: 8),
             DropdownButtonFormField<_EstimateDestination>(
@@ -1542,10 +1551,12 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
               initialValue: _destination,
               items: [
                 for (final destination in _EstimateDestination.values)
-                  DropdownMenuItem(
-                    value: destination,
-                    child: Text(strings.text(destination.label)),
-                  ),
+                  if (!widget.selectionOnly ||
+                      destination != _EstimateDestination.quantity)
+                    DropdownMenuItem(
+                      value: destination,
+                      child: Text(strings.text(destination.label)),
+                    ),
               ],
               onChanged: (value) {
                 if (value != null) setState(() => _destination = value);
@@ -1606,11 +1617,12 @@ class _EstimateTransferSheetState extends State<_EstimateTransferSheet> {
 class _EditableExpressionLine extends StatefulWidget {
   const _EditableExpressionLine({
     required this.controller,
-    required this.onStationaryLongPress,
+    required this.onSelectionMenuAction,
   });
 
   final CalculatorController controller;
-  final VoidCallback onStationaryLongPress;
+  final Future<void> Function(_SelectionMenuAction action)
+  onSelectionMenuAction;
   static const double _expressionFontSize = 42;
 
   @override
@@ -1677,11 +1689,11 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   );
   List<_ExpressionHitTarget> _hitTargets = const [];
   String _lastExpressionSignature = '';
-  Offset? _longPressOrigin;
-  bool _didDragCaret = false;
   OverlayEntry? _selectionHandlesOverlay;
+  OverlayEntry? _selectionToolbarOverlay;
   Rect? _baseSelectionCaretRect;
   Rect? _extentSelectionCaretRect;
+  bool _selectionToolbarRequested = false;
   Duration? _lastPointerDownTime;
   Offset? _lastPointerDownPosition;
   bool _suppressNextExpressionTap = false;
@@ -1691,6 +1703,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   void dispose() {
     _selectionHandlesOverlay?.remove();
     _selectionHandlesOverlay = null;
+    _selectionToolbarOverlay?.remove();
+    _selectionToolbarOverlay = null;
     _tapSuppressionTimer?.cancel();
     unawaited(_magnifierController.hide().whenComplete(_magnifierInfo.dispose));
     _scrollController.dispose();
@@ -2136,6 +2150,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
               _isSelectableNumberCharacter(expression[end])) {
             end++;
           }
+          _selectionToolbarRequested = true;
           widget.controller.selectRange(
             RawExpressionPosition(start),
             RawExpressionPosition(end),
@@ -2157,6 +2172,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         while (end < value.length && _isSelectableNumberCharacter(value[end])) {
           end++;
         }
+        _selectionToolbarRequested = true;
         widget.controller.selectRange(
           FractionExpressionPosition(
             marker: target.marker!,
@@ -2172,6 +2188,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         return;
       }
     }
+    _selectionToolbarRequested = false;
+    _removeSelectionToolbar();
     widget.controller.moveCaretToPosition(resolved.position);
   }
 
@@ -2214,6 +2232,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     if (selection == null) {
       _selectionHandlesOverlay?.remove();
       _selectionHandlesOverlay = null;
+      _selectionToolbarRequested = false;
+      _removeSelectionToolbar();
       return;
     }
     final baseRect = _caretRectForPosition(selection.base);
@@ -2233,6 +2253,93 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       overlay.insert(_selectionHandlesOverlay!);
     } else {
       _selectionHandlesOverlay!.markNeedsBuild();
+    }
+    if (_selectionToolbarRequested) {
+      _selectionToolbarOverlay ??= OverlayEntry(
+        builder: _buildSelectionToolbarOverlay,
+      );
+      if (!_selectionToolbarOverlay!.mounted) {
+        overlay.insert(_selectionToolbarOverlay!);
+      } else {
+        _selectionToolbarOverlay!.markNeedsBuild();
+      }
+    }
+  }
+
+  void _removeSelectionToolbar() {
+    _selectionToolbarOverlay?.remove();
+    _selectionToolbarOverlay = null;
+  }
+
+  Widget _buildSelectionToolbarOverlay(BuildContext overlayContext) {
+    final baseRect = _baseSelectionCaretRect;
+    final extentRect = _extentSelectionCaretRect;
+    if (baseRect == null || extentRect == null) {
+      return const SizedBox.shrink();
+    }
+    final top = math.min(baseRect.top, extentRect.top);
+    final bottom = math.max(baseRect.bottom, extentRect.bottom);
+    final centerX = (baseRect.center.dx + extentRect.center.dx) / 2;
+    final strings = AppLocalizations.of(overlayContext);
+    return KeyedSubtree(
+      key: const Key('calculatorSelectionToolbar'),
+      child: AdaptiveTextSelectionToolbar.buttonItems(
+        anchors: TextSelectionToolbarAnchors(
+          primaryAnchor: Offset(centerX, top),
+          secondaryAnchor: Offset(centerX, bottom),
+        ),
+        buttonItems: [
+          ContextMenuButtonItem(
+            type: ContextMenuButtonType.copy,
+            label: strings.text('コピー'),
+            onPressed: () =>
+                unawaited(_invokeSelectionAction(_SelectionMenuAction.copy)),
+          ),
+          ContextMenuButtonItem(
+            type: ContextMenuButtonType.cut,
+            label: strings.text('カット'),
+            onPressed: () =>
+                unawaited(_invokeSelectionAction(_SelectionMenuAction.cut)),
+          ),
+          ContextMenuButtonItem(
+            type: ContextMenuButtonType.paste,
+            label: strings.text('ペースト'),
+            onPressed: () =>
+                unawaited(_invokeSelectionAction(_SelectionMenuAction.paste)),
+          ),
+          ContextMenuButtonItem(
+            type: ContextMenuButtonType.delete,
+            label: strings.text('消去'),
+            onPressed: () =>
+                unawaited(_invokeSelectionAction(_SelectionMenuAction.delete)),
+          ),
+          ContextMenuButtonItem(
+            label: strings.text('見積へ送る'),
+            onPressed: () => unawaited(
+              _invokeSelectionAction(_SelectionMenuAction.sendToEstimate),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _invokeSelectionAction(_SelectionMenuAction action) async {
+    if (action != _SelectionMenuAction.copy) {
+      _selectionToolbarRequested = false;
+      _removeSelectionToolbar();
+    }
+    if (action == _SelectionMenuAction.sendToEstimate) {
+      _selectionHandlesOverlay?.remove();
+      _selectionHandlesOverlay = null;
+    }
+    await widget.onSelectionMenuAction(action);
+    if (!mounted || !widget.controller.hasSelection) return;
+    if (action != _SelectionMenuAction.copy) {
+      _selectionToolbarRequested = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _syncSelectionHandlesOverlay();
+      });
     }
   }
 
@@ -2297,8 +2404,19 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       child: GestureDetector(
         key: key,
         behavior: HitTestBehavior.opaque,
+        onPanStart: (_) {
+          _selectionToolbarRequested = false;
+          _removeSelectionToolbar();
+        },
         onPanUpdate: (details) =>
             _dragSelectionHandle(details.globalPosition, movesBase: movesBase),
+        onPanEnd: (_) {
+          if (!widget.controller.hasSelection) return;
+          _selectionToolbarRequested = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _syncSelectionHandlesOverlay();
+          });
+        },
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -2396,37 +2514,21 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   }
 
   void _startCaretDrag(LongPressStartDetails details) {
-    _longPressOrigin = details.globalPosition;
-    _didDragCaret = false;
     _moveCaretForDrag(details.globalPosition);
     _showMagnifier();
   }
 
   void _updateCaretDrag(LongPressMoveUpdateDetails details) {
-    final origin = _longPressOrigin;
-    if (origin != null && (details.globalPosition - origin).distance >= 6) {
-      _didDragCaret = true;
-    }
     _moveCaretForDrag(details.globalPosition);
   }
 
   void _endCaretDrag(LongPressEndDetails details) {
     _moveCaretForDrag(details.globalPosition);
-    final showMenu = !_didDragCaret;
-    _longPressOrigin = null;
-    _didDragCaret = false;
-    unawaited(_finishCaretDrag(showMenu: showMenu));
-  }
-
-  void _cancelCaretDrag() {
-    _longPressOrigin = null;
-    _didDragCaret = false;
     unawaited(_magnifierController.hide());
   }
 
-  Future<void> _finishCaretDrag({required bool showMenu}) async {
-    await _magnifierController.hide();
-    if (showMenu && mounted) widget.onStationaryLongPress();
+  void _cancelCaretDrag() {
+    unawaited(_magnifierController.hide());
   }
 
   void _showMagnifier() {

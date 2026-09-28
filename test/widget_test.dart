@@ -2281,7 +2281,7 @@ void main() {
     expect(find.byKey(const Key('calculatorCaret')), findsNothing);
   });
 
-  testWidgets('計算スペースの長押しで編集メニューを表示する', (tester) async {
+  testWidgets('計算スペースの静止長押しで編集メニューを表示しない', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -2296,14 +2296,15 @@ void main() {
     await tester.longPress(find.byKey(const Key('calculationSpace')));
     await tester.pumpAndSettle();
 
-    expect(find.text('コピー'), findsOneWidget);
-    expect(find.text('カット'), findsOneWidget);
-    expect(find.text('ペースト'), findsOneWidget);
-    expect(find.text('消去'), findsOneWidget);
-    expect(find.text('見積へ送る'), findsOneWidget);
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+    expect(find.text('コピー'), findsNothing);
+    expect(find.text('カット'), findsNothing);
+    expect(find.text('ペースト'), findsNothing);
+    expect(find.text('消去'), findsNothing);
+    expect(find.text('見積へ送る'), findsNothing);
   });
 
-  testWidgets('英語設定で電卓広告と計算スペースメニューを英語表示する', (tester) async {
+  testWidgets('英語設定で電卓広告と選択編集メニューを英語表示する', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -2323,14 +2324,30 @@ void main() {
     expect(find.text('Remove ads with Ad-free!'), findsOneWidget);
     expect(find.text('Upgrade\nnow'), findsOneWidget);
 
-    await tester.longPress(find.byKey(const Key('calculationSpace')));
+    await tester.tap(find.text('4'));
+    await tester.pump();
+    await tester.tap(find.text('2'));
+    await tester.pump();
+    final expressionRect = tester.getRect(
+      find.byKey(const Key('expressionText')),
+    );
+    final expressionPosition = Offset(
+      expressionRect.right - 20,
+      expressionRect.center.dy,
+    );
+    await tester.tapAt(expressionPosition);
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tapAt(expressionPosition);
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
     expect(find.text('Copy'), findsOneWidget);
     expect(find.text('Cut'), findsOneWidget);
     expect(find.text('Paste'), findsOneWidget);
     expect(find.text('Clear'), findsOneWidget);
-    expect(find.text('Send to estimate'), findsOneWidget);
+    // At this width the adaptive toolbar keeps later actions in its
+    // platform-specific overflow instead of clipping translated labels.
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a/bボタンから分数枠を入力して計算できる', (tester) async {
