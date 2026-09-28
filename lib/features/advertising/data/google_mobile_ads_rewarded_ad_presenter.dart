@@ -9,13 +9,15 @@ import '../domain/rewarded_ad_policy.dart';
 abstract final class RewardedAdIds {
   static const androidTest = 'ca-app-pub-3940256099942544/5224354917';
   static const iosTest = 'ca-app-pub-3940256099942544/1712485313';
+  static const androidProduction = 'ca-app-pub-5377462997619054/3736654278';
   static const iosProduction = 'ca-app-pub-5377462997619054/4787410869';
 
   static String? forPlatform(
     TargetPlatform platform, {
     bool useProductionIds = kReleaseMode,
   }) => switch (platform) {
-    TargetPlatform.android => androidTest,
+    TargetPlatform.android =>
+      useProductionIds ? androidProduction : androidTest,
     TargetPlatform.iOS => useProductionIds ? iosProduction : iosTest,
     _ => null,
   };

@@ -5,6 +5,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 abstract final class GoogleMobileAdsBannerIds {
   static const androidTest = 'ca-app-pub-3940256099942544/6300978111';
   static const iosTest = 'ca-app-pub-3940256099942544/2934735716';
+  static const androidProduction = 'ca-app-pub-5377462997619054/8748559379';
   static const iosProduction = 'ca-app-pub-5377462997619054/6124543262';
 
   static String? forPlatform(
@@ -12,7 +13,8 @@ abstract final class GoogleMobileAdsBannerIds {
     bool useProductionIds = kReleaseMode,
   }) {
     return switch (platform) {
-      TargetPlatform.android => androidTest,
+      TargetPlatform.android =>
+        useProductionIds ? androidProduction : androidTest,
       TargetPlatform.iOS => useProductionIds ? iosProduction : iosTest,
       _ => null,
     };

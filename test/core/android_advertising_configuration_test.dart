@@ -7,7 +7,7 @@ import 'package:instant_estimate/features/advertising/presentation/google_mobile
 
 void main() {
   const formalApplicationId = 'com.matsumotoboundary.constructioncalc';
-  const googleAndroidTestAppId = 'ca-app-pub-3940256099942544~3347511713';
+  const googleAndroidProductionAppId = 'ca-app-pub-5377462997619054~5024936786';
 
   test('Android advertising configuration uses the formal application ID', () {
     final gradle = File('android/app/build.gradle.kts').readAsStringSync();
@@ -22,7 +22,7 @@ void main() {
     expect(gradle, isNot(contains('com.example.instant_estimate')));
   });
 
-  test('Android manifest keeps the Google test AdMob application ID', () {
+  test('Android manifest uses the production AdMob application ID', () {
     final manifest = File(
       'android/app/src/main/AndroidManifest.xml',
     ).readAsStringSync();
@@ -31,25 +31,29 @@ void main() {
       manifest,
       contains('android:name="com.google.android.gms.ads.APPLICATION_ID"'),
     );
-    expect(manifest, contains('android:value="$googleAndroidTestAppId"'));
-    expect(manifest, isNot(contains('ca-app-pub-5377462997619054')));
+    expect(manifest, contains('android:value="$googleAndroidProductionAppId"'));
+    expect(manifest, isNot(contains('ca-app-pub-3940256099942544')));
   });
 
-  test('Android uses Google test ad units even in release builds', () {
+  test('Android selects test or production ad units for the build mode', () {
     for (final useProductionIds in [false, true]) {
       expect(
         GoogleMobileAdsBannerIds.forPlatform(
           TargetPlatform.android,
           useProductionIds: useProductionIds,
         ),
-        GoogleMobileAdsBannerIds.androidTest,
+        useProductionIds
+            ? GoogleMobileAdsBannerIds.androidProduction
+            : GoogleMobileAdsBannerIds.androidTest,
       );
       expect(
         RewardedAdIds.forPlatform(
           TargetPlatform.android,
           useProductionIds: useProductionIds,
         ),
-        RewardedAdIds.androidTest,
+        useProductionIds
+            ? RewardedAdIds.androidProduction
+            : RewardedAdIds.androidTest,
       );
     }
   });
