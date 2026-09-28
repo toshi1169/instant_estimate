@@ -258,6 +258,8 @@ class _EstimateDocumentsScreenState extends State<EstimateDocumentsScreen> {
             excluding: widget.controller.estimates.map(
               (estimate) => estimate.info.id,
             ),
+            taxEnabled: _settings.defaultEstimateTaxEnabled,
+            taxRateBasisPoints: _settings.defaultEstimateTaxRateBasisPoints,
           ),
         ),
       ),

@@ -382,6 +382,8 @@ Future<void> _pumpSettings(
 Future<void> _openCompanyProfile(WidgetTester tester) async {
   final setting = find.byKey(const Key('companyProfileSetting'));
   await tester.scrollUntilVisible(setting, 250);
+  await tester.ensureVisible(setting);
+  await tester.pumpAndSettle();
   await tester.tap(setting);
   await tester.pumpAndSettle();
 }

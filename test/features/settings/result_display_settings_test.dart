@@ -54,7 +54,10 @@ void main() {
       find.byKey(const Key('resultDisplaySetting')),
       200,
     );
-    await tester.tap(find.byKey(const Key('resultDisplaySetting')));
+    final resultDisplaySetting = find.byKey(const Key('resultDisplaySetting'));
+    await tester.ensureVisible(resultDisplaySetting);
+    await tester.pumpAndSettle();
+    await tester.tap(resultDisplaySetting);
     await tester.pumpAndSettle();
 
     expect(find.text('解の表示'), findsOneWidget);

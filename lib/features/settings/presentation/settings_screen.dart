@@ -19,6 +19,7 @@ import '../../backup/application/backup_restore_coordinator.dart';
 import '../../backup/presentation/backup_screen.dart';
 import 'button_settings_screen.dart';
 import 'company_profile_editor_screen.dart';
+import 'estimate_tax_settings_screen.dart';
 import 'result_display_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -222,6 +223,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _editEstimateTaxSettings(BuildContext context) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => EstimateTaxSettingsScreen(
+          taxEnabled: _settings.defaultEstimateTaxEnabled,
+          taxRateBasisPoints: _settings.defaultEstimateTaxRateBasisPoints,
+          onTaxEnabledChanged: (value) =>
+              _update(_settings.copyWith(defaultEstimateTaxEnabled: value)),
+          onTaxRateBasisPointsChanged: (value) => _update(
+            _settings.copyWith(defaultEstimateTaxRateBasisPoints: value),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _selectEstimateRoundingMode(BuildContext context) async {
     final strings = AppLocalizations.of(context);
     final value = await _selectValue<EstimateQuantityRoundingMode>(
@@ -409,6 +426,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             margin: EdgeInsets.zero,
             child: Column(
               children: [
+                ListTile(
+                  key: const Key('estimateTaxSettings'),
+                  leading: const Icon(Icons.percent_outlined),
+                  title: Text(strings.taxSettings),
+                  subtitle: Text(
+                    strings.taxSettingsSummary(
+                      enabled: _settings.defaultEstimateTaxEnabled,
+                      rate: formatTaxRateBasisPoints(
+                        _settings.defaultEstimateTaxRateBasisPoints,
+                      ),
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _editEstimateTaxSettings(context),
+                ),
+                const Divider(height: 1),
                 ListTile(
                   key: const Key('languageSetting'),
                   leading: const Icon(Icons.language_outlined),
