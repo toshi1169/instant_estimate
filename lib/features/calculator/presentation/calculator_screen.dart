@@ -1691,11 +1691,18 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   String _lastExpressionSignature = '';
   OverlayEntry? _selectionHandlesOverlay;
   OverlayEntry? _selectionToolbarOverlay;
+  OverlayEntry? _caretToolbarOverlay;
   Rect? _baseSelectionCaretRect;
   Rect? _extentSelectionCaretRect;
+  Rect? _caretToolbarRect;
   bool _selectionToolbarRequested = false;
+  bool _caretToolbarRequested = false;
   bool _selectionOverlaySyncScheduled = false;
   bool _selectionHandleDragActive = false;
+  bool _selectionToolbarWasVisibleBeforeScroll = false;
+  bool? _dragMovesBase;
+  ExpressionPosition? _selectionDragAnchor;
+  ExpressionPosition? _collapsedDragPosition;
   Duration? _lastPointerDownTime;
   Offset? _lastPointerDownPosition;
   bool _suppressNextExpressionTap = false;
@@ -1707,6 +1714,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     _selectionHandlesOverlay = null;
     _selectionToolbarOverlay?.remove();
     _selectionToolbarOverlay = null;
+    _caretToolbarOverlay?.remove();
+    _caretToolbarOverlay = null;
     _tapSuppressionTimer?.cancel();
     unawaited(_magnifierController.hide().whenComplete(_magnifierInfo.dispose));
     _scrollController.dispose();
@@ -1769,60 +1778,64 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
             onLongPressEnd: _endCaretDrag,
             onLongPressCancel: _cancelCaretDrag,
             child: ClipRect(
-              child: SingleChildScrollView(
-                key: const Key('expressionVerticalScroll'),
-                controller: _scrollController,
-                scrollDirection: Axis.vertical,
-                child: SizedBox(
-                  key: const Key('expressionText'),
-                  width: constraints.maxWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (
-                        var lineIndex = 0;
-                        lineIndex < lines.length;
-                        lineIndex++
-                      )
-                        KeyedSubtree(
-                          key: Key('expressionLine-$lineIndex'),
-                          child: SizedBox(
-                            key: _lineKeys.putIfAbsent(
-                              lineIndex,
-                              () => GlobalKey(
-                                debugLabel: 'expressionLine-$lineIndex',
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _handleExpressionScroll,
+                child: SingleChildScrollView(
+                  key: const Key('expressionVerticalScroll'),
+                  controller: _scrollController,
+                  scrollDirection: Axis.vertical,
+                  child: SizedBox(
+                    key: const Key('expressionText'),
+                    width: constraints.maxWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (
+                          var lineIndex = 0;
+                          lineIndex < lines.length;
+                          lineIndex++
+                        )
+                          KeyedSubtree(
+                            key: Key('expressionLine-$lineIndex'),
+                            child: SizedBox(
+                              key: _lineKeys.putIfAbsent(
+                                lineIndex,
+                                () => GlobalKey(
+                                  debugLabel: 'expressionLine-$lineIndex',
+                                ),
                               ),
-                            ),
-                            height: lineHeight,
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: FittedBox(
-                                key: Key('expressionLineScale-$lineIndex'),
-                                fit: BoxFit.scaleDown,
+                              height: lineHeight,
+                              child: Align(
                                 alignment: Alignment.centerRight,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    for (
-                                      var segmentIndex = 0;
-                                      segmentIndex < lines[lineIndex].length;
-                                      segmentIndex++
-                                    )
-                                      _buildSegment(
-                                        lines[lineIndex][segmentIndex],
-                                        style,
-                                        lineIndex,
-                                        segmentIndex,
-                                        hitTargets,
-                                      ),
-                                  ],
+                                child: FittedBox(
+                                  key: Key('expressionLineScale-$lineIndex'),
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      for (
+                                        var segmentIndex = 0;
+                                        segmentIndex < lines[lineIndex].length;
+                                        segmentIndex++
+                                      )
+                                        _buildSegment(
+                                          lines[lineIndex][segmentIndex],
+                                          style,
+                                          lineIndex,
+                                          segmentIndex,
+                                          hitTargets,
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1896,6 +1909,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       selectedRawRange: _selectedRawRange,
       onRawOffsetTap: (offset) {
         if (_consumeSuppressedTap()) return;
+        _hideEditingToolbars();
         widget.controller.moveCaretToRawOffset(offset);
       },
     );
@@ -2028,14 +2042,17 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       denominatorKey: denominatorKey,
       onBeforeFractionTap: () {
         if (_consumeSuppressedTap()) return;
+        _hideEditingToolbars();
         widget.controller.moveCaretBeforeFraction(segment.marker);
       },
       onAfterFractionTap: () {
         if (_consumeSuppressedTap()) return;
+        _hideEditingToolbars();
         widget.controller.moveCaretAfterFraction(segment.marker);
       },
       onFieldTap: (field, caretOffset) {
         if (_consumeSuppressedTap()) return;
+        _hideEditingToolbars();
         widget.controller.activateFraction(
           segment.marker,
           field,
@@ -2150,6 +2167,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
               _isSelectableNumberCharacter(expression[end])) {
             end++;
           }
+          _caretToolbarRequested = false;
+          _removeCaretToolbar();
           _selectionToolbarRequested = true;
           widget.controller.selectRange(
             RawExpressionPosition(start),
@@ -2172,6 +2191,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         while (end < value.length && _isSelectableNumberCharacter(value[end])) {
           end++;
         }
+        _caretToolbarRequested = false;
+        _removeCaretToolbar();
         _selectionToolbarRequested = true;
         widget.controller.selectRange(
           FractionExpressionPosition(
@@ -2188,9 +2209,10 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         return;
       }
     }
-    _selectionToolbarRequested = false;
-    _removeSelectionToolbar();
+    _hideEditingToolbars();
     widget.controller.moveCaretToPosition(resolved.position);
+    _caretToolbarRequested = true;
+    _scheduleSelectionOverlaySync();
   }
 
   bool _isSelectableNumberCharacter(String value) =>
@@ -2283,13 +2305,91 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     _selectionOverlaySyncScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _selectionOverlaySyncScheduled = false;
-      if (mounted) _syncSelectionHandlesOverlay();
+      if (!mounted) return;
+      _syncSelectionHandlesOverlay();
+      _syncCaretToolbarOverlay();
     });
+  }
+
+  void _syncCaretToolbarOverlay() {
+    if (!_caretToolbarRequested || widget.controller.hasSelection) {
+      _removeCaretToolbar();
+      return;
+    }
+    final caretRect = _caretRectForPosition(
+      widget.controller.expressionPosition,
+    );
+    if (caretRect == null) {
+      _removeCaretToolbar();
+      return;
+    }
+    final moved = _caretToolbarRect != caretRect;
+    _caretToolbarRect = caretRect;
+    final overlay = Overlay.of(context, rootOverlay: true);
+    _caretToolbarOverlay ??= OverlayEntry(builder: _buildCaretToolbarOverlay);
+    if (!_caretToolbarOverlay!.mounted) {
+      overlay.insert(_caretToolbarOverlay!);
+    } else if (moved) {
+      _caretToolbarOverlay!.markNeedsBuild();
+    }
   }
 
   void _removeSelectionToolbar() {
     _selectionToolbarOverlay?.remove();
     _selectionToolbarOverlay = null;
+  }
+
+  void _removeCaretToolbar() {
+    _caretToolbarOverlay?.remove();
+    _caretToolbarOverlay = null;
+    _caretToolbarRect = null;
+  }
+
+  void _hideEditingToolbars() {
+    _selectionToolbarRequested = false;
+    _caretToolbarRequested = false;
+    _removeSelectionToolbar();
+    _removeCaretToolbar();
+  }
+
+  Widget _buildCaretToolbarOverlay(BuildContext overlayContext) {
+    final caretRect = _caretToolbarRect;
+    if (caretRect == null) return const SizedBox.shrink();
+    final strings = AppLocalizations.of(overlayContext);
+    return KeyedSubtree(
+      key: const Key('calculatorCaretToolbar'),
+      child: AdaptiveTextSelectionToolbar.buttonItems(
+        anchors: TextSelectionToolbarAnchors(
+          primaryAnchor: caretRect.topCenter,
+          secondaryAnchor: caretRect.bottomCenter,
+        ),
+        buttonItems: [
+          ContextMenuButtonItem(
+            type: ContextMenuButtonType.paste,
+            label: strings.text('ペースト'),
+            onPressed: () => unawaited(_pasteAtCaretFromToolbar()),
+          ),
+          ContextMenuButtonItem(
+            label: strings.text('選択'),
+            onPressed: _selectNumberFromCaretToolbar,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pasteAtCaretFromToolbar() async {
+    _caretToolbarRequested = false;
+    _removeCaretToolbar();
+    await widget.onSelectionMenuAction(_SelectionMenuAction.paste);
+  }
+
+  void _selectNumberFromCaretToolbar() {
+    _caretToolbarRequested = false;
+    _removeCaretToolbar();
+    if (!widget.controller.selectNumberNearCaret()) return;
+    _selectionToolbarRequested = true;
+    _scheduleSelectionOverlaySync();
   }
 
   Widget _buildSelectionToolbarOverlay(BuildContext overlayContext) {
@@ -2433,24 +2533,18 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         key: key,
         behavior: HitTestBehavior.opaque,
         onPanStart: (_) {
+          final selection = widget.controller.selection;
+          if (selection == null) return;
           _selectionHandleDragActive = true;
+          _dragMovesBase = movesBase;
+          _selectionDragAnchor = movesBase ? selection.extent : selection.base;
+          _collapsedDragPosition = null;
           _selectionToolbarRequested = false;
           _removeSelectionToolbar();
         },
-        onPanUpdate: (details) =>
-            _dragSelectionHandle(details.globalPosition, movesBase: movesBase),
-        onPanEnd: (_) {
-          _selectionHandleDragActive = false;
-          if (!widget.controller.hasSelection) return;
-          _selectionToolbarRequested = true;
-          _scheduleSelectionOverlaySync();
-        },
-        onPanCancel: () {
-          _selectionHandleDragActive = false;
-          if (!widget.controller.hasSelection) return;
-          _selectionToolbarRequested = true;
-          _scheduleSelectionOverlaySync();
-        },
+        onPanUpdate: (details) => _dragSelectionHandle(details.globalPosition),
+        onPanEnd: (_) => _finishSelectionHandleDrag(),
+        onPanCancel: _finishSelectionHandleDrag,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -2465,20 +2559,49 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
   }
 
-  void _dragSelectionHandle(Offset globalPosition, {required bool movesBase}) {
+  void _dragSelectionHandle(Offset globalPosition) {
     final resolved = _resolvePosition(globalPosition);
-    final selection = widget.controller.selection;
-    if (resolved == null || selection == null) return;
-    if (movesBase) {
-      widget.controller.selectRange(resolved.position, selection.extent);
-    } else {
-      widget.controller.selectRange(selection.base, resolved.position);
+    final anchor = _selectionDragAnchor;
+    final movesBase = _dragMovesBase;
+    if (resolved == null || anchor == null || movesBase == null) return;
+    if (resolved.position == anchor) {
+      // Defer the collapsed selection until pointer-up. Keeping the current
+      // handle alive lets the same gesture continue across the fixed endpoint.
+      _collapsedDragPosition = resolved.position;
+      return;
     }
+    _collapsedDragPosition = null;
+    if (movesBase) {
+      widget.controller.selectRange(resolved.position, anchor);
+    } else {
+      widget.controller.selectRange(anchor, resolved.position);
+    }
+  }
+
+  void _finishSelectionHandleDrag() {
+    final collapsedPosition = _collapsedDragPosition;
+    _selectionHandleDragActive = false;
+    _dragMovesBase = null;
+    _selectionDragAnchor = null;
+    _collapsedDragPosition = null;
+    if (collapsedPosition != null) {
+      _selectionToolbarRequested = false;
+      widget.controller.moveCaretToPosition(collapsedPosition);
+      _scheduleSelectionOverlaySync();
+      return;
+    }
+    if (!widget.controller.hasSelection) return;
+    _selectionToolbarRequested = true;
+    _scheduleSelectionOverlaySync();
   }
 
   Rect? _caretRectForPosition(ExpressionPosition position) {
     for (final target in _hitTargets) {
       if (position case RawExpressionPosition(:final offset)) {
+        if (target.kind == _ExpressionHitTargetKind.currentCaret &&
+            target.rawOffset == offset) {
+          return _edgeCaretRect(target, trailing: false);
+        }
         if (target.kind == _ExpressionHitTargetKind.text) {
           final index = target.rawOffsets.indexOf(offset);
           if (index >= 0) return _caretRectForTargetOffset(target, index);
@@ -2547,7 +2670,24 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     return Rect.fromLTRB(top.dx - 1, top.dy, bottom.dx + 1, bottom.dy);
   }
 
+  bool _handleExpressionScroll(ScrollNotification notification) {
+    if (!widget.controller.hasSelection) return false;
+    if (notification is ScrollStartNotification) {
+      _selectionToolbarWasVisibleBeforeScroll = _selectionToolbarRequested;
+      _selectionToolbarRequested = false;
+      _removeSelectionToolbar();
+    } else if (notification is ScrollEndNotification) {
+      if (_selectionToolbarWasVisibleBeforeScroll) {
+        _selectionToolbarRequested = true;
+      }
+      _selectionToolbarWasVisibleBeforeScroll = false;
+    }
+    _scheduleSelectionOverlaySync();
+    return false;
+  }
+
   void _startCaretDrag(LongPressStartDetails details) {
+    _hideEditingToolbars();
     _moveCaretForDrag(details.globalPosition);
     _showMagnifier();
   }

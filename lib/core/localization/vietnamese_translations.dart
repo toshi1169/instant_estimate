@@ -509,6 +509,7 @@ const Map<String, String> vietnameseTranslations = <String, String>{
   "コピー": "sao chép",
   "カット": "cắt",
   "ペースト": "dán",
+  "選択": "Chọn",
   "消去": "Xóa",
   "共有": "chia sẻ",
   "スター": "ngôi sao",

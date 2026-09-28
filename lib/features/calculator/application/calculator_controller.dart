@@ -497,6 +497,58 @@ class CalculatorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Selects the numeric token next to the current caret. The character after
+  /// the caret has priority; when it is not numeric, the token immediately
+  /// before the caret is used. This keeps the operation local to a structured
+  /// fraction field when the caret is editing one.
+  bool selectNumberNearCaret() {
+    late final String value;
+    late final int offset;
+    late final ExpressionPosition Function(int valueOffset) positionAt;
+    switch (_expressionPosition) {
+      case RawExpressionPosition(offset: final rawOffset):
+        value = _expression;
+        offset = rawOffset;
+        positionAt = RawExpressionPosition.new;
+      case FractionExpressionPosition(
+        :final marker,
+        :final field,
+        offset: final fieldOffset,
+      ):
+        final fraction = _fractions[marker];
+        if (fraction == null) return false;
+        value = _fractionFieldValue(fraction, field);
+        offset = fieldOffset;
+        positionAt = (valueOffset) => FractionExpressionPosition(
+          marker: marker,
+          field: field,
+          offset: valueOffset,
+        );
+    }
+    int? seed;
+    if (offset < value.length && _isSelectionNumberCharacter(value[offset])) {
+      seed = offset;
+    } else if (offset > 0 && _isSelectionNumberCharacter(value[offset - 1])) {
+      seed = offset - 1;
+    }
+    if (seed == null) return false;
+    var start = seed;
+    var end = seed + 1;
+    while (start > 0 && _isSelectionNumberCharacter(value[start - 1])) {
+      start--;
+    }
+    while (end < value.length && _isSelectionNumberCharacter(value[end])) {
+      end++;
+    }
+    selectRange(positionAt(start), positionAt(end));
+    return true;
+  }
+
+  bool _isSelectionNumberCharacter(String value) =>
+      value.length == 1 &&
+      ((value.codeUnitAt(0) >= 48 && value.codeUnitAt(0) <= 57) ||
+          value == '.');
+
   ExpressionSelection _normalizeSelection(
     ExpressionPosition base,
     ExpressionPosition extent,

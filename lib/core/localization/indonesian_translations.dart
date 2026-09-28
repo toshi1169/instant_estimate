@@ -512,6 +512,7 @@ const Map<String, String> indonesianTranslations = <String, String>{
   "コピー": "salin",
   "カット": "potong",
   "ペースト": "tempel",
+  "選択": "Pilih",
   "消去": "Hapus",
   "共有": "berbagi",
   "スター": "bintang",

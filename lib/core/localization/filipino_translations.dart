@@ -520,6 +520,7 @@ const Map<String, String> filipinoTranslations = <String, String>{
   "コピー": "kopyahin",
   "カット": "gupitin",
   "ペースト": "idikit",
+  "選択": "Piliin",
   "消去": "Burahin",
   "共有": "ibahagi",
   "スター": "bituin",

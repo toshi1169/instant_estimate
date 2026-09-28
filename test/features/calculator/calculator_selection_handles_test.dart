@@ -142,6 +142,11 @@ Finder _toolbarAction(String label) => find.descendant(
   matching: find.text(label),
 );
 
+Finder _caretToolbarAction(String label) => find.descendant(
+  of: find.byKey(const Key('calculatorCaretToolbar')),
+  matching: find.text(label),
+);
+
 void _mockClipboard({String initialText = ''}) {
   var clipboardText = initialText;
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -259,7 +264,7 @@ void main() {
     expect(quantity.controller?.text, isEmpty);
   });
 
-  testWidgets('小数点を含む数値全体を選択し演算子は選択しない', (tester) async {
+  testWidgets('小数点は数値全体を選択し演算子キャレットはペースト／選択を表示する', (tester) async {
     final controller = CalculatorController()..pasteAtCaret('123+42.75÷5');
     await _pumpCalculator(tester, controller);
     var expression = _expressionTextContaining('42.75');
@@ -269,14 +274,48 @@ void main() {
 
     controller.clearSelection();
     await tester.pump();
-    expression = _expressionTextContaining('+');
-    await _doubleTapAt(tester, _characterCenter(tester, expression, '+'));
+    controller.moveCaretToRawOffset(3);
+    await tester.pump();
+    await _doubleTapAt(
+      tester,
+      tester.getCenter(find.byKey(const Key('calculatorCaret'))),
+    );
     expect(controller.selection, isNull);
     expect(find.byKey(const Key('calculatorCaret')), findsOneWidget);
+    expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+    expect(_caretToolbarAction('ペースト'), findsOneWidget);
+    expect(_caretToolbarAction('選択'), findsOneWidget);
     expect(
       find.byKey(const Key('calculatorSelectionBaseHandle')),
       findsNothing,
     );
+  });
+
+  testWidgets('キャレットメニューの選択は右側数字列を優先し、なければ左側を選択する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('123+456×789');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    controller.moveCaretToRawOffset(4);
+    await tester.pump();
+    await _doubleTapAt(
+      tester,
+      tester.getCenter(find.byKey(const Key('calculatorCaret'))),
+    );
+    await tester.tap(_caretToolbarAction('選択'));
+    await tester.pumpAndSettle();
+    expect(controller.selectedClipboardText, '456');
+    _expectHandles();
+
+    controller.clearSelection();
+    controller.moveCaretToRawOffset(3);
+    await tester.pump();
+    await _doubleTapAt(
+      tester,
+      tester.getCenter(find.byKey(const Key('calculatorCaret'))),
+    );
+    await tester.tap(_caretToolbarAction('選択'));
+    await tester.pumpAndSettle();
+    expect(controller.selectedClipboardText, '123');
   });
 
   testWidgets('左右両ハンドルを記号境界へ動かし終了後にメニューを一度だけ再表示する', (tester) async {
@@ -341,6 +380,91 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('左右ハンドルは同一位置を通過して両方向に交差できる', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('(12+345)÷6');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    final text = _expressionTextContaining('345');
+    final beforeToken = _characterBoundary(
+      tester,
+      text,
+      '345',
+      trailing: false,
+    );
+    final afterToken = _characterBoundary(tester, text, '345', trailing: true);
+    final beforePlus = _characterBoundary(tester, text, '+', trailing: false);
+    final afterCloseParen = _characterBoundary(
+      tester,
+      text,
+      ')',
+      trailing: true,
+    );
+    await _doubleTapAt(tester, _characterCenter(tester, text, '345'));
+
+    var gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('calculatorSelectionBaseHandle'))),
+    );
+    await gesture.moveTo(afterToken);
+    await tester.pump();
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+    await gesture.moveTo(afterCloseParen);
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.selection!.base, const RawExpressionPosition(8));
+    expect(controller.selection!.extent, const RawExpressionPosition(7));
+
+    await _doubleTapAt(tester, _characterCenter(tester, text, '345'));
+    gesture = await tester.startGesture(
+      tester.getCenter(
+        find.byKey(const Key('calculatorSelectionExtentHandle')),
+      ),
+    );
+    await gesture.moveTo(beforeToken);
+    await tester.pump();
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+    await gesture.moveTo(beforePlus);
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.selection!.base, const RawExpressionPosition(4));
+    expect(controller.selection!.extent, const RawExpressionPosition(3));
+    expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('左ハンドルを右端へ重ねると選択をキャレットへ統合する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('12+345×67');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    final text = _expressionTextContaining('345');
+    final afterToken = _characterBoundary(tester, text, '345', trailing: true);
+    await _doubleTapAt(tester, _characterCenter(tester, text, '345'));
+    await _dragHandle(
+      tester,
+      handleKey: const Key('calculatorSelectionBaseHandle'),
+      destination: afterToken,
+    );
+
+    expect(controller.selection, isNull);
+    expect(controller.expressionPosition, const RawExpressionPosition(6));
+    expect(find.byKey(const Key('calculatorCaret')), findsOneWidget);
+    expect(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('calculatorSelectionExtentHandle')),
+      findsNothing,
+    );
+    await _doubleTapAt(
+      tester,
+      tester.getCenter(find.byKey(const Key('calculatorCaret'))),
+    );
+    expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+    expect(_caretToolbarAction('ペースト'), findsOneWidget);
+    expect(_caretToolbarAction('選択'), findsOneWidget);
+  });
+
   testWidgets('左ハンドルを別行へドラッグして複数行を跨ぐ範囲を選択できる', (tester) async {
     final controller = CalculatorController()
       ..pasteAtCaret('1234567890+1234567890+345');
@@ -365,6 +489,33 @@ void main() {
     expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
     expect(tester.binding.hasScheduledFrame, isFalse);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('複数行のスクロールはselectionを保ったままハンドル座標を追従させる', (tester) async {
+    final controller = CalculatorController()
+      ..pasteAtCaret('1234567890+1234567890+1234567890+345');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+
+    final lastLine = _expressionTextContaining('345').last;
+    await _doubleTapAt(tester, _characterCenter(tester, lastLine, '345'));
+    final selectionBefore = controller.selection;
+    final handleBefore = tester.getCenter(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+    );
+
+    await tester.drag(
+      find.byKey(const Key('expressionVerticalScroll')),
+      const Offset(0, 24),
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.selection, selectionBefore);
+    final handleAfter = tester.getCenter(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+    );
+    expect(handleAfter.dy, isNot(handleBefore.dy));
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
   });
 
   testWidgets('選択範囲へのPasteは現在範囲だけを置換し選択なしではキャレットへ挿入する', (tester) async {
@@ -453,6 +604,34 @@ void main() {
     expect(find.byKey(const Key('fractionNumeratorField')), findsOneWidget);
     expect(find.byKey(const Key('fractionDenominatorField')), findsOneWidget);
     expect(controller.selection, isNull);
+  });
+
+  testWidgets('分数全体へsnapした後も指を離すまでハンドルドラッグを継続する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('7+');
+    _enterFraction(controller, '23', '45');
+    controller.pasteAtCaret('+9');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    await _doubleTapAt(
+      tester,
+      tester.getCenter(find.byKey(const Key('fractionNumeratorField'))),
+    );
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('calculatorSelectionBaseHandle'))),
+    );
+    await gesture.moveTo(tester.getCenter(_expressionTextContaining('7')));
+    await tester.pump();
+    expect(controller.selection!.base, isA<RawExpressionPosition>());
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+
+    await gesture.moveTo(tester.getCenter(_expressionTextContaining('9')));
+    await tester.pump();
+    expect(controller.selection!.base, isA<RawExpressionPosition>());
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
   });
 
   testWidgets('baseとextentが逆向きでも両端ハンドルを表示する', (tester) async {

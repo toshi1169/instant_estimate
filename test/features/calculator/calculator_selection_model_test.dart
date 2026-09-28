@@ -38,6 +38,53 @@ void main() {
       }
     });
 
+    test('単一キャレットの選択は直後の数字列を優先し、なければ直前を選ぶ', () {
+      final right = CalculatorController()..pasteAtCaret('123+456×789');
+      right.moveCaretToRawOffset(4);
+      expect(right.selectNumberNearCaret(), isTrue);
+      expect(right.selectedClipboardText, '456');
+
+      final left = CalculatorController()..pasteAtCaret('123+456');
+      left.moveCaretToRawOffset(3);
+      expect(left.selectNumberNearCaret(), isTrue);
+      expect(left.selectedClipboardText, '123');
+
+      final none = CalculatorController()..pasteAtCaret('()+');
+      none.moveCaretToRawOffset(1);
+      expect(none.selectNumberNearCaret(), isFalse);
+      expect(none.selection, isNull);
+      expect(none.expressionPosition, const RawExpressionPosition(1));
+    });
+
+    test('分数fieldの単一キャレット選択は同じfield内だけを対象にする', () {
+      final controller = CalculatorController();
+      _enterFraction(controller, '23', '45');
+      final marker = _singleFraction(controller).marker;
+      controller.activateFraction(
+        marker,
+        FractionField.denominator,
+        caretOffset: 0,
+      );
+
+      expect(controller.selectNumberNearCaret(), isTrue);
+      expect(controller.selectedClipboardText, '45');
+      expect(
+        controller.selection,
+        ExpressionSelection(
+          base: FractionExpressionPosition(
+            marker: marker,
+            field: FractionField.denominator,
+            offset: 0,
+          ),
+          extent: FractionExpressionPosition(
+            marker: marker,
+            field: FractionField.denominator,
+            offset: 2,
+          ),
+        ),
+      );
+    });
+
     test('同一分数の整数部・分子・分母はfield内だけを選択できる', () {
       final controller = CalculatorController();
       for (final key in ['1', '2', 'a/b', '3', '4', 'a/b', '5', '6']) {
