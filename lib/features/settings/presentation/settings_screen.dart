@@ -227,6 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => EstimateTaxSettingsScreen(
+          title: AppLocalizations.of(context).newEstimateTaxSettings,
           taxEnabled: _settings.defaultEstimateTaxEnabled,
           taxRateBasisPoints: _settings.defaultEstimateTaxRateBasisPoints,
           onTaxEnabledChanged: (value) =>
@@ -427,22 +428,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 ListTile(
-                  key: const Key('estimateTaxSettings'),
-                  leading: const Icon(Icons.percent_outlined),
-                  title: Text(strings.taxSettings),
-                  subtitle: Text(
-                    strings.taxSettingsSummary(
-                      enabled: _settings.defaultEstimateTaxEnabled,
-                      rate: formatTaxRateBasisPoints(
-                        _settings.defaultEstimateTaxRateBasisPoints,
-                      ),
-                    ),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _editEstimateTaxSettings(context),
-                ),
-                const Divider(height: 1),
-                ListTile(
                   key: const Key('languageSetting'),
                   leading: const Icon(Icons.language_outlined),
                   title: Text(strings.language),
@@ -579,6 +564,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             margin: EdgeInsets.zero,
             child: Column(
               children: [
+                ListTile(
+                  key: const Key('estimateTaxSettings'),
+                  leading: const Icon(Icons.percent_outlined),
+                  title: Text(strings.taxSettings),
+                  subtitle: Text(
+                    strings.taxSettingsSummary(
+                      enabled: _settings.defaultEstimateTaxEnabled,
+                      rate: formatTaxRateBasisPoints(
+                        _settings.defaultEstimateTaxRateBasisPoints,
+                      ),
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _editEstimateTaxSettings(context),
+                ),
+                const Divider(height: 1),
                 ListTile(
                   key: const Key('estimateDecimalPlacesSetting'),
                   leading: const Icon(Icons.pin_outlined),

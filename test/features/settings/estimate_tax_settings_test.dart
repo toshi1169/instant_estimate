@@ -6,6 +6,7 @@ import 'package:instant_estimate/core/localization/app_localizations.dart';
 import 'package:instant_estimate/features/estimate/application/estimate_controller.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_documents_screen.dart';
 import 'package:instant_estimate/features/estimate/presentation/estimate_info_editor_screen.dart';
+import 'package:instant_estimate/features/estimate/presentation/estimate_items_screen.dart';
 import 'package:instant_estimate/features/settings/domain/app_settings.dart';
 import 'package:instant_estimate/features/settings/presentation/estimate_tax_settings_screen.dart';
 import 'package:instant_estimate/features/settings/presentation/settings_screen.dart';
@@ -96,6 +97,12 @@ void main() {
       find.byKey(const Key('defaultEstimateTaxRateSetting')),
       '8.25',
     );
+    await tester.pump();
+    expect(
+      settings.defaultEstimateTaxRateBasisPoints,
+      825,
+      reason: '有効値は編集完了を待たず即時保存する',
+    );
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
     expect(settings.defaultEstimateTaxRateBasisPoints, 825);
@@ -113,6 +120,75 @@ void main() {
     await tester.pump();
     expect(settings.defaultEstimateTaxEnabled, isTrue);
     expect(settings.defaultEstimateTaxRateBasisPoints, 825);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('ON・8.25%'), findsOneWidget);
+  });
+
+  testWidgets('見積単位の税率・ON/OFFを編集し既定値へ影響させない', (tester) async {
+    final controller = EstimateController(now: DateTime(2026, 9, 28));
+    await controller.load();
+    var settings = const AppSettings(
+      defaultEstimateTaxEnabled: true,
+      defaultEstimateTaxRateBasisPoints: 800,
+    );
+    await tester.pumpWidget(
+      _localizedApp(
+        AppLanguage.japanese,
+        EstimateItemsScreen(
+          controller: controller,
+          settings: settings,
+          onSettingsChanged: (value) => settings = value,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('estimateMoreActions')));
+    await tester.pumpAndSettle();
+    final copy = find.byKey(const Key('copyEstimateTable'));
+    final tax = find.byKey(const Key('editEstimateTaxSettings'));
+    expect(tax, findsOneWidget);
+    expect(tester.getTopLeft(tax).dy, greaterThan(tester.getTopLeft(copy).dy));
+    expect(find.text('ON・10%'), findsOneWidget);
+    await tester.tap(tax);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('estimateTaxRateSetting')),
+      '12',
+    );
+    await tester.pump();
+    expect(controller.info.taxRateBasisPoints, 1200);
+    expect(settings.defaultEstimateTaxRateBasisPoints, 800);
+
+    await tester.tap(find.byKey(const Key('estimateTaxEnabledSetting')));
+    await tester.pumpAndSettle();
+    expect(controller.info.taxEnabled, isFalse);
+    expect(controller.info.taxRateBasisPoints, 1200);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('estimateSubtotalAmount')), findsNothing);
+    expect(find.byKey(const Key('estimateTaxAmount')), findsNothing);
+    expect(find.byKey(const Key('estimateGrandTotalAmount')), findsOneWidget);
+    expect(find.textContaining('合計'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('estimateMoreActions')));
+    await tester.pumpAndSettle();
+    expect(find.text('OFF・12%'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('editEstimateTaxSettings')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('estimateTaxEnabledSetting')));
+    await tester.pumpAndSettle();
+    expect(controller.info.taxEnabled, isTrue);
+    expect(controller.info.taxRateBasisPoints, 1200);
+    expect(settings.defaultEstimateTaxRateBasisPoints, 800);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('estimateSubtotalAmount')), findsOneWidget);
+    expect(find.byKey(const Key('estimateTaxAmount')), findsOneWidget);
+    expect(find.textContaining('消費税（12%）'), findsOneWidget);
   });
 
   testWidgets('新規見積だけへ既定税設定をスナップショットする', (tester) async {
@@ -153,6 +229,7 @@ void main() {
 
   for (final language in AppLanguage.values) {
     testWidgets('${language.name}で税設定が320px・大文字でもoverflowしない', (tester) async {
+      final strings = AppLocalizations(language);
       tester.view.physicalSize = const Size(320, 700);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -161,6 +238,7 @@ void main() {
         _localizedApp(
           language,
           EstimateTaxSettingsScreen(
+            title: strings.newEstimateTaxSettings,
             taxEnabled: true,
             taxRateBasisPoints: 825,
             onTaxEnabledChanged: (_) {},
@@ -171,12 +249,44 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final strings = AppLocalizations(language);
       expect(find.text(strings.newEstimateTaxSettings), findsOneWidget);
       expect(find.text(strings.applyTax), findsOneWidget);
       expect(find.text(strings.taxRate), findsOneWidget);
       expect(find.text(strings.taxRateNotice), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final language in AppLanguage.values) {
+    testWidgets('${language.name}の見積税メニューと合計が320px・大文字でもoverflowしない', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = EstimateController(now: DateTime(2026, 9, 28));
+      await controller.load();
+      await controller.updateInfo(
+        controller.info.copyWith(taxRateBasisPoints: 825),
+      );
+      await tester.pumpWidget(
+        _localizedApp(
+          language,
+          EstimateItemsScreen(controller: controller),
+          textScale: 1.6,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('estimateMoreActions')));
+      await tester.pumpAndSettle();
+      final strings = AppLocalizations(language);
+      expect(find.text(strings.taxSettings), findsOneWidget);
+      expect(
+        find.text(strings.taxSettingsSummary(enabled: true, rate: '8.25%')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull, reason: language.name);
     });
   }
 }

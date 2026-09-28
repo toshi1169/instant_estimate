@@ -3251,6 +3251,16 @@ class AppLocalizations {
     filipino: 'Mga setting ng buwis para sa bagong estimate',
     myanmar: 'ခန့်မှန်းချက်အသစ်အတွက် အခွန်ဆက်တင်များ',
   );
+  String get estimateTaxSettings => _pick(
+    japanese: 'この見積の税設定',
+    english: 'Tax settings for this estimate',
+    simplifiedChinese: '此估算的税费设置',
+    traditionalChinese: '此估價的稅務設定',
+    vietnamese: 'Cài đặt thuế cho dự toán này',
+    indonesian: 'Pengaturan pajak untuk estimasi ini',
+    filipino: 'Mga setting ng buwis para sa estimate na ito',
+    myanmar: 'ဤခန့်မှန်းချက်အတွက် အခွန်ဆက်တင်များ',
+  );
   String get applyTax => _pick(
     japanese: '税を適用する',
     english: 'Apply tax',
@@ -3293,6 +3303,26 @@ class AppLocalizations {
   );
   String taxSettingsSummary({required bool enabled, required String rate}) =>
       '${enabled ? taxEnabledLabel : taxDisabledLabel}・$rate';
+  String taxAmountLabel(String rate) => _pick(
+    japanese: '消費税（$rate）',
+    english: 'Tax ($rate)',
+    simplifiedChinese: '税费（$rate）',
+    traditionalChinese: '稅額（$rate）',
+    vietnamese: 'Thuế ($rate)',
+    indonesian: 'Pajak ($rate)',
+    filipino: 'Buwis ($rate)',
+    myanmar: 'အခွန် ($rate)',
+  );
+  String get estimateTotal => _pick(
+    japanese: '合計',
+    english: 'Total',
+    simplifiedChinese: '合计',
+    traditionalChinese: '合計',
+    vietnamese: 'Tổng cộng',
+    indonesian: 'Total',
+    filipino: 'Kabuuan',
+    myanmar: 'စုစုပေါင်း',
+  );
   String get taxRateNotice => _pick(
     japanese: '実際の適用税率は地域・取引内容等により異なる場合があります。',
     english:

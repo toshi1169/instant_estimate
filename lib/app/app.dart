@@ -61,6 +61,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
     with WidgetsBindingObserver {
   final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   AppSettings _settings = const AppSettings();
+  Future<void> _settingsSaveQueue = Future<void>.value();
   late AppAccessPlan _accessPlan = widget.accessPlan;
   late AppAccessState _accessState = AppAccessState(plan: widget.accessPlan);
   late final RewardedAdAccessController _rewardedAdAccessController =
@@ -268,7 +269,11 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
   void _changeSettings(AppSettings settings) {
     setState(() => _settings = settings);
     final store = widget.appSettingsStore;
-    if (store != null) unawaited(_saveSettings(store, settings));
+    if (store != null) {
+      _settingsSaveQueue = _settingsSaveQueue.then(
+        (_) => _saveSettings(store, settings),
+      );
+    }
   }
 
   Future<void> _saveSettings(

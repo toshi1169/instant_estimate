@@ -48,17 +48,21 @@ class TaxRateInputFormatter extends TextInputFormatter {
 
 class EstimateTaxSettingsScreen extends StatefulWidget {
   const EstimateTaxSettingsScreen({
+    required this.title,
     required this.taxEnabled,
     required this.taxRateBasisPoints,
     required this.onTaxEnabledChanged,
     required this.onTaxRateBasisPointsChanged,
+    this.keyPrefix = 'defaultEstimate',
     super.key,
   });
 
+  final String title;
   final bool taxEnabled;
   final int taxRateBasisPoints;
   final ValueChanged<bool> onTaxEnabledChanged;
   final ValueChanged<int> onTaxRateBasisPointsChanged;
+  final String keyPrefix;
 
   @override
   State<EstimateTaxSettingsScreen> createState() =>
@@ -91,11 +95,18 @@ class _EstimateTaxSettingsScreenState extends State<EstimateTaxSettingsScreen> {
     _rateController.text = formatTaxRateBasisPoints(parsed).replaceAll('%', '');
   }
 
+  void _updateRateIfValid(String value) {
+    final parsed = parseTaxRateBasisPoints(value);
+    if (parsed == null || parsed == _taxRateBasisPoints) return;
+    _taxRateBasisPoints = parsed;
+    widget.onTaxRateBasisPointsChanged(parsed);
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(strings.newEstimateTaxSettings)),
+      appBar: AppBar(title: Text(widget.title)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -105,7 +116,7 @@ class _EstimateTaxSettingsScreenState extends State<EstimateTaxSettingsScreen> {
               child: Column(
                 children: [
                   SwitchListTile(
-                    key: const Key('defaultEstimateTaxEnabledSetting'),
+                    key: Key('${widget.keyPrefix}TaxEnabledSetting'),
                     secondary: const Icon(Icons.receipt_long_outlined),
                     title: Text(strings.applyTax),
                     value: _taxEnabled,
@@ -118,7 +129,7 @@ class _EstimateTaxSettingsScreenState extends State<EstimateTaxSettingsScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     child: TextField(
-                      key: const Key('defaultEstimateTaxRateSetting'),
+                      key: Key('${widget.keyPrefix}TaxRateSetting'),
                       controller: _rateController,
                       enabled: _taxEnabled,
                       keyboardType: const TextInputType.numberWithOptions(
@@ -132,11 +143,13 @@ class _EstimateTaxSettingsScreenState extends State<EstimateTaxSettingsScreen> {
                         helperText: strings.taxRateNotice,
                         helperMaxLines: 3,
                       ),
+                      onChanged: _updateRateIfValid,
                       onSubmitted: (_) {
+                        _commitRate();
                         FocusManager.instance.primaryFocus?.unfocus();
                       },
-                      onEditingComplete: _commitRate,
                       onTapOutside: (_) {
+                        _commitRate();
                         FocusManager.instance.primaryFocus?.unfocus();
                       },
                     ),

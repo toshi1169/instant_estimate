@@ -6,6 +6,7 @@ import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../settings/domain/company_profile.dart';
 import '../../settings/presentation/company_profile_editor_screen.dart';
+import '../../settings/presentation/estimate_tax_settings_screen.dart';
 import '../application/estimate_controller.dart';
 import '../application/estimate_excel_export.dart';
 import '../application/estimate_excel_share.dart';
@@ -30,7 +31,7 @@ enum _EstimateItemAction { duplicate, edit, delete }
 
 enum _EstimateOutputAction { print, pdf, excel }
 
-enum _EstimateMoreAction { editInfo, editCompanyProfile, copyTable }
+enum _EstimateMoreAction { editInfo, editCompanyProfile, copyTable, editTax }
 
 class EstimateItemsScreen extends StatefulWidget {
   const EstimateItemsScreen({
@@ -60,6 +61,7 @@ class EstimateItemsScreen extends StatefulWidget {
 
 class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
   late AppSettings _settings = widget.settings;
+  Future<void> _taxSettingsSave = Future<void>.value();
 
   EstimateController get controller => widget.controller;
   AppSettings get settings => _settings;
@@ -134,6 +136,23 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
                     title: Text(l10n.copyTableForExcel),
                   ),
                 ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  key: const Key('editEstimateTaxSettings'),
+                  value: _EstimateMoreAction.editTax,
+                  child: ListTile(
+                    leading: const Icon(Icons.percent_outlined),
+                    title: Text(l10n.taxSettings),
+                    subtitle: Text(
+                      l10n.taxSettingsSummary(
+                        enabled: controller.info.taxEnabled,
+                        rate: formatTaxRateBasisPoints(
+                          controller.info.taxRateBasisPoints,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -165,6 +184,8 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
                     subtotal: controller.subtotalAmount,
                     tax: controller.taxAmount,
                     grandTotal: controller.grandTotalAmount,
+                    taxEnabled: controller.info.taxEnabled,
+                    taxRateBasisPoints: controller.info.taxRateBasisPoints,
                   ),
                 ),
                 const Divider(height: 1),
@@ -291,7 +312,37 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
         await _editCompanyProfile(context);
       case _EstimateMoreAction.copyTable:
         await _copyTable(context);
+      case _EstimateMoreAction.editTax:
+        await _editTaxSettings(context);
     }
+  }
+
+  Future<void> _editTaxSettings(BuildContext context) async {
+    var info = controller.info;
+    void save(EstimateInfo updated) {
+      info = updated;
+      _taxSettingsSave = _taxSettingsSave.then(
+        (_) => controller.updateInfo(updated),
+      );
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => EstimateTaxSettingsScreen(
+          title: AppLocalizations.of(context).estimateTaxSettings,
+          keyPrefix: 'estimate',
+          taxEnabled: info.taxEnabled,
+          taxRateBasisPoints: info.taxRateBasisPoints,
+          onTaxEnabledChanged: (value) {
+            save(info.copyWith(taxEnabled: value));
+          },
+          onTaxRateBasisPointsChanged: (value) {
+            save(info.copyWith(taxRateBasisPoints: value));
+          },
+        ),
+      ),
+    );
+    await _taxSettingsSave;
   }
 
   Future<void> _printEstimate(BuildContext context) async {
@@ -836,12 +887,16 @@ class _EstimateTotalsSummary extends StatelessWidget {
     required this.subtotal,
     required this.tax,
     required this.grandTotal,
+    required this.taxEnabled,
+    required this.taxRateBasisPoints,
   });
 
   final int itemCount;
   final int subtotal;
   final int tax;
   final int grandTotal;
+  final bool taxEnabled;
+  final int taxRateBasisPoints;
 
   @override
   Widget build(BuildContext context) {
@@ -858,39 +913,53 @@ class _EstimateTotalsSummary extends StatelessWidget {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  '${l10n.text('税抜合計')}  ¥ ${_money(subtotal.toDouble())}',
-                  key: const Key('estimateSubtotalAmount'),
-                  style: textTheme.bodyMedium,
-                ),
-              ),
-              const SizedBox(height: 2),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  '${l10n.text('消費税（10%）')}  ¥ ${_money(tax.toDouble())}',
-                  key: const Key('estimateTaxAmount'),
-                  style: textTheme.bodyMedium,
-                ),
-              ),
-              const SizedBox(height: 3),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  '${l10n.text('税込総額')}  ¥ ${_money(grandTotal.toDouble())}',
-                  key: const Key('estimateGrandTotalAmount'),
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+            children: taxEnabled
+                ? [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${l10n.text('税抜合計')}  ¥ ${_money(subtotal.toDouble())}',
+                        key: const Key('estimateSubtotalAmount'),
+                        style: textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${l10n.taxAmountLabel(formatTaxRateBasisPoints(taxRateBasisPoints))}  ¥ ${_money(tax.toDouble())}',
+                        key: const Key('estimateTaxAmount'),
+                        style: textTheme.bodyMedium,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${l10n.text('税込総額')}  ¥ ${_money(grandTotal.toDouble())}',
+                        key: const Key('estimateGrandTotalAmount'),
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ]
+                : [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${l10n.estimateTotal}  ¥ ${_money(grandTotal.toDouble())}',
+                        key: const Key('estimateGrandTotalAmount'),
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
           ),
         ),
       ],
