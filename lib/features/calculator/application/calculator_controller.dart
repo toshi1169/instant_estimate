@@ -265,6 +265,43 @@ class FractionExpressionPosition extends ExpressionPosition {
   int get hashCode => Object.hash(marker, field, offset);
 }
 
+/// A session-only selection expressed with the same logical positions as the
+/// calculator caret. Selections inside a single fraction field remain local
+/// to that field. Every other selection is normalized to raw-expression
+/// boundaries so a structured fraction is always selected as one node.
+class ExpressionSelection {
+  const ExpressionSelection({required this.base, required this.extent});
+
+  final ExpressionPosition base;
+  final ExpressionPosition extent;
+
+  bool get isCollapsed => base == extent;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ExpressionSelection &&
+      other.base == base &&
+      other.extent == extent;
+
+  @override
+  int get hashCode => Object.hash(base, extent);
+}
+
+/// An in-memory calculator expression fragment. Fraction states are copied,
+/// never shared, and their private-use markers are remapped when inserted.
+class ExpressionFragment {
+  ExpressionFragment({
+    required this.expression,
+    Map<String, FractionInputState> fractions = const {},
+  }) : fractions = Map.unmodifiable({
+         for (final entry in fractions.entries)
+           entry.key: entry.value.copyWith(),
+       });
+
+  final String expression;
+  final Map<String, FractionInputState> fractions;
+}
+
 sealed class ExpressionDisplaySegment {
   const ExpressionDisplaySegment();
 }
@@ -383,6 +420,7 @@ class CalculatorController extends ChangeNotifier {
   _ExactRational? _exactResult;
   String? _pendingNotice;
   ExpressionPosition _expressionPosition = const RawExpressionPosition(0);
+  ExpressionSelection? _selection;
   final Map<String, FractionInputState> _fractions = {};
   int _nextFractionId = 0;
   bool _isProcessingKeyPress = false;
@@ -399,6 +437,8 @@ class CalculatorController extends ChangeNotifier {
   int? get resultFractionNumerator => _resultFraction?.numerator;
   int? get resultFractionDenominator => _resultFraction?.denominator;
   ExpressionPosition get expressionPosition => _expressionPosition;
+  ExpressionSelection? get selection => _selection;
+  bool get hasSelection => _selection != null;
   int get caretPosition => _caretPosition;
   bool get isEditingFraction =>
       _expressionPosition is FractionExpressionPosition;
@@ -429,6 +469,107 @@ class CalculatorController extends ChangeNotifier {
     _expressionPosition = RawExpressionPosition(
       offset.clamp(0, _expression.length),
     );
+  }
+
+  /// Selects a logical range. Crossing a fraction boundary snaps that
+  /// endpoint outside the marker, keeping the fraction structurally atomic.
+  void selectRange(ExpressionPosition base, ExpressionPosition extent) {
+    if (_state == CalculatorState.error) return;
+    if (_state == CalculatorState.result) _state = CalculatorState.input;
+    final normalized = _normalizeSelection(base, extent);
+    if (normalized.isCollapsed) {
+      _selection = null;
+      _setPositionWithoutNotification(normalized.extent);
+    } else {
+      _selection = normalized;
+      _setPositionWithoutNotification(normalized.extent);
+    }
+    notifyListeners();
+  }
+
+  void clearSelection({bool collapseToExtent = true}) {
+    final current = _selection;
+    if (current == null) return;
+    _selection = null;
+    _setPositionWithoutNotification(
+      collapseToExtent ? current.extent : current.base,
+    );
+    notifyListeners();
+  }
+
+  ExpressionSelection _normalizeSelection(
+    ExpressionPosition base,
+    ExpressionPosition extent,
+  ) {
+    final safeBase = _clampPosition(base);
+    final safeExtent = _clampPosition(extent);
+    if (safeBase is FractionExpressionPosition &&
+        safeExtent is FractionExpressionPosition &&
+        safeBase.marker == safeExtent.marker &&
+        safeBase.field == safeExtent.field) {
+      return ExpressionSelection(base: safeBase, extent: safeExtent);
+    }
+    final forward = _documentOrder(safeBase) <= _documentOrder(safeExtent);
+    return ExpressionSelection(
+      base: _rawBoundaryForSelectionEndpoint(safeBase, isLeading: forward),
+      extent: _rawBoundaryForSelectionEndpoint(safeExtent, isLeading: !forward),
+    );
+  }
+
+  ExpressionPosition _clampPosition(ExpressionPosition position) =>
+      switch (position) {
+        RawExpressionPosition(:final offset) => RawExpressionPosition(
+          offset.clamp(0, _expression.length),
+        ),
+        FractionExpressionPosition(
+          :final marker,
+          :final field,
+          :final offset,
+        ) =>
+          _fractions[marker] == null
+              ? RawExpressionPosition(_expression.length)
+              : FractionExpressionPosition(
+                  marker: marker,
+                  field: field,
+                  offset: offset.clamp(
+                    0,
+                    _fractionFieldValue(_fractions[marker]!, field).length,
+                  ),
+                ),
+      };
+
+  double _documentOrder(ExpressionPosition position) => switch (position) {
+    RawExpressionPosition(:final offset) => offset.toDouble(),
+    FractionExpressionPosition(:final marker, :final field, :final offset) =>
+      _expression.indexOf(marker) +
+          0.1 +
+          (FractionField.values.indexOf(field) * 0.02) +
+          (offset * 0.000001),
+  };
+
+  RawExpressionPosition _rawBoundaryForSelectionEndpoint(
+    ExpressionPosition position, {
+    required bool isLeading,
+  }) {
+    if (position case RawExpressionPosition(:final offset)) {
+      return RawExpressionPosition(offset);
+    }
+    final fractionPosition = position as FractionExpressionPosition;
+    final index = _expression.indexOf(fractionPosition.marker);
+    return RawExpressionPosition(index + (isLeading ? 0 : 1));
+  }
+
+  void _setPositionWithoutNotification(ExpressionPosition position) {
+    switch (position) {
+      case RawExpressionPosition(:final offset):
+        _setRawPosition(offset);
+      case FractionExpressionPosition(
+        :final marker,
+        :final field,
+        :final offset,
+      ):
+        _setFractionPosition(marker, field, offset);
+    }
   }
 
   void _setFractionPosition(String marker, FractionField field, int offset) {
@@ -540,6 +681,149 @@ class CalculatorController extends ChangeNotifier {
       return '$displayExpression = $_result';
     }
     return displayExpression;
+  }
+
+  ExpressionFragment? copySelectionFragment() {
+    final current = _selection;
+    if (current == null) return null;
+    if (current.base case FractionExpressionPosition(
+      :final marker,
+      :final field,
+      :final offset,
+    )) {
+      final extent = current.extent as FractionExpressionPosition;
+      final value = _fractionFieldValue(_fractions[marker]!, field);
+      final start = math.min(offset, extent.offset);
+      final end = math.max(offset, extent.offset);
+      return ExpressionFragment(expression: value.substring(start, end));
+    }
+    final base = (current.base as RawExpressionPosition).offset;
+    final extent = (current.extent as RawExpressionPosition).offset;
+    final start = math.min(base, extent);
+    final end = math.max(base, extent);
+    final expression = _expression.substring(start, end);
+    final fractions = <String, FractionInputState>{};
+    for (final character in expression.split('')) {
+      final fraction = _fractions[character];
+      if (fraction != null) fractions[character] = fraction;
+    }
+    return ExpressionFragment(expression: expression, fractions: fractions);
+  }
+
+  String get selectedClipboardText {
+    final fragment = copySelectionFragment();
+    return fragment == null ? '' : _linearizeFragment(fragment);
+  }
+
+  String _linearizeFragment(ExpressionFragment fragment) {
+    final buffer = StringBuffer();
+    for (final character in fragment.expression.split('')) {
+      final fraction = fragment.fractions[character];
+      if (fraction == null) {
+        buffer.write(character);
+        continue;
+      }
+      if (fraction.wholeNumberText.isNotEmpty) {
+        buffer
+          ..write(fraction.wholeNumberText)
+          ..write(' ');
+      }
+      buffer
+        ..write(fraction.numeratorText)
+        ..write('/')
+        ..write(fraction.denominatorText);
+    }
+    return buffer.toString();
+  }
+
+  bool deleteSelection() {
+    if (!_deleteSelectionInternal()) return false;
+    _updatePreviewResult();
+    notifyListeners();
+    return true;
+  }
+
+  ExpressionFragment? cutSelectionFragment() {
+    final fragment = copySelectionFragment();
+    if (fragment == null) return null;
+    _deleteSelectionInternal();
+    _updatePreviewResult();
+    notifyListeners();
+    return fragment;
+  }
+
+  bool pasteFragment(ExpressionFragment fragment) {
+    if (fragment.expression.isEmpty) return false;
+    if (_expressionPosition is FractionExpressionPosition &&
+        fragment.fractions.isNotEmpty) {
+      return false;
+    }
+    _deleteSelectionInternal();
+    if (_expressionPosition case FractionExpressionPosition()) {
+      _insertIntoActiveFraction(fragment.expression);
+    } else {
+      final remapped = _remapFragment(fragment);
+      _insertAtCaret(remapped.expression);
+      _fractions.addAll(remapped.fractions);
+    }
+    _state = CalculatorState.input;
+    _updatePreviewResult();
+    notifyListeners();
+    return true;
+  }
+
+  ExpressionFragment _remapFragment(ExpressionFragment fragment) {
+    final buffer = StringBuffer();
+    final fractions = <String, FractionInputState>{};
+    for (final character in fragment.expression.split('')) {
+      final fraction = fragment.fractions[character];
+      if (fraction == null) {
+        buffer.write(character);
+        continue;
+      }
+      final marker = String.fromCharCode(0xE000 + _nextFractionId++);
+      buffer.write(marker);
+      fractions[marker] = fraction.copyWith();
+    }
+    return ExpressionFragment(
+      expression: buffer.toString(),
+      fractions: fractions,
+    );
+  }
+
+  bool _deleteSelectionInternal() {
+    final current = _selection;
+    if (current == null) return false;
+    _selection = null;
+    if (current.base case FractionExpressionPosition(
+      :final marker,
+      :final field,
+      :final offset,
+    )) {
+      final extent = current.extent as FractionExpressionPosition;
+      final value = _fractionFieldValue(_fractions[marker]!, field);
+      final start = math.min(offset, extent.offset);
+      final end = math.max(offset, extent.offset);
+      _setFractionFieldValue(
+        marker,
+        field,
+        '${value.substring(0, start)}${value.substring(end)}',
+      );
+      _setFractionPosition(marker, field, start);
+      return true;
+    }
+    final base = (current.base as RawExpressionPosition).offset;
+    final extent = (current.extent as RawExpressionPosition).offset;
+    final start = math.min(base, extent);
+    final end = math.max(base, extent);
+    final removed = _expression.substring(start, end);
+    for (final character in removed.split('')) {
+      if (_isFractionMarker(character)) _fractions.remove(character);
+    }
+    _expression =
+        '${_expression.substring(0, start)}${_expression.substring(end)}';
+    _setRawPosition(start);
+    return true;
   }
 
   String get estimateExpressionText => displayExpression;
@@ -747,6 +1031,7 @@ class CalculatorController extends ChangeNotifier {
     _isProcessingKeyPress = true;
     _keyPressNotificationPending = false;
     try {
+      if (key != '=' && key != '←') _deleteSelectionInternal();
       switch (key) {
         case '=':
           calculate();
@@ -792,6 +1077,7 @@ class CalculatorController extends ChangeNotifier {
 
   String? insertFunction(String label) {
     _pendingNotice = null;
+    _deleteSelectionInternal();
     if (_activeFractionMarker != null) {
       final notice = _insertFractionFunction(label);
       if (notice == null) _updatePreviewResult();
@@ -872,6 +1158,7 @@ class CalculatorController extends ChangeNotifier {
   }
 
   void calculate() {
+    _selection = null;
     if (_expression.isEmpty || _state == CalculatorState.error) return;
     if (_state == CalculatorState.result) {
       _cycleResultDisplay();
@@ -951,6 +1238,7 @@ class CalculatorController extends ChangeNotifier {
     if (position case FractionExpressionPosition(:final marker)) {
       if (!_fractions.containsKey(marker)) return;
     }
+    _selection = null;
     if (_state == CalculatorState.result) {
       _state = CalculatorState.input;
     }
@@ -1050,6 +1338,11 @@ class CalculatorController extends ChangeNotifier {
   }
 
   void backspace() {
+    if (_deleteSelectionInternal()) {
+      _updatePreviewResult();
+      notifyListeners();
+      return;
+    }
     if (_activeFractionMarker != null) {
       _backspaceFraction();
       return;
@@ -1114,6 +1407,7 @@ class CalculatorController extends ChangeNotifier {
   }
 
   void clear() {
+    _selection = null;
     _expression = '';
     _result = '';
     _rawResult = '';
@@ -1132,6 +1426,7 @@ class CalculatorController extends ChangeNotifier {
   }
 
   void editHistoryEntry(CalculationHistoryEntry entry) {
+    _selection = null;
     _expression = '';
     _fractions.clear();
     _setRawPosition(0);
@@ -1199,10 +1494,19 @@ class CalculatorController extends ChangeNotifier {
     if (_state == CalculatorState.result || _state == CalculatorState.error) {
       clear();
     }
+    _deleteSelectionInternal();
     _insertAtCaret(sanitized);
     _updatePreviewResult();
     notifyListeners();
     return true;
+  }
+
+  /// Replaces the active selection using the same validation as external
+  /// clipboard paste. Returns false without changing the selection when the
+  /// supplied text contains no calculator input.
+  bool replaceSelection(String text) {
+    if (_selection == null) return false;
+    return pasteAtCaret(text);
   }
 
   void _insertDigits(String digits) {
