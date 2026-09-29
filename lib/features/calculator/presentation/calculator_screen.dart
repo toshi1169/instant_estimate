@@ -1678,6 +1678,8 @@ class _ResolvedExpressionPosition {
   final Rect lineBounds;
 }
 
+enum _SelectionEndpoint { base, extent }
+
 class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _fieldKey = GlobalKey();
@@ -1699,8 +1701,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   bool _caretToolbarRequested = false;
   bool _selectionOverlaySyncScheduled = false;
   bool _selectionHandleDragActive = false;
-  bool _selectionToolbarWasVisibleBeforeScroll = false;
-  bool? _dragMovesBase;
+  _SelectionEndpoint? _activeSelectionEndpoint;
+  int? _activeSelectionPointer;
   ExpressionPosition? _selectionDragAnchor;
   ExpressionPosition? _collapsedDragPosition;
   Duration? _lastPointerDownTime;
@@ -1771,6 +1773,10 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           key: _fieldKey,
           behavior: HitTestBehavior.opaque,
           onPointerDown: _handleExpressionPointerDown,
+          onPointerMove: _handleExpressionPointerMove,
+          onPointerCancel: (_) {
+            _clearPendingDoubleTap();
+          },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onLongPressStart: _startCaretDrag,
@@ -1909,6 +1915,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       selectedRawRange: _selectedRawRange,
       onRawOffsetTap: (offset) {
         if (_consumeSuppressedTap()) return;
+        if (_showSelectionToolbarForTap(RawExpressionPosition(offset))) {
+          return;
+        }
         _hideEditingToolbars();
         widget.controller.moveCaretToRawOffset(offset);
       },
@@ -2042,16 +2051,30 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       denominatorKey: denominatorKey,
       onBeforeFractionTap: () {
         if (_consumeSuppressedTap()) return;
+        final position = RawExpressionPosition(
+          widget.controller.expression.indexOf(segment.marker),
+        );
+        if (_showSelectionToolbarForTap(position)) return;
         _hideEditingToolbars();
         widget.controller.moveCaretBeforeFraction(segment.marker);
       },
       onAfterFractionTap: () {
         if (_consumeSuppressedTap()) return;
+        final position = RawExpressionPosition(
+          widget.controller.expression.indexOf(segment.marker) + 1,
+        );
+        if (_showSelectionToolbarForTap(position)) return;
         _hideEditingToolbars();
         widget.controller.moveCaretAfterFraction(segment.marker);
       },
       onFieldTap: (field, caretOffset) {
         if (_consumeSuppressedTap()) return;
+        final position = FractionExpressionPosition(
+          marker: segment.marker,
+          field: field,
+          offset: caretOffset,
+        );
+        if (_showSelectionToolbarForTap(position)) return;
         _hideEditingToolbars();
         widget.controller.activateFraction(
           segment.marker,
@@ -2114,6 +2137,11 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   );
 
   void _handleExpressionPointerDown(PointerDownEvent event) {
+    if (widget.controller.hasSelection &&
+        _selectionContainsGlobalPoint(event.position)) {
+      _showSelectionToolbar();
+      _suppressNextExpressionTap = true;
+    }
     final previousTime = _lastPointerDownTime;
     final previousPosition = _lastPointerDownPosition;
     _lastPointerDownTime = event.timeStamp;
@@ -2132,6 +2160,71 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     _tapSuppressionTimer = Timer(const Duration(milliseconds: 400), () {
       _suppressNextExpressionTap = false;
     });
+  }
+
+  void _handleExpressionPointerMove(PointerMoveEvent event) {
+    final previousPosition = _lastPointerDownPosition;
+    if (previousPosition != null &&
+        (event.position - previousPosition).distance > 24) {
+      _clearPendingDoubleTap();
+    }
+  }
+
+  bool _selectionContainsGlobalPoint(Offset globalPosition) {
+    final selection = widget.controller.selection;
+    final target = _closestHitTarget(globalPosition);
+    if (selection == null || target == null) return false;
+    if (target.kind == _ExpressionHitTargetKind.text) {
+      final index = _characterIndexAt(target, globalPosition);
+      if (index == null || index >= target.rawOffsets.length) return false;
+      final rawOffset = target.rawOffsets[index];
+      if (selection.base is RawExpressionPosition &&
+          selection.extent is RawExpressionPosition) {
+        final base = (selection.base as RawExpressionPosition).offset;
+        final extent = (selection.extent as RawExpressionPosition).offset;
+        return rawOffset >= math.min(base, extent) &&
+            rawOffset < math.max(base, extent);
+      }
+      return false;
+    }
+    if (target.kind == _ExpressionHitTargetKind.fractionField) {
+      final index = _characterIndexAt(target, globalPosition);
+      if (index == null) return false;
+      final base = selection.base;
+      final extent = selection.extent;
+      if (base is! FractionExpressionPosition ||
+          extent is! FractionExpressionPosition ||
+          base.marker != target.marker ||
+          extent.marker != target.marker ||
+          base.field != target.field ||
+          extent.field != target.field) {
+        return false;
+      }
+      return index >= math.min(base.offset, extent.offset) &&
+          index < math.max(base.offset, extent.offset);
+    }
+    if (target.marker != null &&
+        selection.base is RawExpressionPosition &&
+        selection.extent is RawExpressionPosition) {
+      final markerOffset = widget.controller.expression.indexOf(target.marker!);
+      final base = (selection.base as RawExpressionPosition).offset;
+      final extent = (selection.extent as RawExpressionPosition).offset;
+      return markerOffset >= math.min(base, extent) &&
+          markerOffset < math.max(base, extent);
+    }
+    return false;
+  }
+
+  void _showSelectionToolbar() {
+    _caretToolbarRequested = false;
+    _removeCaretToolbar();
+    _selectionToolbarRequested = true;
+    _syncSelectionHandlesOverlay();
+  }
+
+  void _clearPendingDoubleTap() {
+    _lastPointerDownTime = null;
+    _lastPointerDownPosition = null;
   }
 
   bool _consumeSuppressedTap() {
@@ -2249,6 +2342,79 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     return null;
   }
 
+  bool _showSelectionToolbarForTap(ExpressionPosition position) {
+    final selection = widget.controller.selection;
+    if (selection == null || !_selectionContainsPosition(selection, position)) {
+      return false;
+    }
+    _showSelectionToolbar();
+    return true;
+  }
+
+  bool _selectionContainsPosition(
+    ExpressionSelection selection,
+    ExpressionPosition position,
+  ) {
+    final base = selection.base;
+    final extent = selection.extent;
+    if (base is RawExpressionPosition && extent is RawExpressionPosition) {
+      final start = math.min(base.offset, extent.offset);
+      final end = math.max(base.offset, extent.offset);
+      if (position is RawExpressionPosition) {
+        return position.offset >= start && position.offset <= end;
+      }
+      if (position is FractionExpressionPosition) {
+        final markerOffset = widget.controller.expression.indexOf(
+          position.marker,
+        );
+        return markerOffset >= start && markerOffset < end;
+      }
+      return false;
+    }
+    if (base is FractionExpressionPosition &&
+        extent is FractionExpressionPosition &&
+        position is FractionExpressionPosition &&
+        base.marker == extent.marker &&
+        base.marker == position.marker &&
+        base.field == extent.field &&
+        base.field == position.field) {
+      final start = math.min(base.offset, extent.offset);
+      final end = math.max(base.offset, extent.offset);
+      return position.offset >= start && position.offset <= end;
+    }
+    return false;
+  }
+
+  Rect? get _expressionViewportRect {
+    final box = _fieldKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
+  bool _caretIsVisible(Rect rect) {
+    final viewport = _expressionViewportRect;
+    if (viewport == null) return false;
+    final center = rect.center;
+    return center.dx >= viewport.left &&
+        center.dx <= viewport.right &&
+        center.dy >= viewport.top &&
+        center.dy <= viewport.bottom;
+  }
+
+  Rect _toolbarAnchorRect(Rect rect) {
+    final viewport = _expressionViewportRect;
+    if (viewport == null) return rect;
+    final center = Offset(
+      rect.center.dx.clamp(viewport.left, viewport.right),
+      rect.center.dy.clamp(viewport.top, viewport.bottom),
+    );
+    return Rect.fromCenter(
+      center: center,
+      width: rect.width,
+      height: math.min(rect.height, viewport.height),
+    );
+  }
+
   void _syncSelectionHandlesOverlay() {
     final selection = widget.controller.selection;
     if (selection == null) {
@@ -2297,6 +2463,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       } else if (handlesMoved) {
         _selectionToolbarOverlay!.markNeedsBuild();
       }
+    } else {
+      _removeSelectionToolbar();
     }
   }
 
@@ -2398,9 +2566,11 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     if (baseRect == null || extentRect == null) {
       return const SizedBox.shrink();
     }
-    final top = math.min(baseRect.top, extentRect.top);
-    final bottom = math.max(baseRect.bottom, extentRect.bottom);
-    final centerX = (baseRect.center.dx + extentRect.center.dx) / 2;
+    final anchoredBase = _toolbarAnchorRect(baseRect);
+    final anchoredExtent = _toolbarAnchorRect(extentRect);
+    final top = math.min(anchoredBase.top, anchoredExtent.top);
+    final bottom = math.max(anchoredBase.bottom, anchoredExtent.bottom);
+    final centerX = (anchoredBase.center.dx + anchoredExtent.center.dx) / 2;
     final strings = AppLocalizations.of(overlayContext);
     return KeyedSubtree(
       key: const Key('calculatorSelectionToolbar'),
@@ -2472,26 +2642,30 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         baseRect.top < extentRect.top - 1 ||
         ((baseRect.top - extentRect.top).abs() <= 1 &&
             baseRect.left <= extentRect.left);
+    final baseVisible = _caretIsVisible(baseRect);
+    final extentVisible = _caretIsVisible(extentRect);
     return Stack(
       children: [
-        _buildSelectionHandle(
-          overlayContext,
-          key: const Key('calculatorSelectionBaseHandle'),
-          endpoint: baseRect.bottomCenter,
-          type: baseBeforeExtent
-              ? TextSelectionHandleType.left
-              : TextSelectionHandleType.right,
-          movesBase: true,
-        ),
-        _buildSelectionHandle(
-          overlayContext,
-          key: const Key('calculatorSelectionExtentHandle'),
-          endpoint: extentRect.bottomCenter,
-          type: baseBeforeExtent
-              ? TextSelectionHandleType.right
-              : TextSelectionHandleType.left,
-          movesBase: false,
-        ),
+        if (baseVisible)
+          _buildSelectionHandle(
+            overlayContext,
+            key: const Key('calculatorSelectionBaseHandle'),
+            endpoint: baseRect.bottomCenter,
+            type: baseBeforeExtent
+                ? TextSelectionHandleType.left
+                : TextSelectionHandleType.right,
+            endpointRole: _SelectionEndpoint.base,
+          ),
+        if (extentVisible)
+          _buildSelectionHandle(
+            overlayContext,
+            key: const Key('calculatorSelectionExtentHandle'),
+            endpoint: extentRect.bottomCenter,
+            type: baseBeforeExtent
+                ? TextSelectionHandleType.right
+                : TextSelectionHandleType.left,
+            endpointRole: _SelectionEndpoint.extent,
+          ),
       ],
     );
   }
@@ -2501,7 +2675,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     required Key key,
     required Offset endpoint,
     required TextSelectionHandleType type,
-    required bool movesBase,
+    required _SelectionEndpoint endpointRole,
   }) {
     const touchSize = 48.0;
     const lineHeight = _EditableExpressionLine._expressionFontSize;
@@ -2529,22 +2703,15 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       top: top,
       width: touchSize,
       height: touchSize,
-      child: GestureDetector(
+      child: Listener(
         key: key,
         behavior: HitTestBehavior.opaque,
-        onPanStart: (_) {
-          final selection = widget.controller.selection;
-          if (selection == null) return;
-          _selectionHandleDragActive = true;
-          _dragMovesBase = movesBase;
-          _selectionDragAnchor = movesBase ? selection.extent : selection.base;
-          _collapsedDragPosition = null;
-          _selectionToolbarRequested = false;
-          _removeSelectionToolbar();
-        },
-        onPanUpdate: (details) => _dragSelectionHandle(details.globalPosition),
-        onPanEnd: (_) => _finishSelectionHandleDrag(),
-        onPanCancel: _finishSelectionHandleDrag,
+        onPointerDown: (event) =>
+            _startSelectionHandleDrag(endpointRole, event.pointer),
+        onPointerMove: (event) =>
+            _updateSelectionHandleDrag(event.pointer, event.position),
+        onPointerUp: (event) => _finishSelectionHandleDrag(event.pointer),
+        onPointerCancel: (event) => _finishSelectionHandleDrag(event.pointer),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -2559,11 +2726,30 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
   }
 
+  void _startSelectionHandleDrag(_SelectionEndpoint endpoint, int pointer) {
+    final selection = widget.controller.selection;
+    if (selection == null || _activeSelectionPointer != null) return;
+    _selectionHandleDragActive = true;
+    _activeSelectionEndpoint = endpoint;
+    _activeSelectionPointer = pointer;
+    _selectionDragAnchor = endpoint == _SelectionEndpoint.base
+        ? selection.extent
+        : selection.base;
+    _collapsedDragPosition = null;
+    _selectionToolbarRequested = false;
+    _removeSelectionToolbar();
+  }
+
+  void _updateSelectionHandleDrag(int pointer, Offset globalPosition) {
+    if (_activeSelectionPointer != pointer) return;
+    _dragSelectionHandle(globalPosition);
+  }
+
   void _dragSelectionHandle(Offset globalPosition) {
     final resolved = _resolvePosition(globalPosition);
     final anchor = _selectionDragAnchor;
-    final movesBase = _dragMovesBase;
-    if (resolved == null || anchor == null || movesBase == null) return;
+    final endpoint = _activeSelectionEndpoint;
+    if (resolved == null || anchor == null || endpoint == null) return;
     if (resolved.position == anchor) {
       // Defer the collapsed selection until pointer-up. Keeping the current
       // handle alive lets the same gesture continue across the fixed endpoint.
@@ -2571,17 +2757,19 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       return;
     }
     _collapsedDragPosition = null;
-    if (movesBase) {
+    if (endpoint == _SelectionEndpoint.base) {
       widget.controller.selectRange(resolved.position, anchor);
     } else {
       widget.controller.selectRange(anchor, resolved.position);
     }
   }
 
-  void _finishSelectionHandleDrag() {
+  void _finishSelectionHandleDrag(int pointer) {
+    if (_activeSelectionPointer != pointer) return;
     final collapsedPosition = _collapsedDragPosition;
     _selectionHandleDragActive = false;
-    _dragMovesBase = null;
+    _activeSelectionEndpoint = null;
+    _activeSelectionPointer = null;
     _selectionDragAnchor = null;
     _collapsedDragPosition = null;
     if (collapsedPosition != null) {
@@ -2592,7 +2780,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     }
     if (!widget.controller.hasSelection) return;
     _selectionToolbarRequested = true;
-    _scheduleSelectionOverlaySync();
+    _syncSelectionHandlesOverlay();
   }
 
   Rect? _caretRectForPosition(ExpressionPosition position) {
@@ -2673,14 +2861,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   bool _handleExpressionScroll(ScrollNotification notification) {
     if (!widget.controller.hasSelection) return false;
     if (notification is ScrollStartNotification) {
-      _selectionToolbarWasVisibleBeforeScroll = _selectionToolbarRequested;
       _selectionToolbarRequested = false;
       _removeSelectionToolbar();
-    } else if (notification is ScrollEndNotification) {
-      if (_selectionToolbarWasVisibleBeforeScroll) {
-        _selectionToolbarRequested = true;
-      }
-      _selectionToolbarWasVisibleBeforeScroll = false;
     }
     _scheduleSelectionOverlaySync();
     return false;

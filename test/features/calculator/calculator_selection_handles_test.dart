@@ -498,6 +498,11 @@ void main() {
 
     final lastLine = _expressionTextContaining('345').last;
     await _doubleTapAt(tester, _characterCenter(tester, lastLine, '345'));
+    controller.selectRange(
+      const RawExpressionPosition(22),
+      const RawExpressionPosition(36),
+    );
+    await tester.pumpAndSettle();
     final selectionBefore = controller.selection;
     final handleBefore = tester.getCenter(
       find.byKey(const Key('calculatorSelectionBaseHandle')),
@@ -514,7 +519,45 @@ void main() {
       find.byKey(const Key('calculatorSelectionBaseHandle')),
     );
     expect(handleAfter.dy, isNot(handleBefore.dy));
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 500));
+    final selectedLine = _expressionTextContaining('1234567890').last;
+    await tester.tapAt(_characterCenter(tester, selectedLine, '5'));
+    await tester.pumpAndSettle();
+    expect(controller.selection, selectionBefore);
     expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('画面外へ出たselectionハンドルを隠し戻すと正しい端点へ再表示する', (tester) async {
+    final controller = CalculatorController()
+      ..pasteAtCaret('1234567890+1234567890+1234567890+345');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+
+    final lastLine = _expressionTextContaining('345').last;
+    await _doubleTapAt(tester, _characterCenter(tester, lastLine, '345'));
+    final selectionBefore = controller.selection;
+    final scroll = find.byKey(const Key('expressionVerticalScroll'));
+
+    await tester.drag(scroll, const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(controller.selection, selectionBefore);
+    expect(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('calculatorSelectionExtentHandle')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+
+    await tester.drag(scroll, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.selection, selectionBefore);
+    _expectHandles();
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
     expect(tester.binding.hasScheduledFrame, isFalse);
   });
 
