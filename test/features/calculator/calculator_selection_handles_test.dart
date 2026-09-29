@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:instant_estimate/features/calculator/application/calculator_controller.dart';
@@ -98,6 +99,22 @@ Offset _rawBoundary(
   return Offset(rect.left + x * rect.width / painter.width, rect.center.dy);
 }
 
+Offset _renderedRawBoundary(
+  WidgetTester tester,
+  Finder finder,
+  ExpressionTextSegment segment,
+  int rawOffset,
+) {
+  final displayOffset = segment.rawOffsets.indexOf(rawOffset);
+  expect(displayOffset, isNonNegative);
+  final richText = find.descendant(of: finder, matching: find.byType(RichText));
+  expect(richText, findsOneWidget);
+  final paragraph = tester.renderObject<RenderParagraph>(richText);
+  return paragraph.localToGlobal(
+    paragraph.getOffsetForCaret(TextPosition(offset: displayOffset), Rect.zero),
+  );
+}
+
 Future<void> _dragHandle(
   WidgetTester tester, {
   required Key handleKey,
@@ -154,6 +171,17 @@ Finder _expressionTextContaining(String value) => find.descendant(
             false),
   ),
 );
+
+Finder _expressionTextForSegment(ExpressionTextSegment segment) =>
+    find.descendant(
+      of: find.byKey(const Key('expressionText')),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            widget.data == segment.text &&
+            widget.style?.fontSize == 54.6,
+      ),
+    );
 
 void _enterFraction(
   CalculatorController controller,
@@ -609,6 +637,112 @@ void main() {
     );
     expect(actualStart.dx, closeTo(expectedStart.dx, 0.01));
     expect(actualEnd.dx, closeTo(expectedEnd.dx, 0.01));
+  });
+
+  testWidgets('縮小した長い通常式の実描画境界とhandle endpointを左端から右端まで比較する', (tester) async {
+    final controller = CalculatorController()
+      ..pasteAtCaret('12345678901234567890');
+    await _pumpCalculator(
+      tester,
+      controller,
+      size: const Size(320, 844),
+      textScale: 1.2,
+    );
+    final text = _expressionTextContaining('1234567890');
+    final segment = controller.displaySegments
+        .whereType<ExpressionTextSegment>()
+        .firstWhere((segment) => segment.text.contains('1234567890'));
+
+    for (final rawOffset in <int>[0, 5, 10, 15, 20]) {
+      controller.selectRange(
+        RawExpressionPosition(rawOffset == 20 ? 19 : rawOffset),
+        RawExpressionPosition(rawOffset == 20 ? 20 : rawOffset + 1),
+      );
+      await tester.pump();
+      await tester.pump();
+      final key = rawOffset == 20
+          ? const Key('calculatorSelectionExtentHandle')
+          : const Key('calculatorSelectionBaseHandle');
+      final leftType = rawOffset != 20;
+      final actual = _iosHandleAnchor(tester, key, leftType: leftType);
+      final expected = _renderedRawBoundary(tester, text, segment, rawOffset);
+      expect(actual.dx, closeTo(expected.dx, 0.01), reason: 'raw=$rawOffset');
+    }
+  });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('短い通常式の演算子・括弧・小数点境界は実描画座標と一致する ($brightness)', (tester) async {
+      final controller = CalculatorController()..pasteAtCaret('(12.3+45)');
+      await _pumpCalculator(
+        tester,
+        controller,
+        size: const Size(800, 844),
+        textScale: 1.15,
+        brightness: brightness,
+      );
+      final segment = controller.displaySegments
+          .whereType<ExpressionTextSegment>()
+          .single;
+      final text = _expressionTextForSegment(segment);
+
+      for (final rawOffset in <int>[0, 1, 3, 4, 5, 6, 8]) {
+        controller.selectRange(
+          RawExpressionPosition(rawOffset),
+          RawExpressionPosition(rawOffset + 1),
+        );
+        await tester.pump();
+        await tester.pump();
+        final actual = _iosHandleAnchor(
+          tester,
+          const Key('calculatorSelectionBaseHandle'),
+          leftType: true,
+        );
+        final expected = _renderedRawBoundary(tester, text, segment, rawOffset);
+        expect(actual.dx, closeTo(expected.dx, 0.01), reason: 'raw=$rawOffset');
+      }
+    });
+  }
+
+  testWidgets('2行通常式は各行の実描画境界から同じraw位置を復元する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('1234567890+12.34');
+    await _pumpCalculator(
+      tester,
+      controller,
+      size: const Size(320, 844),
+      textScale: 1.25,
+    );
+    final segments = controller.displaySegments
+        .whereType<ExpressionTextSegment>()
+        .toList();
+    expect(segments, hasLength(2));
+
+    for (final rawOffset in <int>[0, 5, 11, 14, 15]) {
+      final segment = segments.firstWhere(
+        (segment) => segment.rawOffsets.contains(rawOffset),
+      );
+      final text = _expressionTextForSegment(segment);
+      final expected = _renderedRawBoundary(tester, text, segment, rawOffset);
+      await tester.tapAt(expected);
+      await tester.pump();
+      expect(
+        controller.expressionPosition,
+        RawExpressionPosition(rawOffset),
+        reason: 'tap raw=$rawOffset',
+      );
+
+      controller.selectRange(
+        RawExpressionPosition(rawOffset),
+        RawExpressionPosition(rawOffset + 1),
+      );
+      await tester.pump();
+      await tester.pump();
+      final actual = _iosHandleAnchor(
+        tester,
+        const Key('calculatorSelectionBaseHandle'),
+        leftType: true,
+      );
+      expect(actual.dx, closeTo(expected.dx, 0.01), reason: 'raw=$rawOffset');
+    }
   });
 
   testWidgets('選択ハンドル交差後も向きを保持してドラッグと通常操作を継続できる', (tester) async {

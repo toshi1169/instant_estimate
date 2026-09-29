@@ -2382,6 +2382,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout();
     final textX = target.kind == _ExpressionHitTargetKind.fractionField
@@ -2931,6 +2932,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout();
     final safeOffset = offset.clamp(0, text.length);
@@ -3078,6 +3080,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         final painter = TextPainter(
           text: TextSpan(text: target.text, style: target.style),
           textDirection: TextDirection.ltr,
+          textScaler: MediaQuery.textScalerOf(context),
           maxLines: 1,
         )..layout();
         final textOffset = painter
@@ -3093,6 +3096,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         final painter = TextPainter(
           text: TextSpan(text: value, style: target.style),
           textDirection: TextDirection.ltr,
+          textScaler: MediaQuery.textScalerOf(context),
           maxLines: 1,
         )..layout();
         var textX = local.dx - 5;
@@ -3158,6 +3162,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout();
     return painter.width;
@@ -3181,9 +3186,11 @@ class _EditableExpressionText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScaler = MediaQuery.textScalerOf(context);
     final painter = TextPainter(
       text: TextSpan(text: segment.text, style: style),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
       maxLines: 1,
     )..layout();
 
@@ -3195,6 +3202,7 @@ class _EditableExpressionText extends StatelessWidget {
               text: segment.text,
               rawOffsets: segment.rawOffsets,
               style: style,
+              textScaler: textScaler,
               selected: selected,
               color: Theme.of(
                 context,
@@ -3228,6 +3236,7 @@ class _ExpressionSelectionHighlightPainter extends CustomPainter {
     required this.text,
     required this.rawOffsets,
     required this.style,
+    required this.textScaler,
     required this.selected,
     required this.color,
   });
@@ -3235,6 +3244,7 @@ class _ExpressionSelectionHighlightPainter extends CustomPainter {
   final String text;
   final List<int> rawOffsets;
   final TextStyle style;
+  final TextScaler textScaler;
   final (int, int) selected;
   final Color color;
 
@@ -3243,6 +3253,7 @@ class _ExpressionSelectionHighlightPainter extends CustomPainter {
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
       maxLines: 1,
     )..layout();
     final paint = Paint()..color = color;
@@ -3266,6 +3277,7 @@ class _ExpressionSelectionHighlightPainter extends CustomPainter {
       text != oldDelegate.text ||
       rawOffsets != oldDelegate.rawOffsets ||
       style != oldDelegate.style ||
+      textScaler != oldDelegate.textScaler ||
       selected != oldDelegate.selected ||
       color != oldDelegate.color;
 }
@@ -3437,6 +3449,7 @@ class _FractionFieldDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScaler = MediaQuery.textScalerOf(context);
     final textColor = Theme.of(context).colorScheme.onSurface;
     final textStyle = TextStyle(
       color: textColor,
@@ -3459,11 +3472,13 @@ class _FractionFieldDisplay extends StatelessWidget {
       final painter = TextPainter(
         text: TextSpan(text: value, style: textStyle),
         textDirection: TextDirection.ltr,
+        textScaler: textScaler,
         maxLines: 1,
       )..layout();
       var localX = details.localPosition.dx - 5;
       if (active &&
-          localX > _textWidth(value.substring(0, offset), textStyle)) {
+          localX >
+              _textWidth(value.substring(0, offset), textStyle, textScaler)) {
         localX -= _caretGap + _caretWidth;
       }
       final position = painter.getPositionForOffset(
@@ -3495,6 +3510,7 @@ class _FractionFieldDisplay extends StatelessWidget {
                 painter: _FractionSelectionHighlightPainter(
                   text: value,
                   style: textStyle,
+                  textScaler: textScaler,
                   range: range,
                   color: highlight,
                 ),
@@ -3553,10 +3569,11 @@ class _FractionFieldDisplay extends StatelessWidget {
     );
   }
 
-  double _textWidth(String text, TextStyle style) {
+  double _textWidth(String text, TextStyle style, TextScaler textScaler) {
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
       maxLines: 1,
     )..layout();
     return painter.width;
@@ -3567,12 +3584,14 @@ class _FractionSelectionHighlightPainter extends CustomPainter {
   const _FractionSelectionHighlightPainter({
     required this.text,
     required this.style,
+    required this.textScaler,
     required this.range,
     required this.color,
   });
 
   final String text;
   final TextStyle style;
+  final TextScaler textScaler;
   final TextRange range;
   final Color color;
 
@@ -3581,6 +3600,7 @@ class _FractionSelectionHighlightPainter extends CustomPainter {
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
       maxLines: 1,
     )..layout();
     final paint = Paint()..color = color;
@@ -3595,6 +3615,7 @@ class _FractionSelectionHighlightPainter extends CustomPainter {
   bool shouldRepaint(_FractionSelectionHighlightPainter oldDelegate) =>
       text != oldDelegate.text ||
       style != oldDelegate.style ||
+      textScaler != oldDelegate.textScaler ||
       range != oldDelegate.range ||
       color != oldDelegate.color;
 }
