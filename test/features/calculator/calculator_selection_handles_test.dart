@@ -136,6 +136,22 @@ Offset _renderedFractionBoundary(
   );
 }
 
+Offset _renderedFractionCharacterCenter(
+  WidgetTester tester,
+  Key fieldKey,
+  String value,
+  int index,
+) {
+  final leading = _renderedFractionBoundary(tester, fieldKey, value, index);
+  final trailing = _renderedFractionBoundary(
+    tester,
+    fieldKey,
+    value,
+    index + 1,
+  );
+  return Offset((leading.dx + trailing.dx) / 2, (leading.dy + trailing.dy) / 2);
+}
+
 Future<void> _dragHandle(
   WidgetTester tester, {
   required Key handleKey,
@@ -1023,6 +1039,173 @@ void main() {
       );
       _expectHandles();
     }
+  });
+
+  testWidgets('短い分子12を実描画位置のダブルタップで選択する', (tester) async {
+    final controller = CalculatorController();
+    _enterFraction(controller, '12', '12345678');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+
+    await _doubleTapAt(
+      tester,
+      _renderedFractionCharacterCenter(
+        tester,
+        const Key('fractionNumeratorField'),
+        '12',
+        0,
+      ),
+    );
+
+    expect(controller.selectedClipboardText, '12');
+    expect(controller.selection?.base, isA<FractionExpressionPosition>());
+    expect(controller.selection?.extent, isA<FractionExpressionPosition>());
+    _expectHandles();
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
+  });
+
+  testWidgets('分子12−566の表示選択とCut対象が一致する', (tester) async {
+    _mockClipboard();
+    final controller = CalculatorController()..press('a/b');
+    for (final character in '12−566'.split('')) {
+      controller.press(character);
+    }
+    controller.press('a/b');
+    for (final character in '12345678'.split('')) {
+      controller.press(character);
+    }
+    controller.press('a/b');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+
+    await _doubleTapAt(
+      tester,
+      _renderedFractionCharacterCenter(
+        tester,
+        const Key('fractionNumeratorField'),
+        '12−566',
+        4,
+      ),
+    );
+    expect(controller.selectedClipboardText, '566');
+
+    await tester.tap(_toolbarAction('カット'));
+    await tester.pumpAndSettle();
+    final fraction = controller.displaySegments
+        .whereType<ExpressionFractionSegment>()
+        .single;
+    expect(fraction.numerator, '12−');
+    expect((await Clipboard.getData(Clipboard.kTextPlain))?.text, '566');
+  });
+
+  testWidgets('長い分母の実描画位置で全8桁を選択しCut対象と一致する', (tester) async {
+    _mockClipboard();
+    final controller = CalculatorController();
+    _enterFraction(controller, '12', '12345678');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+
+    await _doubleTapAt(
+      tester,
+      _renderedFractionCharacterCenter(
+        tester,
+        const Key('fractionDenominatorField'),
+        '12345678',
+        4,
+      ),
+    );
+    expect(controller.selectedClipboardText, '12345678');
+
+    await tester.tap(_toolbarAction('カット'));
+    await tester.pumpAndSettle();
+    final fraction = controller.displaySegments
+        .whereType<ExpressionFractionSegment>()
+        .single;
+    expect(fraction.denominator, isEmpty);
+    expect((await Clipboard.getData(Clipboard.kTextPlain))?.text, '12345678');
+  });
+
+  testWidgets('分数field端までのhandle移動はfield内選択を維持する', (tester) async {
+    final controller = CalculatorController();
+    _enterFraction(controller, '12−566', '12345678');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    final marker = controller.expression;
+    controller.selectRange(
+      FractionExpressionPosition(
+        marker: marker,
+        field: FractionField.numerator,
+        offset: 3,
+      ),
+      FractionExpressionPosition(
+        marker: marker,
+        field: FractionField.numerator,
+        offset: 5,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await _dragHandle(
+      tester,
+      handleKey: const Key('calculatorSelectionExtentHandle'),
+      destination: _renderedFractionBoundary(
+        tester,
+        const Key('fractionNumeratorField'),
+        '12−566',
+        6,
+      ),
+    );
+
+    expect(controller.selectedClipboardText, '566');
+    expect(
+      controller.selection?.base,
+      const FractionExpressionPosition(
+        marker: '\uE000',
+        field: FractionField.numerator,
+        offset: 3,
+      ),
+    );
+    expect(
+      controller.selection?.extent,
+      const FractionExpressionPosition(
+        marker: '\uE000',
+        field: FractionField.numerator,
+        offset: 6,
+      ),
+    );
+    expect(find.byKey(const Key('selectedFractionNode')), findsNothing);
+  });
+
+  testWidgets('長押し位置と分母caret・magnifierが同じ実文字境界を使う', (tester) async {
+    final controller = CalculatorController();
+    _enterFraction(controller, '12', '12345678');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    final boundary = _renderedFractionBoundary(
+      tester,
+      const Key('fractionDenominatorField'),
+      '12345678',
+      4,
+    );
+
+    final gesture = await tester.startGesture(boundary);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
+
+    expect(
+      controller.expressionPosition,
+      const FractionExpressionPosition(
+        marker: '\uE000',
+        field: FractionField.denominator,
+        offset: 4,
+      ),
+    );
+    expect(find.byKey(const Key('calculatorMagnifier')), findsOneWidget);
+    final caret = tester.getRect(find.byKey(const Key('fractionFieldCaret')));
+    // The existing fraction caret keeps its 2 logical-pixel visual gap, and
+    // both it and the paragraph are independently pixel-snapped after the
+    // fraction's FittedBox transform. The resolved logical offset must still
+    // be the touched boundary (offset 4), rather than drifting by characters.
+    expect(caret.left, closeTo(boundary.dx, 5));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
   });
 
   for (final values in const [

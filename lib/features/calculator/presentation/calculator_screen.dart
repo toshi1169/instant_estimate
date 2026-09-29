@@ -2404,7 +2404,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           value == '.');
 
   int? _characterIndexAt(_ExpressionHitTarget target, Offset globalPosition) {
-    final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+    final box = _coordinateBoxForTarget(target);
     final style = target.style;
     final text = target.kind == _ExpressionHitTargetKind.text
         ? target.text
@@ -2419,9 +2419,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout();
-    final textX = target.kind == _ExpressionHitTargetKind.fractionField
-        ? local.dx - 5
-        : local.dx;
+    final textX = _textXForTarget(target, local.dx);
     for (var index = 0; index < text.length; index++) {
       final boxes = painter.getBoxesForSelection(
         TextSelection(baseOffset: index, extentOffset: index + 1),
@@ -3110,7 +3108,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     _ExpressionHitTarget target,
     Offset globalPosition,
   ) {
-    final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+    final box = _coordinateBoxForTarget(target);
     final lineBox =
         target.lineKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || lineBox == null || !box.hasSize || !lineBox.hasSize) {
@@ -3143,17 +3141,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           textScaler: MediaQuery.textScalerOf(context),
           maxLines: 1,
         )..layout();
-        var textX = local.dx;
+        final textX = _textXForTarget(target, local.dx);
         final activeOffset = target.activeCaretOffset;
-        if (target.fractionCaretInserted &&
-            activeOffset != null &&
-            textX >
-                _textWidthForStyle(
-                  value.substring(0, activeOffset.clamp(0, value.length)),
-                  target.style!,
-                )) {
-          textX -= _FractionFieldDisplay.caretInsertionWidth;
-        }
         final fieldOffset = value.isEmpty
             ? 0
             : painter
@@ -3213,6 +3202,31 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       maxLines: 1,
     )..layout();
     return painter.width;
+  }
+
+  RenderBox? _coordinateBoxForTarget(_ExpressionHitTarget target) {
+    final coordinateKey = target.kind == _ExpressionHitTargetKind.fractionField
+        ? target.geometryKey ?? target.key
+        : target.key;
+    return coordinateKey.currentContext?.findRenderObject() as RenderBox?;
+  }
+
+  double _textXForTarget(_ExpressionHitTarget target, double localX) {
+    if (target.kind != _ExpressionHitTargetKind.fractionField ||
+        !target.fractionCaretInserted) {
+      return localX;
+    }
+    final activeOffset = target.activeCaretOffset;
+    final style = target.style;
+    if (activeOffset == null || style == null) return localX;
+    final safeOffset = activeOffset.clamp(0, target.fieldValue.length);
+    final prefixWidth = _textWidthForStyle(
+      target.fieldValue.substring(0, safeOffset),
+      style,
+    );
+    return localX > prefixWidth
+        ? localX - _FractionFieldDisplay.caretInsertionWidth
+        : localX;
   }
 }
 
