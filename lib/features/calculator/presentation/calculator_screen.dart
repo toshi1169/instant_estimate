@@ -1719,6 +1719,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   bool _selectionHandleDragActive = false;
   _SelectionEndpoint? _activeSelectionEndpoint;
   int? _activeSelectionPointer;
+  Offset? _activeSelectionPointerToEndpointDelta;
   ExpressionPosition? _selectionDragAnchor;
   ExpressionPosition? _collapsedDragPosition;
   Duration? _lastPointerDownTime;
@@ -2206,6 +2207,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     _selectionHandleDragActive = false;
     _activeSelectionEndpoint = null;
     _activeSelectionPointer = null;
+    _activeSelectionPointerToEndpointDelta = null;
     _selectionDragAnchor = null;
     _collapsedDragPosition = null;
     _hideEditingToolbars();
@@ -2783,11 +2785,18 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       child: Listener(
         key: key,
         behavior: HitTestBehavior.opaque,
-        onPointerDown: (event) =>
-            _startSelectionHandleDrag(endpointRole, event.pointer),
+        onPointerDown: (event) => _startSelectionHandleDrag(
+          endpointRole,
+          event.pointer,
+          pointerPosition: event.position,
+          endpointPosition: endpoint,
+        ),
         onPointerMove: (event) =>
             _updateSelectionHandleDrag(event.pointer, event.position),
-        onPointerUp: (event) => _finishSelectionHandleDrag(event.pointer),
+        onPointerUp: (event) {
+          _updateSelectionHandleDrag(event.pointer, event.position);
+          _finishSelectionHandleDrag(event.pointer);
+        },
         onPointerCancel: (event) => _finishSelectionHandleDrag(event.pointer),
         child: Stack(
           clipBehavior: Clip.none,
@@ -2803,12 +2812,18 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
   }
 
-  void _startSelectionHandleDrag(_SelectionEndpoint endpoint, int pointer) {
+  void _startSelectionHandleDrag(
+    _SelectionEndpoint endpoint,
+    int pointer, {
+    required Offset pointerPosition,
+    required Offset endpointPosition,
+  }) {
     final selection = widget.controller.selection;
     if (selection == null || _activeSelectionPointer != null) return;
     _selectionHandleDragActive = true;
     _activeSelectionEndpoint = endpoint;
     _activeSelectionPointer = pointer;
+    _activeSelectionPointerToEndpointDelta = endpointPosition - pointerPosition;
     _selectionDragAnchor = endpoint == _SelectionEndpoint.base
         ? selection.extent
         : selection.base;
@@ -2819,7 +2834,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
 
   void _updateSelectionHandleDrag(int pointer, Offset globalPosition) {
     if (_activeSelectionPointer != pointer) return;
-    _dragSelectionHandle(globalPosition);
+    _dragSelectionHandle(
+      globalPosition + (_activeSelectionPointerToEndpointDelta ?? Offset.zero),
+    );
   }
 
   void _dragSelectionHandle(Offset globalPosition) {
@@ -2847,6 +2864,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     _selectionHandleDragActive = false;
     _activeSelectionEndpoint = null;
     _activeSelectionPointer = null;
+    _activeSelectionPointerToEndpointDelta = null;
     _selectionDragAnchor = null;
     _collapsedDragPosition = null;
     if (collapsedPosition != null) {

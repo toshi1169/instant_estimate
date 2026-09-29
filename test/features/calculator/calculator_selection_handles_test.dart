@@ -75,6 +75,29 @@ Offset _characterBoundary(
   return Offset(rect.left + x * rect.width / painter.width, rect.center.dy);
 }
 
+Offset _rawBoundary(
+  WidgetTester tester,
+  Finder finder,
+  ExpressionTextSegment segment,
+  int rawOffset,
+) {
+  final widget = tester.widget<Text>(finder);
+  final text = widget.data ?? widget.textSpan!.toPlainText();
+  expect(text, segment.text);
+  final displayOffset = segment.rawOffsets.indexOf(rawOffset);
+  expect(displayOffset, isNonNegative);
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: widget.style),
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+  )..layout();
+  final x = painter
+      .getOffsetForCaret(TextPosition(offset: displayOffset), Rect.zero)
+      .dx;
+  final rect = tester.getRect(finder);
+  return Offset(rect.left + x * rect.width / painter.width, rect.center.dy);
+}
+
 Future<void> _dragHandle(
   WidgetTester tester, {
   required Key handleKey,
@@ -100,6 +123,19 @@ Offset _iosHandleKnobCenter(
   );
   final rect = tester.getRect(paint.last);
   return Offset(rect.center.dx, circleAtTop ? rect.top + 6 : rect.bottom - 6);
+}
+
+Offset _iosHandleAnchor(
+  WidgetTester tester,
+  Key handleKey, {
+  required bool leftType,
+}) {
+  final paint = find.descendant(
+    of: find.byKey(handleKey),
+    matching: find.byType(CustomPaint),
+  );
+  final rect = tester.getRect(paint.last);
+  return Offset(rect.center.dx, leftType ? rect.bottom : rect.bottom - 10.5);
 }
 
 Future<void> _doubleTapAt(WidgetTester tester, Offset position) async {
@@ -490,6 +526,89 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.selection!.extent, const RawExpressionPosition(7));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('左右どちらの実描画ノブから同一ExpressionPositionへ重ねてもcollapseする', (
+    tester,
+  ) async {
+    final controller = CalculatorController()..pasteAtCaret('123+456');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+    final text = _expressionTextContaining('123');
+
+    await _doubleTapAt(tester, _characterCenter(tester, text, '456'));
+    var leftKnob = _iosHandleKnobCenter(
+      tester,
+      const Key('calculatorSelectionBaseHandle'),
+      circleAtTop: true,
+    );
+    var rightAnchor = _iosHandleAnchor(
+      tester,
+      const Key('calculatorSelectionExtentHandle'),
+      leftType: false,
+    );
+    var leftAnchor = _iosHandleAnchor(
+      tester,
+      const Key('calculatorSelectionBaseHandle'),
+      leftType: true,
+    );
+    var gesture = await tester.startGesture(leftKnob);
+    await gesture.moveBy(rightAnchor - leftAnchor);
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.selection, isNull);
+    expect(controller.expressionPosition, const RawExpressionPosition(7));
+
+    await _doubleTapAt(tester, _characterCenter(tester, text, '456'));
+    final rightKnob = _iosHandleKnobCenter(
+      tester,
+      const Key('calculatorSelectionExtentHandle'),
+      circleAtTop: false,
+    );
+    leftAnchor = _iosHandleAnchor(
+      tester,
+      const Key('calculatorSelectionBaseHandle'),
+      leftType: true,
+    );
+    rightAnchor = _iosHandleAnchor(
+      tester,
+      const Key('calculatorSelectionExtentHandle'),
+      leftType: false,
+    );
+    gesture = await tester.startGesture(rightKnob);
+    await gesture.moveBy(leftAnchor - rightAnchor);
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.selection, isNull);
+    expect(controller.expressionPosition, const RawExpressionPosition(4));
+  });
+
+  testWidgets('通常式のTextPainter境界とplatform handle anchorは同じ描画座標を使う', (
+    tester,
+  ) async {
+    final controller = CalculatorController()..pasteAtCaret('123+456');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+    final text = _expressionTextContaining('123');
+    await _doubleTapAt(tester, _characterCenter(tester, text, '456'));
+    final segment = controller.displaySegments
+        .whereType<ExpressionTextSegment>()
+        .singleWhere((segment) => segment.text.contains('456'));
+
+    final expectedStart = _rawBoundary(tester, text, segment, 4);
+    final expectedEnd = _rawBoundary(tester, text, segment, 7);
+    final actualStart = _iosHandleAnchor(
+      tester,
+      const Key('calculatorSelectionBaseHandle'),
+      leftType: true,
+    );
+    final actualEnd = _iosHandleAnchor(
+      tester,
+      const Key('calculatorSelectionExtentHandle'),
+      leftType: false,
+    );
+    expect(actualStart.dx, closeTo(expectedStart.dx, 0.01));
+    expect(actualEnd.dx, closeTo(expectedEnd.dx, 0.01));
   });
 
   testWidgets('選択ハンドル交差後も向きを保持してドラッグと通常操作を継続できる', (tester) async {
