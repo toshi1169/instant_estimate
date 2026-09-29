@@ -1659,6 +1659,7 @@ class _ExpressionHitTarget {
     required this.key,
     required this.lineKey,
     required this.kind,
+    this.geometryKey,
     this.text = '',
     this.rawOffsets = const [],
     this.style,
@@ -1666,10 +1667,12 @@ class _ExpressionHitTarget {
     this.field,
     this.fieldValue = '',
     this.activeCaretOffset,
+    this.fractionCaretInserted = false,
     this.rawOffset,
   });
 
   final GlobalKey key;
+  final GlobalKey? geometryKey;
   final GlobalKey lineKey;
   final _ExpressionHitTargetKind kind;
   final String text;
@@ -1679,6 +1682,7 @@ class _ExpressionHitTarget {
   final FractionField? field;
   final String fieldValue;
   final int? activeCaretOffset;
+  final bool fractionCaretInserted;
   final int? rawOffset;
 }
 
@@ -1985,6 +1989,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     final wholeKey = _targetKey('$prefix-whole');
     final numeratorKey = _targetKey('$prefix-numerator');
     final denominatorKey = _targetKey('$prefix-denominator');
+    final wholeGeometryKey = _targetKey('$prefix-whole-geometry');
+    final numeratorGeometryKey = _targetKey('$prefix-numerator-geometry');
+    final denominatorGeometryKey = _targetKey('$prefix-denominator-geometry');
     hitTargets
       ..add(
         _ExpressionHitTarget(
@@ -1997,6 +2004,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       ..add(
         _ExpressionHitTarget(
           key: numeratorKey,
+          geometryKey: numeratorGeometryKey,
           lineKey: lineKey,
           kind: _ExpressionHitTargetKind.fractionField,
           marker: segment.marker,
@@ -2005,12 +2013,20 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           activeCaretOffset: segment.activeField == FractionField.numerator
               ? segment.activeCaretOffset
               : null,
+          fractionCaretInserted:
+              segment.activeField == FractionField.numerator &&
+              _fractionFieldSelection(
+                    segment.marker,
+                    FractionField.numerator,
+                  ) ==
+                  null,
           style: _fractionTextStyle(context),
         ),
       )
       ..add(
         _ExpressionHitTarget(
           key: denominatorKey,
+          geometryKey: denominatorGeometryKey,
           lineKey: lineKey,
           kind: _ExpressionHitTargetKind.fractionField,
           marker: segment.marker,
@@ -2019,6 +2035,13 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           activeCaretOffset: segment.activeField == FractionField.denominator
               ? segment.activeCaretOffset
               : null,
+          fractionCaretInserted:
+              segment.activeField == FractionField.denominator &&
+              _fractionFieldSelection(
+                    segment.marker,
+                    FractionField.denominator,
+                  ) ==
+                  null,
           style: _fractionTextStyle(context),
         ),
       )
@@ -2034,6 +2057,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       hitTargets.add(
         _ExpressionHitTarget(
           key: wholeKey,
+          geometryKey: wholeGeometryKey,
           lineKey: lineKey,
           kind: _ExpressionHitTargetKind.fractionField,
           marker: segment.marker,
@@ -2042,6 +2066,13 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           activeCaretOffset: segment.activeField == FractionField.wholeNumber
               ? segment.activeCaretOffset
               : null,
+          fractionCaretInserted:
+              segment.activeField == FractionField.wholeNumber &&
+              _fractionFieldSelection(
+                    segment.marker,
+                    FractionField.wholeNumber,
+                  ) ==
+                  null,
           style: _fractionTextStyle(context),
         ),
       );
@@ -2067,6 +2098,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       wholeNumberKey: wholeKey,
       numeratorKey: numeratorKey,
       denominatorKey: denominatorKey,
+      wholeNumberGeometryKey: wholeGeometryKey,
+      numeratorGeometryKey: numeratorGeometryKey,
+      denominatorGeometryKey: denominatorGeometryKey,
       onBeforeFractionTap: () {
         if (_consumeSuppressedTap()) return;
         final position = RawExpressionPosition(
@@ -2911,7 +2945,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         if (target.kind == _ExpressionHitTargetKind.fractionField &&
             target.marker == marker &&
             target.field == field) {
-          return _caretRectForTargetOffset(target, offset, horizontalInset: 5);
+          return _caretRectForTargetOffset(target, offset);
         }
       }
     }
@@ -2923,7 +2957,10 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     int offset, {
     double horizontalInset = 0,
   }) {
-    final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+    final coordinateKey = target.kind == _ExpressionHitTargetKind.fractionField
+        ? target.geometryKey ?? target.key
+        : target.key;
+    final box = coordinateKey.currentContext?.findRenderObject() as RenderBox?;
     final style = target.style;
     if (box == null || !box.hasSize || style == null) return null;
     final text = target.kind == _ExpressionHitTargetKind.text
@@ -2936,18 +2973,25 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       maxLines: 1,
     )..layout();
     final safeOffset = offset.clamp(0, text.length);
-    final x =
+    var x =
         horizontalInset +
         painter
             .getOffsetForCaret(TextPosition(offset: safeOffset), Rect.zero)
             .dx;
+    if (target.fractionCaretInserted &&
+        safeOffset > (target.activeCaretOffset ?? text.length)) {
+      x += _FractionFieldDisplay.caretInsertionWidth;
+    }
     final top = box.localToGlobal(Offset(x, 0));
     final bottom = box.localToGlobal(Offset(x, box.size.height));
     return Rect.fromLTRB(top.dx - 1, top.dy, bottom.dx + 1, bottom.dy);
   }
 
   Rect? _edgeCaretRect(_ExpressionHitTarget target, {required bool trailing}) {
-    final box = target.key.currentContext?.findRenderObject() as RenderBox?;
+    final coordinateKey = target.kind == _ExpressionHitTargetKind.fractionField
+        ? target.geometryKey ?? target.key
+        : target.key;
+    final box = coordinateKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return null;
     final x = trailing ? box.size.width : 0.0;
     final top = box.localToGlobal(Offset(x, 0));
@@ -3099,17 +3143,16 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           textScaler: MediaQuery.textScalerOf(context),
           maxLines: 1,
         )..layout();
-        var textX = local.dx - 5;
+        var textX = local.dx;
         final activeOffset = target.activeCaretOffset;
-        if (activeOffset != null &&
+        if (target.fractionCaretInserted &&
+            activeOffset != null &&
             textX >
                 _textWidthForStyle(
                   value.substring(0, activeOffset.clamp(0, value.length)),
                   target.style!,
                 )) {
-          textX -=
-              _FractionFieldDisplay._caretGap +
-              _FractionFieldDisplay._caretWidth;
+          textX -= _FractionFieldDisplay.caretInsertionWidth;
         }
         final fieldOffset = value.isEmpty
             ? 0
@@ -3124,11 +3167,15 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           field: target.field!,
           offset: fieldOffset,
         );
-        caretX =
-            5 +
-            painter
-                .getOffsetForCaret(TextPosition(offset: fieldOffset), Rect.zero)
-                .dx;
+        var fractionCaretX = painter
+            .getOffsetForCaret(TextPosition(offset: fieldOffset), Rect.zero)
+            .dx;
+        if (target.fractionCaretInserted &&
+            activeOffset != null &&
+            fieldOffset > activeOffset) {
+          fractionCaretX += _FractionFieldDisplay.caretInsertionWidth;
+        }
+        caretX = fractionCaretX;
       case _ExpressionHitTargetKind.fractionBefore:
         position = RawExpressionPosition(
           widget.controller.expression.indexOf(target.marker!),
@@ -3295,6 +3342,9 @@ class _InlineFraction extends StatelessWidget {
     required this.wholeNumberKey,
     required this.numeratorKey,
     required this.denominatorKey,
+    required this.wholeNumberGeometryKey,
+    required this.numeratorGeometryKey,
+    required this.denominatorGeometryKey,
     required this.onBeforeFractionTap,
     required this.onAfterFractionTap,
     required this.onFieldTap,
@@ -3311,6 +3361,9 @@ class _InlineFraction extends StatelessWidget {
   final GlobalKey wholeNumberKey;
   final GlobalKey numeratorKey;
   final GlobalKey denominatorKey;
+  final GlobalKey wholeNumberGeometryKey;
+  final GlobalKey numeratorGeometryKey;
+  final GlobalKey denominatorGeometryKey;
   final VoidCallback onBeforeFractionTap;
   final VoidCallback onAfterFractionTap;
   final void Function(FractionField field, int caretOffset) onFieldTap;
@@ -3346,6 +3399,7 @@ class _InlineFraction extends StatelessWidget {
                 key: const Key('mixedFractionWholeNumber'),
                 caretSlotKey: const Key('mixedFractionWholeNumberCaretSlot'),
                 gestureKey: wholeNumberKey,
+                geometryKey: wholeNumberGeometryKey,
                 value: segment.wholeNumber,
                 active: segment.activeField == FractionField.wholeNumber,
                 caretOffset: segment.activeField == FractionField.wholeNumber
@@ -3369,6 +3423,7 @@ class _InlineFraction extends StatelessWidget {
                     key: const Key('fractionNumeratorField'),
                     caretSlotKey: const Key('fractionNumeratorCaretSlot'),
                     gestureKey: numeratorKey,
+                    geometryKey: numeratorGeometryKey,
                     value: segment.numerator,
                     active: segment.activeField == FractionField.numerator,
                     caretOffset: segment.activeField == FractionField.numerator
@@ -3389,6 +3444,7 @@ class _InlineFraction extends StatelessWidget {
                     key: const Key('fractionDenominatorField'),
                     caretSlotKey: const Key('fractionDenominatorCaretSlot'),
                     gestureKey: denominatorKey,
+                    geometryKey: denominatorGeometryKey,
                     value: segment.denominator,
                     active: segment.activeField == FractionField.denominator,
                     caretOffset:
@@ -3428,6 +3484,7 @@ class _FractionFieldDisplay extends StatelessWidget {
     required this.caretOffset,
     required this.caretSlotKey,
     required this.gestureKey,
+    required this.geometryKey,
     required this.fontSize,
     required this.selection,
     required this.onTap,
@@ -3439,6 +3496,7 @@ class _FractionFieldDisplay extends StatelessWidget {
   final int? caretOffset;
   final Key caretSlotKey;
   final GlobalKey gestureKey;
+  final GlobalKey geometryKey;
   final double fontSize;
   final TextRange? selection;
   final ValueChanged<int> onTap;
@@ -3446,6 +3504,7 @@ class _FractionFieldDisplay extends StatelessWidget {
   static const double _caretGap = 2;
   static const double _caretWidth = 1.5;
   static const double _caretHeight = 32;
+  static const double caretInsertionWidth = _caretGap + _caretWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -3475,11 +3534,18 @@ class _FractionFieldDisplay extends StatelessWidget {
         textScaler: textScaler,
         maxLines: 1,
       )..layout();
-      var localX = details.localPosition.dx - 5;
+      final gestureBox =
+          gestureKey.currentContext?.findRenderObject() as RenderBox?;
+      final geometryBox =
+          geometryKey.currentContext?.findRenderObject() as RenderBox?;
+      if (gestureBox == null || geometryBox == null) return;
+      final globalPosition = gestureBox.localToGlobal(details.localPosition);
+      var localX = geometryBox.globalToLocal(globalPosition).dx;
       if (active &&
+          selection == null &&
           localX >
               _textWidth(value.substring(0, offset), textStyle, textScaler)) {
-        localX -= _caretGap + _caretWidth;
+        localX -= caretInsertionWidth;
       }
       final position = painter.getPositionForOffset(
         Offset(localX.clamp(0.0, painter.width), 0),
@@ -3505,16 +3571,19 @@ class _FractionFieldDisplay extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 5),
             child: Align(
               alignment: Alignment.center,
-              child: CustomPaint(
-                key: Key('${caretSlotKey.toString()}-selection'),
-                painter: _FractionSelectionHighlightPainter(
-                  text: value,
-                  style: textStyle,
-                  textScaler: textScaler,
-                  range: range,
-                  color: highlight,
+              child: SizedBox(
+                key: geometryKey,
+                child: CustomPaint(
+                  key: Key('${caretSlotKey.toString()}-selection'),
+                  painter: _FractionSelectionHighlightPainter(
+                    text: value,
+                    style: textStyle,
+                    textScaler: textScaler,
+                    range: range,
+                    color: highlight,
+                  ),
+                  child: Text(value, style: textStyle, maxLines: 1),
                 ),
-                child: Text(value, style: textStyle, maxLines: 1),
               ),
             ),
           ),
@@ -3533,6 +3602,7 @@ class _FractionFieldDisplay extends StatelessWidget {
           child: Align(
             alignment: Alignment.center,
             child: Row(
+              key: geometryKey,
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -115,6 +116,26 @@ Offset _renderedRawBoundary(
   );
 }
 
+Offset _renderedFractionBoundary(
+  WidgetTester tester,
+  Key fieldKey,
+  String value,
+  int offset,
+) {
+  final text = find.descendant(
+    of: find.byKey(fieldKey),
+    matching: find.byWidgetPredicate(
+      (widget) => widget is Text && widget.data == value,
+    ),
+  );
+  expect(text, findsOneWidget);
+  final richText = find.descendant(of: text, matching: find.byType(RichText));
+  final paragraph = tester.renderObject<RenderParagraph>(richText);
+  return paragraph.localToGlobal(
+    paragraph.getOffsetForCaret(TextPosition(offset: offset), Rect.zero),
+  );
+}
+
 Future<void> _dragHandle(
   WidgetTester tester, {
   required Key handleKey,
@@ -151,8 +172,12 @@ Offset _iosHandleAnchor(
     of: find.byKey(handleKey),
     matching: find.byType(CustomPaint),
   );
-  final rect = tester.getRect(paint.last);
-  return Offset(rect.center.dx, leftType ? rect.bottom : rect.bottom - 10.5);
+  final handleBox = tester.renderObject<RenderBox>(paint.last);
+  final anchor = cupertinoTextSelectionControls.getHandleAnchor(
+    leftType ? TextSelectionHandleType.left : TextSelectionHandleType.right,
+    54.6,
+  );
+  return handleBox.localToGlobal(anchor);
 }
 
 Future<void> _doubleTapAt(WidgetTester tester, Offset position) async {
@@ -998,6 +1023,145 @@ void main() {
       );
       _expectHandles();
     }
+  });
+
+  for (final values in const [
+    ('12345', '12345678'),
+    ('12345678', '12345'),
+    ('1', '1234567890'),
+    ('1234567890', '1'),
+    ('12345', '67890'),
+  ]) {
+    testWidgets(
+      '長さが異なる分子${values.$1.length}桁／分母${values.$2.length}桁でも実描画境界とhandle endpointが一致する',
+      (tester) async {
+        final controller = CalculatorController();
+        _enterFraction(controller, values.$1, values.$2);
+        await _pumpCalculator(tester, controller, size: const Size(320, 844));
+        final marker = controller.expression;
+
+        for (final fieldCase in [
+          (
+            const Key('fractionNumeratorField'),
+            FractionField.numerator,
+            values.$1,
+          ),
+          (
+            const Key('fractionDenominatorField'),
+            FractionField.denominator,
+            values.$2,
+          ),
+        ]) {
+          for (final range in [
+            (0, 1),
+            (fieldCase.$3.length - 1, fieldCase.$3.length),
+          ]) {
+            controller.selectRange(
+              FractionExpressionPosition(
+                marker: marker,
+                field: fieldCase.$2,
+                offset: range.$1,
+              ),
+              FractionExpressionPosition(
+                marker: marker,
+                field: fieldCase.$2,
+                offset: range.$2,
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+
+            final expectedBase = _renderedFractionBoundary(
+              tester,
+              fieldCase.$1,
+              fieldCase.$3,
+              range.$1,
+            );
+            final expectedExtent = _renderedFractionBoundary(
+              tester,
+              fieldCase.$1,
+              fieldCase.$3,
+              range.$2,
+            );
+            final actualBase = _iosHandleAnchor(
+              tester,
+              const Key('calculatorSelectionBaseHandle'),
+              leftType: true,
+            );
+            final actualExtent = _iosHandleAnchor(
+              tester,
+              const Key('calculatorSelectionExtentHandle'),
+              leftType: false,
+            );
+            // The platform handle itself is pixel-snapped after the scaled
+            // expression geometry is converted into the root overlay.
+            expect(actualBase.dx, closeTo(expectedBase.dx, 1.5));
+            expect(actualExtent.dx, closeTo(expectedExtent.dx, 1.5));
+          }
+        }
+      },
+    );
+  }
+
+  testWidgets('帯分数整数部はTextScaler・Darkテーマでも実描画境界とhandle endpointが一致する', (
+    tester,
+  ) async {
+    final controller = CalculatorController();
+    _enterFraction(controller, '12345', '12345678', wholeNumber: '9876');
+    await _pumpCalculator(
+      tester,
+      controller,
+      size: const Size(320, 844),
+      textScale: 1.4,
+      brightness: Brightness.dark,
+    );
+    // The calculator keypad has an existing overflow at this accessibility
+    // scale; this test targets the fraction field geometry above it.
+    tester.takeException();
+    final marker = controller.expression;
+    controller.selectRange(
+      FractionExpressionPosition(
+        marker: marker,
+        field: FractionField.wholeNumber,
+        offset: 0,
+      ),
+      FractionExpressionPosition(
+        marker: marker,
+        field: FractionField.wholeNumber,
+        offset: 4,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final expectedBase = _renderedFractionBoundary(
+      tester,
+      const Key('mixedFractionWholeNumber'),
+      '9876',
+      0,
+    );
+    final expectedExtent = _renderedFractionBoundary(
+      tester,
+      const Key('mixedFractionWholeNumber'),
+      '9876',
+      4,
+    );
+    expect(
+      _iosHandleAnchor(
+        tester,
+        const Key('calculatorSelectionBaseHandle'),
+        leftType: true,
+      ).dx,
+      closeTo(expectedBase.dx, 1.5),
+    );
+    expect(
+      _iosHandleAnchor(
+        tester,
+        const Key('calculatorSelectionExtentHandle'),
+        leftType: false,
+      ).dx,
+      closeTo(expectedExtent.dx, 1.5),
+    );
   });
 
   testWidgets('分数fieldの選択ハンドルを外へ広げると分数全体へsnapする', (tester) async {
