@@ -26,7 +26,7 @@ void main() {
     expect(withAds.lastButton.bottom, lessThanOrEqualTo(withAds.safeBottom));
     expect(withAds.banner, isNotNull);
     expect(withAds.banner!.bottom, lessThanOrEqualTo(withAds.history.top));
-    expect(withAds.expressionFontSize, 42);
+    expect(withAds.expressionFontSize, 54.6);
     expect(withAds.resultFontSize, 42);
     expect(tester.takeException(), isNull);
   });
@@ -53,7 +53,7 @@ void main() {
       withoutAds.safeBottom - withoutAds.lastButton.bottom,
       closeTo(6, 0.01),
     );
-    expect(withoutAds.expressionFontSize, 42);
+    expect(withoutAds.expressionFontSize, 54.6);
     expect(withoutAds.resultFontSize, 42);
     expect(tester.takeException(), isNull);
   });
@@ -159,7 +159,7 @@ void main() {
               )
               .first,
         );
-        expect(numeratorText.style?.fontSize, 42);
+        expect(numeratorText.style?.fontSize, 54.6);
         expect(tester.takeException(), isNull, reason: '$length digits');
       }
     });

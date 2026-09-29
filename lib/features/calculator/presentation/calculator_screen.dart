@@ -1623,7 +1623,7 @@ class _EditableExpressionLine extends StatefulWidget {
   final CalculatorController controller;
   final Future<void> Function(_SelectionMenuAction action)
   onSelectionMenuAction;
-  static const double _expressionFontSize = 42;
+  static const double _expressionFontSize = 54.6;
 
   @override
   State<_EditableExpressionLine> createState() =>
@@ -2944,7 +2944,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       final box = target.key.currentContext?.findRenderObject() as RenderBox?;
       if (box == null || !box.hasSize) continue;
       final topLeft = box.localToGlobal(Offset.zero);
-      final rect = topLeft & box.size;
+      final bottomRight = box.localToGlobal(box.size.bottomRight(Offset.zero));
+      final rect = Rect.fromPoints(topLeft, bottomRight);
       final dx = globalPosition.dx < rect.left
           ? rect.left - globalPosition.dx
           : globalPosition.dx > rect.right

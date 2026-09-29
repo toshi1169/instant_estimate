@@ -2572,7 +2572,7 @@ void main() {
           text.indexOf(containedText) + offsetWithinContainedText;
       final rect = tester.getRect(finder);
       final painter = TextPainter(
-        text: TextSpan(text: text, style: const TextStyle(fontSize: 42)),
+        text: TextSpan(text: text, style: const TextStyle(fontSize: 54.6)),
         textDirection: TextDirection.ltr,
       )..layout();
       final left = painter.getOffsetForCaret(
