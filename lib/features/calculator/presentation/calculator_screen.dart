@@ -116,6 +116,7 @@ class CalculatorScreen extends StatefulWidget {
 
 class _CalculatorScreenState extends State<CalculatorScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  final _expressionLineKey = GlobalKey<_EditableExpressionLineState>();
   Timer? _digitLimitVisibilityTimer;
   Timer? _digitLimitCooldownTimer;
   bool _digitLimitNoticeVisible = false;
@@ -211,10 +212,12 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   void _pressKey(_CalculatorKey key) {
     if (key.kind == _KeyKind.menu) {
+      _clearExpressionEditing();
       _scaffoldKey.currentState?.openDrawer();
       return;
     }
     if (key.kind == _KeyKind.settings) {
+      _clearExpressionEditing();
       unawaited(_openSettings());
       return;
     }
@@ -301,6 +304,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 
   Future<void> _openFunctionList() async {
+    _clearExpressionEditing();
     final function = await showDialog<String>(
       context: context,
       builder: (_) => FunctionListDialog(
@@ -313,6 +317,10 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       final notice = _controller.insertFunction(function);
       if (notice != null) _showMessage(notice);
     }
+  }
+
+  void _clearExpressionEditing() {
+    _expressionLineKey.currentState?.clearTransientEditing();
   }
 
   void _changeAngleUnitFromFunctionList(AngleUnit angleUnit) {
@@ -880,6 +888,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       animation: _controller,
       builder: (context, _) => Scaffold(
         key: _scaffoldKey,
+        onDrawerChanged: (isOpened) {
+          if (isOpened) _clearExpressionEditing();
+        },
         drawer: CalculatorSideMenu(
           showAds: widget.accessPlan.showsAds,
           accessPlan: widget.accessPlan,
@@ -980,6 +991,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                           height: expressionHeight,
                           child: _ExpressionPanel(
                             controller: _controller,
+                            expressionLineKey: _expressionLineKey,
                             onSelectionMenuAction: _handleSelectionMenuAction,
                           ),
                         ),
@@ -1269,10 +1281,12 @@ class _HistoryMenuSheet extends StatelessWidget {
 class _ExpressionPanel extends StatelessWidget {
   const _ExpressionPanel({
     required this.controller,
+    required this.expressionLineKey,
     required this.onSelectionMenuAction,
   });
 
   final CalculatorController controller;
+  final GlobalKey<_EditableExpressionLineState> expressionLineKey;
   final Future<void> Function(_SelectionMenuAction action)
   onSelectionMenuAction;
 
@@ -1296,6 +1310,7 @@ class _ExpressionPanel extends StatelessWidget {
           children: [
             Expanded(
               child: _EditableExpressionLine(
+                key: expressionLineKey,
                 controller: controller,
                 onSelectionMenuAction: onSelectionMenuAction,
               ),
@@ -1618,6 +1633,7 @@ class _EditableExpressionLine extends StatefulWidget {
   const _EditableExpressionLine({
     required this.controller,
     required this.onSelectionMenuAction,
+    super.key,
   });
 
   final CalculatorController controller;
@@ -1779,6 +1795,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
+            onTapUp: _handleExpressionBackgroundTap,
             onLongPressStart: _startCaretDrag,
             onLongPressMoveUpdate: _updateCaretDrag,
             onLongPressEnd: _endCaretDrag,
@@ -2170,6 +2187,34 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     }
   }
 
+  void _handleExpressionBackgroundTap(TapUpDetails details) {
+    if (_consumeSuppressedTap()) return;
+    final resolved = _resolvePosition(details.globalPosition);
+    _hideEditingToolbars();
+    if (resolved != null) {
+      widget.controller.moveCaretToPosition(resolved.position);
+    } else if (widget.controller.hasSelection) {
+      widget.controller.clearSelection();
+    }
+  }
+
+  void clearTransientEditing() {
+    _clearPendingDoubleTap();
+    _suppressNextExpressionTap = false;
+    _tapSuppressionTimer?.cancel();
+    _tapSuppressionTimer = null;
+    _selectionHandleDragActive = false;
+    _activeSelectionEndpoint = null;
+    _activeSelectionPointer = null;
+    _selectionDragAnchor = null;
+    _collapsedDragPosition = null;
+    _hideEditingToolbars();
+    _selectionHandlesOverlay?.remove();
+    _selectionHandlesOverlay = null;
+    if (widget.controller.hasSelection) widget.controller.clearSelection();
+    unawaited(_magnifierController.hide());
+  }
+
   bool _selectionContainsGlobalPoint(Offset globalPosition) {
     final selection = widget.controller.selection;
     final target = _closestHitTarget(globalPosition);
@@ -2241,6 +2286,15 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         ? null
         : _resolveTarget(target, globalPosition);
     if (target == null || resolved == null) return;
+    final targetBox =
+        target.key.currentContext?.findRenderObject() as RenderBox?;
+    if (targetBox == null || !targetBox.hasSize) return;
+    final targetRect = targetBox.localToGlobal(Offset.zero) & targetBox.size;
+    if (!targetRect.contains(globalPosition)) {
+      _hideEditingToolbars();
+      widget.controller.moveCaretToPosition(resolved.position);
+      return;
+    }
     if (target.kind == _ExpressionHitTargetKind.text) {
       final index = _characterIndexAt(target, globalPosition);
       if (index != null && index < target.text.length) {
@@ -2651,6 +2705,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
             overlayContext,
             key: const Key('calculatorSelectionBaseHandle'),
             endpoint: baseRect.bottomCenter,
+            otherEndpoint: extentRect.bottomCenter,
             type: baseBeforeExtent
                 ? TextSelectionHandleType.left
                 : TextSelectionHandleType.right,
@@ -2661,6 +2716,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
             overlayContext,
             key: const Key('calculatorSelectionExtentHandle'),
             endpoint: extentRect.bottomCenter,
+            otherEndpoint: baseRect.bottomCenter,
             type: baseBeforeExtent
                 ? TextSelectionHandleType.right
                 : TextSelectionHandleType.left,
@@ -2674,22 +2730,31 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     BuildContext overlayContext, {
     required Key key,
     required Offset endpoint,
+    required Offset otherEndpoint,
     required TextSelectionHandleType type,
     required _SelectionEndpoint endpointRole,
   }) {
     const touchSize = 48.0;
     const lineHeight = _EditableExpressionLine._expressionFontSize;
     final screen = MediaQuery.sizeOf(overlayContext);
-    // Keep the two 48pt hit targets on the outside of their endpoints. When
-    // both were centered, short selections made them overlap and the later
-    // extent handle consumed every pointer intended for the base handle.
-    const endpointInset = 8.0;
-    final desiredLeft = type == TextSelectionHandleType.left
-        ? endpoint.dx - touchSize + endpointInset
-        : endpoint.dx - endpointInset;
+    // The hit target must share the same endpoint coordinate as the painted
+    // platform handle. Offsetting it to the visual "outside" disconnects the
+    // iOS handle anchor from its pointer region, most noticeably on the
+    // physical left side and again after the handles cross.
+    var desiredLeft = endpoint.dx - touchSize / 2;
+    var desiredRight = endpoint.dx + touchSize / 2;
+    if ((endpoint.dy - otherEndpoint.dy).abs() < touchSize) {
+      final midpoint = (endpoint.dx + otherEndpoint.dx) / 2;
+      if (endpoint.dx < otherEndpoint.dx) {
+        desiredRight = math.min(desiredRight, midpoint);
+      } else if (endpoint.dx > otherEndpoint.dx) {
+        desiredLeft = math.max(desiredLeft, midpoint);
+      }
+    }
     final left = desiredLeft
-        .clamp(0.0, math.max(0.0, screen.width - touchSize))
+        .clamp(0.0, math.max(0.0, screen.width - 1))
         .toDouble();
+    final right = desiredRight.clamp(left + 1, screen.width).toDouble();
     final top = (endpoint.dy - touchSize / 2)
         .clamp(0.0, math.max(0.0, screen.height - touchSize))
         .toDouble();
@@ -2701,7 +2766,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     return Positioned(
       left: left,
       top: top,
-      width: touchSize,
+      width: right - left,
       height: touchSize,
       child: Listener(
         key: key,
@@ -3093,20 +3158,20 @@ class _EditableExpressionText extends StatelessWidget {
     )..layout();
 
     final selected = selectedRawRange;
-    final textWidget = selected == null
-        ? Text(segment.text, style: style, maxLines: 1)
-        : Text.rich(
-            TextSpan(
-              children: _selectionSpans(
+    final textWidget = CustomPaint(
+      painter: selected == null
+          ? null
+          : _ExpressionSelectionHighlightPainter(
+              text: segment.text,
+              rawOffsets: segment.rawOffsets,
+              style: style,
+              selected: selected,
+              color: Theme.of(
                 context,
-                segment.text,
-                segment.rawOffsets,
-                style,
-                selected,
-              ),
+              ).colorScheme.primary.withValues(alpha: 0.28),
             ),
-            maxLines: 1,
-          );
+      child: Text(segment.text, style: style, maxLines: 1),
+    );
     return GestureDetector(
       key: gestureKey,
       behavior: HitTestBehavior.opaque,
@@ -3126,46 +3191,53 @@ class _EditableExpressionText extends StatelessWidget {
       ),
     );
   }
+}
 
-  List<InlineSpan> _selectionSpans(
-    BuildContext context,
-    String text,
-    List<int> rawOffsets,
-    TextStyle style,
-    (int, int) selected,
-  ) {
-    final spans = <InlineSpan>[];
-    final highlight = Theme.of(
-      context,
-    ).colorScheme.primary.withValues(alpha: 0.28);
-    var buffer = StringBuffer();
-    bool? highlighted;
-    void flush() {
-      if (buffer.isEmpty) return;
-      spans.add(
-        TextSpan(
-          text: buffer.toString(),
-          style: highlighted == true
-              ? style.copyWith(backgroundColor: highlight)
-              : style,
-        ),
-      );
-      buffer = StringBuffer();
-    }
+class _ExpressionSelectionHighlightPainter extends CustomPainter {
+  const _ExpressionSelectionHighlightPainter({
+    required this.text,
+    required this.rawOffsets,
+    required this.style,
+    required this.selected,
+    required this.color,
+  });
 
+  final String text;
+  final List<int> rawOffsets;
+  final TextStyle style;
+  final (int, int) selected;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final paint = Paint()..color = color;
     for (var index = 0; index < text.length; index++) {
       final rawStart = rawOffsets[index];
       final rawEnd = rawOffsets[index + 1];
       final isSelected = rawEnd > rawStart
           ? rawStart >= selected.$1 && rawEnd <= selected.$2
           : rawStart > selected.$1 && rawStart < selected.$2;
-      if (highlighted != null && highlighted != isSelected) flush();
-      highlighted = isSelected;
-      buffer.write(text[index]);
+      if (!isSelected) continue;
+      for (final box in painter.getBoxesForSelection(
+        TextSelection(baseOffset: index, extentOffset: index + 1),
+      )) {
+        canvas.drawRect(box.toRect(), paint);
+      }
     }
-    flush();
-    return spans;
   }
+
+  @override
+  bool shouldRepaint(_ExpressionSelectionHighlightPainter oldDelegate) =>
+      text != oldDelegate.text ||
+      rawOffsets != oldDelegate.rawOffsets ||
+      style != oldDelegate.style ||
+      selected != oldDelegate.selected ||
+      color != oldDelegate.color;
 }
 
 class _InlineFraction extends StatelessWidget {
@@ -3388,20 +3460,15 @@ class _FractionFieldDisplay extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 5),
             child: Align(
               alignment: Alignment.center,
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: value.substring(0, range.start)),
-                    TextSpan(
-                      text: value.substring(range.start, range.end),
-                      style: textStyle.copyWith(backgroundColor: highlight),
-                    ),
-                    TextSpan(text: value.substring(range.end)),
-                  ],
-                  style: textStyle,
-                ),
+              child: CustomPaint(
                 key: Key('${caretSlotKey.toString()}-selection'),
-                maxLines: 1,
+                painter: _FractionSelectionHighlightPainter(
+                  text: value,
+                  style: textStyle,
+                  range: range,
+                  color: highlight,
+                ),
+                child: Text(value, style: textStyle, maxLines: 1),
               ),
             ),
           ),
@@ -3464,6 +3531,42 @@ class _FractionFieldDisplay extends StatelessWidget {
     )..layout();
     return painter.width;
   }
+}
+
+class _FractionSelectionHighlightPainter extends CustomPainter {
+  const _FractionSelectionHighlightPainter({
+    required this.text,
+    required this.style,
+    required this.range,
+    required this.color,
+  });
+
+  final String text;
+  final TextStyle style;
+  final TextRange range;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final paint = Paint()..color = color;
+    for (final box in painter.getBoxesForSelection(
+      TextSelection(baseOffset: range.start, extentOffset: range.end),
+    )) {
+      canvas.drawRect(box.toRect(), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FractionSelectionHighlightPainter oldDelegate) =>
+      text != oldDelegate.text ||
+      style != oldDelegate.style ||
+      range != oldDelegate.range ||
+      color != oldDelegate.color;
 }
 
 class _Keypad extends StatelessWidget {

@@ -182,6 +182,74 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('選択外の空白タップは古い選択を解除して最新位置を優先する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('123+456');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    final expression = _expressionTextContaining('456');
+    await _doubleTapAt(tester, _characterCenter(tester, expression, '456'));
+    expect(controller.selectedClipboardText, '456');
+
+    final field = tester.getRect(
+      find.byKey(const Key('expressionVerticalScroll')),
+    );
+    await tester.tapAt(Offset(field.left + 4, field.top + 4));
+    await tester.pumpAndSettle();
+
+    expect(controller.selection, isNull);
+    expect(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+  });
+
+  testWidgets('設定と関数一覧を開く前にselection Overlayを完全に解除する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('123+456');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    var expression = _expressionTextContaining('456');
+    await _doubleTapAt(tester, _characterCenter(tester, expression, '456'));
+    await tester.tap(find.byKey(const Key('calculatorKey⚙')));
+    await tester.pumpAndSettle();
+    expect(controller.selection, isNull);
+    expect(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expression = _expressionTextContaining('456');
+    await _doubleTapAt(tester, _characterCenter(tester, expression, '456'));
+    await tester.longPress(find.text('•••'));
+    await tester.pumpAndSettle();
+    expect(controller.selection, isNull);
+    expect(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+  });
+
+  testWidgets('通常時とselection時は同じTextStyleとglyph描画を使用する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('123+456');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    var text = tester.widget<Text>(_expressionTextContaining('123'));
+    final normalStyle = text.style;
+    await _doubleTapAt(
+      tester,
+      _characterCenter(tester, _expressionTextContaining('123'), '456'),
+    );
+    text = tester.widget<Text>(_expressionTextContaining('123'));
+
+    expect(text.style, normalStyle);
+    expect(text.data, '123 + 456');
+    expect(find.byType(CustomPaint), findsWidgets);
+  });
+
   testWidgets('選択メニューのコピーは選択を維持しカットは選択範囲だけ削除する', (tester) async {
     _mockClipboard();
     final controller = CalculatorController()..pasteAtCaret('123456789+429÷25');
@@ -346,6 +414,33 @@ void main() {
     expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
     expect(tester.binding.hasScheduledFrame, isFalse);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('短い選択でhit領域が近接しても左右physical handleを個別に掴める', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('123+456');
+    controller.selectRange(
+      const RawExpressionPosition(1),
+      const RawExpressionPosition(2),
+    );
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    final text = _expressionTextContaining('123');
+    final start = _characterBoundary(tester, text, '1', trailing: false);
+    final end = _characterBoundary(tester, text, '3', trailing: true);
+    await _dragHandle(
+      tester,
+      handleKey: const Key('calculatorSelectionBaseHandle'),
+      destination: start,
+    );
+    expect(controller.selection!.base, const RawExpressionPosition(0));
+
+    await _dragHandle(
+      tester,
+      handleKey: const Key('calculatorSelectionExtentHandle'),
+      destination: end,
+    );
+    expect(controller.selection!.extent, const RawExpressionPosition(3));
+    expect(controller.selectedClipboardText, '123');
   });
 
   testWidgets('選択ハンドル交差後も向きを保持してドラッグと通常操作を継続できる', (tester) async {
