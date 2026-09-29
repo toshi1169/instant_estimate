@@ -2737,12 +2737,27 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     const touchSize = 48.0;
     const lineHeight = _EditableExpressionLine._expressionFontSize;
     final screen = MediaQuery.sizeOf(overlayContext);
-    // The hit target must share the same endpoint coordinate as the painted
-    // platform handle. Offsetting it to the visual "outside" disconnects the
-    // iOS handle anchor from its pointer region, most noticeably on the
-    // physical left side and again after the handles cross.
-    var desiredLeft = endpoint.dx - touchSize / 2;
-    var desiredRight = endpoint.dx + touchSize / 2;
+    final controls = Theme.of(overlayContext).platform == TargetPlatform.iOS
+        ? cupertinoTextSelectionControls
+        : materialTextSelectionControls;
+    final anchor = controls.getHandleAnchor(type, lineHeight);
+    final handleSize = controls.getHandleSize(lineHeight);
+    final visualRect = Rect.fromLTWH(
+      endpoint.dx - anchor.dx,
+      endpoint.dy - anchor.dy,
+      handleSize.width,
+      handleSize.height,
+    );
+    // Match Flutter's selection-handle geometry: the interactive rectangle
+    // encloses the actual platform handle and is expanded to the Material
+    // minimum touch target. Cupertino's left handle circle sits at the top of
+    // this tall visual rectangle, while the right handle is rotated; a square
+    // centered only on [endpoint] therefore misses the visible left circle.
+    final interactiveRect = visualRect.expandToInclude(
+      Rect.fromCircle(center: visualRect.center, radius: touchSize / 2),
+    );
+    var desiredLeft = interactiveRect.left;
+    var desiredRight = interactiveRect.right;
     if ((endpoint.dy - otherEndpoint.dy).abs() < touchSize) {
       final midpoint = (endpoint.dx + otherEndpoint.dx) / 2;
       if (endpoint.dx < otherEndpoint.dx) {
@@ -2755,19 +2770,16 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         .clamp(0.0, math.max(0.0, screen.width - 1))
         .toDouble();
     final right = desiredRight.clamp(left + 1, screen.width).toDouble();
-    final top = (endpoint.dy - touchSize / 2)
-        .clamp(0.0, math.max(0.0, screen.height - touchSize))
+    final top = interactiveRect.top.clamp(0.0, screen.height - 1).toDouble();
+    final bottom = interactiveRect.bottom
+        .clamp(top + 1, screen.height)
         .toDouble();
-    final controls = Theme.of(overlayContext).platform == TargetPlatform.iOS
-        ? cupertinoTextSelectionControls
-        : materialTextSelectionControls;
-    final anchor = controls.getHandleAnchor(type, lineHeight);
     final handle = controls.buildHandle(overlayContext, type, lineHeight);
     return Positioned(
       left: left,
       top: top,
       width: right - left,
-      height: touchSize,
+      height: bottom - top,
       child: Listener(
         key: key,
         behavior: HitTestBehavior.opaque,

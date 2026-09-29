@@ -89,6 +89,19 @@ Future<void> _dragHandle(
   await tester.pumpAndSettle();
 }
 
+Offset _iosHandleKnobCenter(
+  WidgetTester tester,
+  Key handleKey, {
+  required bool circleAtTop,
+}) {
+  final paint = find.descendant(
+    of: find.byKey(handleKey),
+    matching: find.byType(CustomPaint),
+  );
+  final rect = tester.getRect(paint.last);
+  return Offset(rect.center.dx, circleAtTop ? rect.top + 6 : rect.bottom - 6);
+}
+
 Future<void> _doubleTapAt(WidgetTester tester, Offset position) async {
   await tester.tapAt(position);
   await tester.pump(const Duration(milliseconds: 50));
@@ -441,6 +454,42 @@ void main() {
     );
     expect(controller.selection!.extent, const RawExpressionPosition(3));
     expect(controller.selectedClipboardText, '123');
+  });
+
+  testWidgets('iOSで実際に描画された左右の青いノブからpointer down move upが届く', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('123+456');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    final text = _expressionTextContaining('123');
+    await _doubleTapAt(tester, _characterCenter(tester, text, '456'));
+    final start = _characterBoundary(tester, text, '1', trailing: false);
+    var gesture = await tester.startGesture(
+      _iosHandleKnobCenter(
+        tester,
+        const Key('calculatorSelectionBaseHandle'),
+        circleAtTop: true,
+      ),
+    );
+    await gesture.moveTo(start);
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.selection!.base, const RawExpressionPosition(0));
+
+    final end = _characterBoundary(tester, text, '6', trailing: true);
+    gesture = await tester.startGesture(
+      _iosHandleKnobCenter(
+        tester,
+        const Key('calculatorSelectionExtentHandle'),
+        circleAtTop: false,
+      ),
+    );
+    await gesture.moveTo(end);
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.selection!.extent, const RawExpressionPosition(7));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('選択ハンドル交差後も向きを保持してドラッグと通常操作を継続できる', (tester) async {
