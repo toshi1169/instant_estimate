@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/cupertino.dart'
-    show CupertinoTextMagnifier, cupertinoTextSelectionControls;
+    show CupertinoMagnifier, CupertinoTheme, cupertinoTextSelectionControls;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -2734,13 +2734,20 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         ),
         buttonItems: [
           ContextMenuButtonItem(
+            label: strings.text('選択'),
+            onPressed: _selectNumberFromCaretToolbar,
+          ),
+          ContextMenuButtonItem(
+            type: ContextMenuButtonType.selectAll,
+            label: MaterialLocalizations.of(
+              overlayContext,
+            ).selectAllButtonLabel,
+            onPressed: _selectAllFromCaretToolbar,
+          ),
+          ContextMenuButtonItem(
             type: ContextMenuButtonType.paste,
             label: strings.text('ペースト'),
             onPressed: () => unawaited(_pasteAtCaretFromToolbar()),
-          ),
-          ContextMenuButtonItem(
-            label: strings.text('選択'),
-            onPressed: _selectNumberFromCaretToolbar,
           ),
         ],
       ),
@@ -2757,6 +2764,14 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     _caretToolbarRequested = false;
     _removeCaretToolbar();
     if (!widget.controller.selectNumberNearCaret()) return;
+    _selectionToolbarRequested = true;
+    _scheduleSelectionOverlaySync();
+  }
+
+  void _selectAllFromCaretToolbar() {
+    _caretToolbarRequested = false;
+    _removeCaretToolbar();
+    if (!widget.controller.selectAllExpression()) return;
     _selectionToolbarRequested = true;
     _scheduleSelectionOverlaySync();
   }
@@ -3076,6 +3091,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     if (collapsedPosition != null) {
       _selectionToolbarRequested = false;
       widget.controller.moveCaretToPosition(collapsedPosition);
+      _caretToolbarRequested = true;
       _scheduleSelectionOverlaySync();
       return;
     }
@@ -3301,14 +3317,16 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         builder: (overlayContext) {
           final platform = Theme.of(overlayContext).platform;
           final magnifier = switch (platform) {
-            TargetPlatform.iOS => CupertinoTextMagnifier(
+            TargetPlatform.iOS => _CalculatorCupertinoTextMagnifier(
               controller: _magnifierController,
               magnifierInfo: _magnifierInfo,
             ),
-            TargetPlatform.android => TextMagnifier(
+            TargetPlatform.android => _CalculatorMaterialTextMagnifier(
               magnifierInfo: _magnifierInfo,
             ),
-            _ => TextMagnifier(magnifierInfo: _magnifierInfo),
+            _ => _CalculatorMaterialTextMagnifier(
+              magnifierInfo: _magnifierInfo,
+            ),
           };
           return KeyedSubtree(
             key: const Key('calculatorMagnifier'),
@@ -3519,6 +3537,273 @@ class _EditableExpressionText extends StatelessWidget {
         // to hit without changing their visual spacing.
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: textWidget,
+      ),
+    );
+  }
+}
+
+const double _calculatorMagnificationScale = 1.3;
+
+class _CalculatorCupertinoTextMagnifier extends StatefulWidget {
+  const _CalculatorCupertinoTextMagnifier({
+    required this.controller,
+    required this.magnifierInfo,
+  });
+
+  final MagnifierController controller;
+  final ValueNotifier<MagnifierInfo> magnifierInfo;
+
+  @override
+  State<_CalculatorCupertinoTextMagnifier> createState() =>
+      _CalculatorCupertinoTextMagnifierState();
+}
+
+class _CalculatorCupertinoTextMagnifierState
+    extends State<_CalculatorCupertinoTextMagnifier>
+    with SingleTickerProviderStateMixin {
+  static const _animationDuration = Duration(milliseconds: 150);
+  static const _dragAnimationDuration = Duration(milliseconds: 45);
+  static const _dragResistance = 10.0;
+  static const _hideBelowThreshold = 48.0;
+  static const _horizontalScreenEdgePadding = 10.0;
+
+  Offset _position = Offset.zero;
+  double _verticalFocalPointAdjustment = 0;
+  late final AnimationController _animationController;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      value: 0,
+      vsync: this,
+      duration: _animationDuration,
+    )..addListener(_rebuild);
+    widget.controller.animationController = _animationController;
+    widget.magnifierInfo.addListener(_updateGeometry);
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateGeometry();
+  }
+
+  @override
+  void didUpdateWidget(_CalculatorCupertinoTextMagnifier oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.magnifierInfo != widget.magnifierInfo) {
+      oldWidget.magnifierInfo.removeListener(_updateGeometry);
+      widget.magnifierInfo.addListener(_updateGeometry);
+    }
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.animationController = null;
+      widget.controller.animationController = _animationController;
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.animationController = null;
+    widget.magnifierInfo.removeListener(_updateGeometry);
+    _animationController
+      ..removeListener(_rebuild)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _rebuild() {
+    if (mounted) setState(() {});
+  }
+
+  void _updateGeometry() {
+    if (!mounted) return;
+    final info = widget.magnifierInfo.value;
+    final lineCenterY = info.caretRect.center.dy;
+    if (lineCenterY - info.globalGesturePosition.dy < -_hideBelowThreshold) {
+      if (widget.controller.shown) {
+        unawaited(widget.controller.hide(removeFromOverlay: false));
+      }
+      return;
+    }
+    if (!widget.controller.shown) _animationController.forward();
+    final lensY = math.max(
+      lineCenterY,
+      lineCenterY -
+          (lineCenterY - info.globalGesturePosition.dy) / _dragResistance,
+    );
+    final rawPosition = Offset(
+      info.globalGesturePosition.dx - CupertinoMagnifier.kDefaultSize.width / 2,
+      lensY -
+          (CupertinoMagnifier.kDefaultSize.height -
+              CupertinoMagnifier.kMagnifierAboveFocalPoint),
+    );
+    final screenRect = Offset.zero & MediaQuery.sizeOf(context);
+    final adjusted = MagnifierController.shiftWithinBounds(
+      bounds: Rect.fromLTRB(
+        screenRect.left + _horizontalScreenEdgePadding,
+        screenRect.top -
+            (CupertinoMagnifier.kDefaultSize.height +
+                CupertinoMagnifier.kMagnifierAboveFocalPoint),
+        screenRect.right - _horizontalScreenEdgePadding,
+        screenRect.bottom +
+            (CupertinoMagnifier.kDefaultSize.height +
+                CupertinoMagnifier.kMagnifierAboveFocalPoint),
+      ),
+      rect: rawPosition & CupertinoMagnifier.kDefaultSize,
+    ).topLeft;
+    setState(() {
+      _position = adjusted;
+      _verticalFocalPointAdjustment = lineCenterY - lensY;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedPositioned(
+      duration: _dragAnimationDuration,
+      curve: Curves.easeOut,
+      left: _position.dx,
+      top: _position.dy,
+      child: CupertinoMagnifier(
+        inOutAnimation: _animation,
+        additionalFocalPointOffset: Offset(0, _verticalFocalPointAdjustment),
+        borderSide: BorderSide(
+          color: CupertinoTheme.of(context).primaryColor,
+          width: 2,
+        ),
+        magnificationScale: _calculatorMagnificationScale,
+      ),
+    );
+  }
+}
+
+class _CalculatorMaterialTextMagnifier extends StatefulWidget {
+  const _CalculatorMaterialTextMagnifier({required this.magnifierInfo});
+
+  final ValueNotifier<MagnifierInfo> magnifierInfo;
+
+  @override
+  State<_CalculatorMaterialTextMagnifier> createState() =>
+      _CalculatorMaterialTextMagnifierState();
+}
+
+class _CalculatorMaterialTextMagnifierState
+    extends State<_CalculatorMaterialTextMagnifier> {
+  static const _size = Size(77.37, 37.9);
+  static const _verticalFocalPointShift = 22.0;
+  static const _lineJumpDuration = Duration(milliseconds: 70);
+
+  Offset? _position;
+  Offset _extraFocalPointOffset = Offset.zero;
+  Timer? _lineJumpTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.magnifierInfo.addListener(_updateGeometry);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateGeometry();
+  }
+
+  @override
+  void didUpdateWidget(_CalculatorMaterialTextMagnifier oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.magnifierInfo != widget.magnifierInfo) {
+      oldWidget.magnifierInfo.removeListener(_updateGeometry);
+      widget.magnifierInfo.addListener(_updateGeometry);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.magnifierInfo.removeListener(_updateGeometry);
+    _lineJumpTimer?.cancel();
+    super.dispose();
+  }
+
+  void _updateGeometry() {
+    if (!mounted) return;
+    final info = widget.magnifierInfo.value;
+    final screenRect = Offset.zero & MediaQuery.sizeOf(context);
+    final magnifierX = info.globalGesturePosition.dx.clamp(
+      info.currentLineBoundaries.left,
+      info.currentLineBoundaries.right,
+    );
+    final basicOffset = Offset(
+      _size.width / 2,
+      _size.height + _verticalFocalPointShift,
+    );
+    final unadjusted =
+        Offset(magnifierX, info.caretRect.center.dy) - basicOffset & _size;
+    final adjusted = MagnifierController.shiftWithinBounds(
+      bounds: screenRect,
+      rect: unadjusted,
+    );
+    final horizontalInset = (_size.width / 2) / _calculatorMagnificationScale;
+    final focalX = info.fieldBounds.width < horizontalInset * 2
+        ? info.fieldBounds.center.dx
+        : adjusted.center.dx.clamp(
+            info.fieldBounds.left + horizontalInset,
+            info.fieldBounds.right - horizontalInset,
+          );
+    final extraFocalPointOffset = Offset(
+      focalX - adjusted.center.dx,
+      unadjusted.top - adjusted.top,
+    );
+    final shouldAnimate =
+        _position != null && adjusted.topLeft.dy != _position!.dy;
+    if (shouldAnimate) {
+      _lineJumpTimer?.cancel();
+      _lineJumpTimer = Timer(_lineJumpDuration, () {
+        if (!mounted) return;
+        setState(() => _lineJumpTimer = null);
+      });
+    }
+    setState(() {
+      _position = adjusted.topLeft;
+      _extraFocalPointOffset = extraFocalPointOffset;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final position = _position;
+    if (position == null) return const SizedBox.shrink();
+    return AnimatedPositioned(
+      top: position.dy,
+      left: position.dx,
+      duration: _lineJumpTimer == null ? Duration.zero : _lineJumpDuration,
+      child: RawMagnifier(
+        size: _size,
+        magnificationScale: _calculatorMagnificationScale,
+        focalPointOffset:
+            _extraFocalPointOffset +
+            Offset(0, _verticalFocalPointShift + _size.height / 2),
+        decoration: const MagnifierDecoration(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(40)),
+          ),
+          shadows: [
+            BoxShadow(
+              blurRadius: 1.5,
+              offset: Offset(0, 2),
+              spreadRadius: 0.75,
+              color: Color.fromARGB(25, 0, 0, 0),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: const ColoredBox(color: Color.fromARGB(8, 158, 158, 158)),
       ),
     );
   }

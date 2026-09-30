@@ -548,6 +548,15 @@ class CalculatorController extends ChangeNotifier {
     return true;
   }
 
+  bool selectAllExpression() {
+    if (_expression.isEmpty) return false;
+    selectRange(
+      const RawExpressionPosition(0),
+      RawExpressionPosition(_expression.length),
+    );
+    return true;
+  }
+
   bool _isSelectionNumberCharacter(String value) =>
       value.length == 1 &&
       ((value.codeUnitAt(0) >= 48 && value.codeUnitAt(0) <= 57) ||

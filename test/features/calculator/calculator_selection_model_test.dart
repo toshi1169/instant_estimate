@@ -56,6 +56,25 @@ void main() {
       expect(none.expressionPosition, const RawExpressionPosition(1));
     });
 
+    test('単一キャレットのすべてを選択は構造化分数を含む式全体を対象にする', () {
+      final controller = CalculatorController()..pasteAtCaret('12+');
+      _enterFraction(controller, '34', '56');
+      controller.pasteAtCaret('×7');
+      controller.moveCaretToRawOffset(1);
+
+      expect(controller.selectAllExpression(), isTrue);
+      expect(controller.selection?.base, const RawExpressionPosition(0));
+      expect(
+        controller.selection?.extent,
+        RawExpressionPosition(controller.expression.length),
+      );
+      expect(controller.selectedClipboardText, '12+34/56×7');
+
+      final empty = CalculatorController();
+      expect(empty.selectAllExpression(), isFalse);
+      expect(empty.selection, isNull);
+    });
+
     test('分数fieldの単一キャレット選択は同じfield内だけを対象にする', () {
       final controller = CalculatorController();
       _enterFraction(controller, '23', '45');
@@ -131,6 +150,28 @@ void main() {
         ),
       );
       expect(controller.selectedClipboardText, '56');
+    });
+
+    test('分数fieldは同じoffsetでもfieldが異なればcollapseしない', () {
+      final controller = CalculatorController();
+      _enterFraction(controller, '123', '456');
+      final marker = _singleFraction(controller).marker;
+
+      controller.selectRange(
+        FractionExpressionPosition(
+          marker: marker,
+          field: FractionField.numerator,
+          offset: 1,
+        ),
+        FractionExpressionPosition(
+          marker: marker,
+          field: FractionField.denominator,
+          offset: 1,
+        ),
+      );
+
+      expect(controller.selection, isNotNull);
+      expect(controller.selectedClipboardText, '23÷4');
     });
 
     test('同一分数の分子途中から分母途中を連続範囲として選択できる', () {

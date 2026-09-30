@@ -286,6 +286,10 @@ Finder _caretToolbarAction(String label) => find.descendant(
   matching: find.text(label),
 );
 
+String _selectAllLabel(WidgetTester tester) => MaterialLocalizations.of(
+  tester.element(find.byKey(const Key('calculatorCaretToolbar'))),
+).selectAllButtonLabel;
+
 void _mockClipboard({String initialText = ''}) {
   var clipboardText = initialText;
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -720,8 +724,8 @@ void main() {
     expect(controller.selection, isNull);
     expect(find.byKey(const Key('calculatorCaret')), findsOneWidget);
     expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
-    expect(_caretToolbarAction('ペースト'), findsOneWidget);
     expect(_caretToolbarAction('選択'), findsOneWidget);
+    expect(_caretToolbarAction(_selectAllLabel(tester)), findsOneWidget);
     expect(
       find.byKey(const Key('calculatorSelectionBaseHandle')),
       findsNothing,
@@ -878,6 +882,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.selection, isNull);
     expect(controller.expressionPosition, const RawExpressionPosition(7));
+    expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+    expect(_caretToolbarAction('選択'), findsOneWidget);
+    expect(_caretToolbarAction(_selectAllLabel(tester)), findsOneWidget);
+    expect(_caretToolbarAction('コピー'), findsNothing);
+    expect(_caretToolbarAction('カット'), findsNothing);
 
     await _doubleTapAt(tester, _characterCenter(tester, text, '456'));
     final rightKnob = _iosHandleKnobCenter(
@@ -1153,13 +1162,18 @@ void main() {
       find.byKey(const Key('calculatorSelectionExtentHandle')),
       findsNothing,
     );
+    expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+    expect(_caretToolbarAction('選択'), findsOneWidget);
+    expect(_caretToolbarAction(_selectAllLabel(tester)), findsOneWidget);
+    expect(_caretToolbarAction('コピー'), findsNothing);
+    expect(_caretToolbarAction('カット'), findsNothing);
     await _doubleTapAt(
       tester,
       tester.getCenter(find.byKey(const Key('calculatorCaret'))),
     );
     expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
-    expect(_caretToolbarAction('ペースト'), findsOneWidget);
     expect(_caretToolbarAction('選択'), findsOneWidget);
+    expect(_caretToolbarAction(_selectAllLabel(tester)), findsOneWidget);
   });
 
   testWidgets('左ハンドルを別行へドラッグして複数行を跨ぐ範囲を選択できる', (tester) async {

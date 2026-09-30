@@ -68,7 +68,13 @@ void main() {
     );
 
     expect(find.byKey(const Key('calculatorMagnifier')), findsOneWidget);
-    expect(find.byType(CupertinoTextMagnifier), findsOneWidget);
+    expect(find.byType(CupertinoMagnifier), findsOneWidget);
+    expect(
+      tester
+          .widget<CupertinoMagnifier>(find.byType(CupertinoMagnifier))
+          .magnificationScale,
+      1.3,
+    );
     expect(controller.expressionPosition, const RawExpressionPosition(0));
 
     final expressionRect = tester.getRect(
@@ -298,7 +304,11 @@ void main() {
     final gesture = await _startLongPress(tester, rect.center);
 
     expect(find.byKey(const Key('calculatorMagnifier')), findsOneWidget);
-    expect(find.byType(TextMagnifier), findsOneWidget);
+    expect(find.byType(RawMagnifier), findsOneWidget);
+    expect(
+      tester.widget<RawMagnifier>(find.byType(RawMagnifier)).magnificationScale,
+      1.3,
+    );
 
     await gesture.up();
     await tester.pumpAndSettle();
@@ -326,7 +336,7 @@ void main() {
       Offset(expressionRect.right - 1, expressionRect.top + 4),
     );
 
-    expect(find.byType(CupertinoTextMagnifier), findsOneWidget);
+    expect(find.byType(CupertinoMagnifier), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await gesture.up();
