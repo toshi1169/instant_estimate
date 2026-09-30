@@ -159,7 +159,11 @@ void main() {
               )
               .first,
         );
-        expect((numeratorText.textSpan as TextSpan?)?.style?.fontSize, 54.6);
+        expect(
+          numeratorText.style?.fontSize ??
+              (numeratorText.textSpan as TextSpan?)?.style?.fontSize,
+          54.6,
+        );
         expect(tester.takeException(), isNull, reason: '$length digits');
       }
     });
@@ -187,13 +191,12 @@ void main() {
       expect(textFinder, findsOneWidget);
       final textWidget = tester.widget<Text>(textFinder);
       final renderParagraph = tester.renderObject<RenderParagraph>(textFinder);
-      expect(textWidget.textSpan?.toPlainText(), value);
+      expect(textWidget.data ?? textWidget.textSpan?.toPlainText(), value);
       expect(renderParagraph.text.toPlainText(), value);
+      final style =
+          textWidget.style ?? (textWidget.textSpan as TextSpan?)?.style;
       final painter = TextPainter(
-        text: TextSpan(
-          text: value,
-          style: (textWidget.textSpan as TextSpan?)?.style,
-        ),
+        text: TextSpan(text: value, style: style),
         textDirection: TextDirection.ltr,
         maxLines: 1,
       )..layout();

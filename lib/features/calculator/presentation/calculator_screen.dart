@@ -3659,22 +3659,7 @@ class _FractionFieldDisplay extends StatelessWidget {
     final caretX = caretPainter
         .getOffsetForCaret(TextPosition(offset: displayOffset), Rect.zero)
         .dx;
-    final textSpan = range == null
-        ? TextSpan(
-            text: displayValue,
-            style: value.isEmpty ? placeholderStyle : textStyle,
-          )
-        : TextSpan(
-            style: textStyle,
-            children: [
-              TextSpan(text: value.substring(0, range.start)),
-              TextSpan(
-                text: value.substring(range.start, range.end),
-                style: TextStyle(backgroundColor: highlight),
-              ),
-              TextSpan(text: value.substring(range.end)),
-            ],
-          );
+    final displayStyle = value.isEmpty ? placeholderStyle : textStyle;
 
     return GestureDetector(
       key: gestureKey,
@@ -3689,7 +3674,23 @@ class _FractionFieldDisplay extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Text.rich(textSpan, key: geometryKey, maxLines: 1),
+                CustomPaint(
+                  painter: range == null
+                      ? null
+                      : _FractionSelectionHighlightPainter(
+                          text: value,
+                          style: textStyle,
+                          textScaler: textScaler,
+                          selection: range,
+                          color: highlight,
+                        ),
+                  child: Text(
+                    displayValue,
+                    key: geometryKey,
+                    style: displayStyle,
+                    maxLines: 1,
+                  ),
+                ),
                 if (range == null)
                   Positioned(
                     left: caretX,
@@ -3714,6 +3715,46 @@ class _FractionFieldDisplay extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FractionSelectionHighlightPainter extends CustomPainter {
+  const _FractionSelectionHighlightPainter({
+    required this.text,
+    required this.style,
+    required this.textScaler,
+    required this.selection,
+    required this.color,
+  });
+
+  final String text;
+  final TextStyle style;
+  final TextScaler textScaler;
+  final TextRange selection;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final paint = Paint()..color = color;
+    for (final box in painter.getBoxesForSelection(
+      TextSelection(baseOffset: selection.start, extentOffset: selection.end),
+    )) {
+      canvas.drawRect(box.toRect(), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FractionSelectionHighlightPainter oldDelegate) =>
+      text != oldDelegate.text ||
+      style != oldDelegate.style ||
+      textScaler != oldDelegate.textScaler ||
+      selection != oldDelegate.selection ||
+      color != oldDelegate.color;
 }
 
 class _Keypad extends StatelessWidget {

@@ -381,7 +381,7 @@ void main() {
       ),
     );
     final fractionRoot = fractionText.text as TextSpan;
-    final fractionStyle = (fractionRoot.children?.single as TextSpan).style!;
+    final fractionStyle = fractionRoot.style!;
 
     expect(fractionStyle.fontFamily, expressionStyle.fontFamily);
     expect(
@@ -393,6 +393,18 @@ void main() {
     expect(fractionStyle.letterSpacing, expressionStyle.letterSpacing);
     expect(expressionStyle.fontWeight, FontWeight.w400);
     expect(expressionStyle.fontSize, 54.6);
+    expect(fractionRoot.text, '34');
+    expect(fractionRoot.children, isNull);
+
+    final expressionPainter = TextPainter(
+      text: TextSpan(text: '1234567890', style: expressionStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final fractionPainter = TextPainter(
+      text: TextSpan(text: '1234567890', style: fractionStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    expect(fractionPainter.width, closeTo(expressionPainter.width, 0.001));
   });
 
   testWidgets('分子途中から分母途中を同じselectionで部分表示する', (tester) async {
@@ -416,30 +428,23 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    TextSpan fieldSpan(Key key) =>
-        tester
-                .widget<RichText>(
-                  find.descendant(
-                    of: find.byKey(key),
-                    matching: find.byType(RichText),
-                  ),
-                )
-                .text
-            as TextSpan;
-    List<TextSpan> leaves(TextSpan span) => [
-      if (span.text != null) span,
-      for (final child in span.children ?? const <InlineSpan>[])
-        if (child is TextSpan) ...leaves(child),
-    ];
-    final numerator = fieldSpan(const Key('fractionNumeratorField'));
-    final denominator = fieldSpan(const Key('fractionDenominatorField'));
-    final numeratorChildren = leaves(numerator);
-    final denominatorChildren = leaves(denominator);
-
-    expect(numeratorChildren.map((span) => span.text), ['1234', '56789', '']);
-    expect(numeratorChildren[1].style?.backgroundColor, isNotNull);
-    expect(denominatorChildren.map((span) => span.text), ['', '12', '3456789']);
-    expect(denominatorChildren[1].style?.backgroundColor, isNotNull);
+    Finder paintedSelection(Key key) => find.descendant(
+      of: find.byKey(key),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is CustomPaint &&
+            widget.painter?.runtimeType.toString() ==
+                '_FractionSelectionHighlightPainter',
+      ),
+    );
+    expect(
+      paintedSelection(const Key('fractionNumeratorField')),
+      findsOneWidget,
+    );
+    expect(
+      paintedSelection(const Key('fractionDenominatorField')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('selectedFractionNode')), findsNothing);
     _expectHandles();
 
