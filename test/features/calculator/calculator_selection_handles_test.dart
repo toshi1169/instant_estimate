@@ -366,6 +366,33 @@ void main() {
     expect(find.byType(CustomPaint), findsWidgets);
   });
 
+  testWidgets('通常式と構造化分数は同じ書体・太さ・基準サイズを共有する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('12+');
+    _enterFraction(controller, '34', '56');
+    await _pumpCalculator(tester, controller, size: const Size(800, 844));
+
+    final expressionStyle = tester
+        .widget<Text>(_expressionTextContaining('12'))
+        .style!;
+    final fractionText = tester.widget<RichText>(
+      find.descendant(
+        of: find.byKey(const Key('fractionNumeratorField')),
+        matching: find.byType(RichText),
+      ),
+    );
+    final fractionRoot = fractionText.text as TextSpan;
+    final fractionStyle = (fractionRoot.children?.single as TextSpan).style!;
+
+    expect(fractionStyle.fontFamily, expressionStyle.fontFamily);
+    expect(
+      fractionStyle.fontFamilyFallback,
+      expressionStyle.fontFamilyFallback,
+    );
+    expect(fractionStyle.fontWeight, expressionStyle.fontWeight);
+    expect(fractionStyle.fontSize, expressionStyle.fontSize);
+    expect(fractionStyle.letterSpacing, expressionStyle.letterSpacing);
+  });
+
   testWidgets('選択メニューのコピーは選択を維持しカットは選択範囲だけ削除する', (tester) async {
     _mockClipboard();
     final controller = CalculatorController()..pasteAtCaret('123456789+429÷25');
@@ -761,6 +788,11 @@ void main() {
       );
       final text = _expressionTextForSegment(segment);
       final expected = _renderedRawBoundary(tester, text, segment, rawOffset);
+      if (controller.hasSelection) {
+        await tester.tapAt(expected);
+        await tester.pumpAndSettle();
+        expect(controller.selection, isNull);
+      }
       await tester.tapAt(expected);
       await tester.pump();
       expect(
@@ -850,6 +882,9 @@ void main() {
     expect(controller.selection!.base, const RawExpressionPosition(8));
     expect(controller.selection!.extent, const RawExpressionPosition(7));
 
+    await tester.tapAt(_characterCenter(tester, text, '345'));
+    await tester.pumpAndSettle();
+    expect(controller.selection, isNull);
     await _doubleTapAt(tester, _characterCenter(tester, text, '345'));
     gesture = await tester.startGesture(
       tester.getCenter(
@@ -961,8 +996,8 @@ void main() {
     final selectedLine = _expressionTextContaining('1234567890').last;
     await tester.tapAt(_characterCenter(tester, selectedLine, '5'));
     await tester.pumpAndSettle();
-    expect(controller.selection, selectionBefore);
-    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
+    expect(controller.selection, isNull);
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
     expect(tester.binding.hasScheduledFrame, isFalse);
   });
 
@@ -1025,6 +1060,11 @@ void main() {
       (Key('fractionNumeratorField'), '34', FractionField.numerator),
       (Key('fractionDenominatorField'), '56', FractionField.denominator),
     ]) {
+      if (controller.hasSelection) {
+        await tester.tap(find.byKey(entry.$1));
+        await tester.pumpAndSettle();
+        expect(controller.selection, isNull);
+      }
       await _doubleTapAt(tester, tester.getCenter(find.byKey(entry.$1)));
       expect(controller.selectedClipboardText, entry.$2);
       expect(
@@ -1461,6 +1501,86 @@ void main() {
     );
     expect(controller.selectedClipboardText, '566');
     _expectHandles();
+  });
+
+  testWidgets('選択中は式の文字上を1回タップすると編集せず選択UIだけを解除する', (tester) async {
+    final controller = CalculatorController()
+      ..pasteAtCaret('12345678901234567890');
+    await _pumpCalculator(tester, controller, size: const Size(320, 844));
+    final expressionBefore = controller.expression;
+    controller.selectRange(
+      const RawExpressionPosition(2),
+      const RawExpressionPosition(18),
+    );
+    final caretBefore = controller.caretPosition;
+    await tester.pump();
+    await tester.pump();
+    _expectHandles();
+
+    await tester.tap(_expressionTextContaining('12345678901234567890'));
+    await tester.pumpAndSettle();
+
+    expect(controller.expression, expressionBefore);
+    expect(controller.caretPosition, caretBefore);
+    expect(controller.selection, isNull);
+    expect(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+  });
+
+  testWidgets('部分選択中は計算結果上のタップで入力を変えず選択UIを解除する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('12+34');
+    await _pumpCalculator(tester, controller);
+    final expressionBefore = controller.expression;
+    final resultBefore = controller.result;
+    controller.selectRange(
+      const RawExpressionPosition(0),
+      const RawExpressionPosition(2),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('resultText')));
+    await tester.pumpAndSettle();
+
+    expect(controller.expression, expressionBefore);
+    expect(controller.result, resultBefore);
+    expect(controller.selection, isNull);
+    expect(
+      find.byKey(const Key('calculatorSelectionExtentHandle')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+  });
+
+  testWidgets('複数分数の全体選択中は履歴欄タップで選択UIだけを解除する', (tester) async {
+    final controller = CalculatorController();
+    _enterFraction(controller, '12', '34567890');
+    controller.pasteAtCaret('+');
+    _enterFraction(controller, '9876543210', '3');
+    await _pumpCalculator(tester, controller);
+    final expressionBefore = controller.expression;
+    controller.selectRange(
+      const RawExpressionPosition(0),
+      RawExpressionPosition(controller.expression.length),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const Key('selectedFractionNode')), findsNWidgets(2));
+
+    await tester.tap(find.byKey(const Key('historyPanel')));
+    await tester.pumpAndSettle();
+
+    expect(controller.expression, expressionBefore);
+    expect(controller.selection, isNull);
+    expect(find.byKey(const Key('selectedFractionNode')), findsNothing);
+    expect(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
   });
 
   testWidgets('baseとextentが逆向きでも両端ハンドルを表示する', (tester) async {

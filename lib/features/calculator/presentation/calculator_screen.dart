@@ -983,6 +983,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                           child: _HistoryPanel(
                             key: const Key('historyPanel'),
                             history: _controller.history,
+                            onPointerDown: _dismissExpressionSelection,
                             onMenuPressed: _showHistoryMenu,
                             onLongPress: _openFullHistory,
                           ),
@@ -993,6 +994,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                           child: _ExpressionPanel(
                             controller: _controller,
                             expressionLineKey: _expressionLineKey,
+                            onPointerDown: _dismissExpressionSelection,
                             onSelectionMenuAction: _handleSelectionMenuAction,
                           ),
                         ),
@@ -1029,6 +1031,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         ),
       ),
     );
+  }
+
+  void _dismissExpressionSelection() {
+    if (!_controller.hasSelection) return;
+    _expressionLineKey.currentState?.dismissSelectionForExternalTap();
   }
 }
 
@@ -1179,68 +1186,74 @@ class _AdBanner extends StatelessWidget {
 class _HistoryPanel extends StatelessWidget {
   const _HistoryPanel({
     required this.history,
+    required this.onPointerDown,
     required this.onMenuPressed,
     required this.onLongPress,
     super.key,
   });
 
   final List<CalculationHistoryEntry> history;
+  final VoidCallback onPointerDown;
   final ValueChanged<CalculationHistoryEntry> onMenuPressed;
   final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return GestureDetector(
+    return Listener(
       behavior: HitTestBehavior.opaque,
-      onLongPress: onLongPress,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.brightness == Brightness.dark
-              ? AppColors.darkHistory
-              : AppColors.lightHistory,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: ListView.builder(
-          reverse: true,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 9,
-            vertical: _historyVerticalPadding,
+      onPointerDown: (_) => onPointerDown(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onLongPress: onLongPress,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.brightness == Brightness.dark
+                ? AppColors.darkHistory
+                : AppColors.lightHistory,
+            borderRadius: BorderRadius.circular(8),
           ),
-          itemCount: history.length,
-          itemBuilder: (context, reversedIndex) {
-            final index = history.length - 1 - reversedIndex;
-            final item = history[index];
-            return SizedBox(
-              height: _historyRowHeight,
-              child: Row(
-                children: [
-                  GestureDetector(
-                    key: Key('historyMenuButton$index'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onMenuPressed(item),
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: Icon(
-                        Icons.more_vert,
-                        size: 17,
-                        color: theme.colorScheme.onSurfaceVariant,
+          child: ListView.builder(
+            reverse: true,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 9,
+              vertical: _historyVerticalPadding,
+            ),
+            itemCount: history.length,
+            itemBuilder: (context, reversedIndex) {
+              final index = history.length - 1 - reversedIndex;
+              final item = history[index];
+              return SizedBox(
+                height: _historyRowHeight,
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      key: Key('historyMenuButton$index'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => onMenuPressed(item),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Icon(
+                          Icons.more_vert,
+                          size: 17,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: CalculatorHistoryLine(
-                      key: Key('historyText$index'),
-                      expression: item.expression,
-                      result: item.result,
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: CalculatorHistoryLine(
+                        key: Key('historyText$index'),
+                        expression: item.expression,
+                        result: item.result,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          },
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -1283,11 +1296,13 @@ class _ExpressionPanel extends StatelessWidget {
   const _ExpressionPanel({
     required this.controller,
     required this.expressionLineKey,
+    required this.onPointerDown,
     required this.onSelectionMenuAction,
   });
 
   final CalculatorController controller;
   final GlobalKey<_EditableExpressionLineState> expressionLineKey;
+  final VoidCallback onPointerDown;
   final Future<void> Function(_SelectionMenuAction action)
   onSelectionMenuAction;
 
@@ -1317,10 +1332,14 @@ class _ExpressionPanel extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: _ResultLine(controller: controller),
+              child: Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (_) => onPointerDown(),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: _ResultLine(controller: controller),
+                ),
               ),
             ),
           ],
@@ -1729,6 +1748,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   ExpressionPosition? _collapsedDragPosition;
   Duration? _lastPointerDownTime;
   Offset? _lastPointerDownPosition;
+  int? _selectionDismissPointer;
+  Offset? _selectionDismissStart;
+  bool _selectionDismissMoved = false;
   bool _suppressNextExpressionTap = false;
   Timer? _tapSuppressionTimer;
 
@@ -1796,7 +1818,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           behavior: HitTestBehavior.opaque,
           onPointerDown: _handleExpressionPointerDown,
           onPointerMove: _handleExpressionPointerMove,
-          onPointerCancel: (_) {
+          onPointerUp: _handleExpressionPointerUp,
+          onPointerCancel: (event) {
+            _cancelSelectionDismiss(event.pointer);
             _clearPendingDoubleTap();
           },
           child: GestureDetector(
@@ -1903,6 +1927,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       ),
       ExpressionFractionSegment() => _buildFractionSegment(
         segment,
+        style,
         lineKey,
         lineIndex,
         segmentIndex,
@@ -1978,6 +2003,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
 
   Widget _buildFractionSegment(
     ExpressionFractionSegment segment,
+    TextStyle expressionStyle,
     GlobalKey lineKey,
     int lineIndex,
     int segmentIndex,
@@ -2021,7 +2047,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
                     FractionField.numerator,
                   ) ==
                   null,
-          style: _fractionTextStyle(context),
+          style: _fractionTextStyle(context, expressionStyle),
         ),
       )
       ..add(
@@ -2043,7 +2069,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
                     FractionField.denominator,
                   ) ==
                   null,
-          style: _fractionTextStyle(context),
+          style: _fractionTextStyle(context, expressionStyle),
         ),
       )
       ..add(
@@ -2074,13 +2100,14 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
                     FractionField.wholeNumber,
                   ) ==
                   null,
-          style: _fractionTextStyle(context),
+          style: _fractionTextStyle(context, expressionStyle),
         ),
       );
     }
     return _InlineFraction(
       segment: segment,
       fontSize: _EditableExpressionLine._expressionFontSize,
+      textStyle: _fractionTextStyle(context, expressionStyle),
       fullySelected: _isFractionFullySelected(segment.marker),
       wholeNumberSelection: _fractionFieldSelection(
         segment.marker,
@@ -2138,15 +2165,13 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
   }
 
-  TextStyle _fractionTextStyle(BuildContext context) =>
-      DefaultTextStyle.of(context).style.merge(
-        TextStyle(
-          color: Theme.of(context).colorScheme.onSurface,
-          fontSize: _EditableExpressionLine._expressionFontSize,
-          fontWeight: FontWeight.w400,
-          height: 1,
-        ),
-      );
+  TextStyle _fractionTextStyle(
+    BuildContext context,
+    TextStyle expressionStyle,
+  ) => expressionStyle.copyWith(
+    color: Theme.of(context).colorScheme.onSurface,
+    height: 1,
+  );
 
   (int, int)? get _selectedRawRange {
     final selection = widget.controller.selection;
@@ -2194,10 +2219,11 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   );
 
   void _handleExpressionPointerDown(PointerDownEvent event) {
-    if (widget.controller.hasSelection &&
-        _selectionContainsGlobalPoint(event.position)) {
-      _showSelectionToolbar();
-      _suppressNextExpressionTap = true;
+    if (widget.controller.hasSelection) {
+      _selectionDismissPointer = event.pointer;
+      _selectionDismissStart = event.position;
+      _selectionDismissMoved = false;
+      return;
     }
     final previousTime = _lastPointerDownTime;
     final previousPosition = _lastPointerDownPosition;
@@ -2220,11 +2246,35 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   }
 
   void _handleExpressionPointerMove(PointerMoveEvent event) {
+    if (_selectionDismissPointer == event.pointer) {
+      final start = _selectionDismissStart;
+      if (start != null && (event.position - start).distance > 8) {
+        _selectionDismissMoved = true;
+      }
+      return;
+    }
     final previousPosition = _lastPointerDownPosition;
     if (previousPosition != null &&
         (event.position - previousPosition).distance > 24) {
       _clearPendingDoubleTap();
     }
+  }
+
+  void _handleExpressionPointerUp(PointerUpEvent event) {
+    if (_selectionDismissPointer != event.pointer) return;
+    final shouldDismiss =
+        !_selectionDismissMoved &&
+        _activeSelectionPointer != event.pointer &&
+        widget.controller.hasSelection;
+    _cancelSelectionDismiss(event.pointer);
+    if (shouldDismiss) dismissSelectionForExternalTap();
+  }
+
+  void _cancelSelectionDismiss(int pointer) {
+    if (_selectionDismissPointer != pointer) return;
+    _selectionDismissPointer = null;
+    _selectionDismissStart = null;
+    _selectionDismissMoved = false;
   }
 
   void _handleExpressionBackgroundTap(TapUpDetails details) {
@@ -2269,6 +2319,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     _activeSelectionPointerToEndpointDelta = null;
     _selectionDragAnchor = null;
     _collapsedDragPosition = null;
+    _selectionDismissPointer = null;
+    _selectionDismissStart = null;
+    _selectionDismissMoved = false;
     _hideEditingToolbars();
     _selectionHandlesOverlay?.remove();
     _selectionHandlesOverlay = null;
@@ -2276,49 +2329,18 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     unawaited(_magnifierController.hide());
   }
 
-  bool _selectionContainsGlobalPoint(Offset globalPosition) {
-    final selection = widget.controller.selection;
-    final target = _closestHitTarget(globalPosition);
-    if (selection == null || target == null) return false;
-    if (target.kind == _ExpressionHitTargetKind.text) {
-      final index = _characterIndexAt(target, globalPosition);
-      if (index == null || index >= target.rawOffsets.length) return false;
-      final rawOffset = target.rawOffsets[index];
-      if (selection.base is RawExpressionPosition &&
-          selection.extent is RawExpressionPosition) {
-        final base = (selection.base as RawExpressionPosition).offset;
-        final extent = (selection.extent as RawExpressionPosition).offset;
-        return rawOffset >= math.min(base, extent) &&
-            rawOffset < math.max(base, extent);
-      }
-      return false;
-    }
-    if (target.kind == _ExpressionHitTargetKind.fractionField) {
-      final index = _characterIndexAt(target, globalPosition);
-      if (index == null) return false;
-      final base = selection.base;
-      final extent = selection.extent;
-      if (base is! FractionExpressionPosition ||
-          extent is! FractionExpressionPosition ||
-          base.marker != target.marker ||
-          extent.marker != target.marker ||
-          base.field != target.field ||
-          extent.field != target.field) {
-        return false;
-      }
-      return index >= math.min(base.offset, extent.offset) &&
-          index < math.max(base.offset, extent.offset);
-    }
-    if (target.marker != null &&
-        selection.base is RawExpressionPosition &&
-        selection.extent is RawExpressionPosition) {
-      final markerOffset = widget.controller.expression.indexOf(target.marker!);
-      final base = (selection.base as RawExpressionPosition).offset;
-      final extent = (selection.extent as RawExpressionPosition).offset;
-      return markerOffset >= math.min(base, extent) &&
-          markerOffset < math.max(base, extent);
-    }
-    return false;
+  void dismissSelectionForExternalTap() {
+    if (!widget.controller.hasSelection) return;
+    _clearPendingDoubleTap();
+    _suppressNextExpressionTap = true;
+    _tapSuppressionTimer?.cancel();
+    _tapSuppressionTimer = Timer(const Duration(milliseconds: 400), () {
+      _suppressNextExpressionTap = false;
+    });
+    _hideEditingToolbars();
+    _selectionHandlesOverlay?.remove();
+    _selectionHandlesOverlay = null;
+    widget.controller.clearSelection();
   }
 
   void _showSelectionToolbar() {
@@ -3060,6 +3082,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   bool _handleExpressionScroll(ScrollNotification notification) {
     if (!widget.controller.hasSelection) return false;
     if (notification is ScrollStartNotification) {
+      _selectionDismissMoved = true;
       _selectionToolbarRequested = false;
       _removeSelectionToolbar();
     }
@@ -3369,6 +3392,7 @@ class _InlineFraction extends StatelessWidget {
   const _InlineFraction({
     required this.segment,
     required this.fontSize,
+    required this.textStyle,
     required this.fullySelected,
     required this.wholeNumberSelection,
     required this.numeratorSelection,
@@ -3388,6 +3412,7 @@ class _InlineFraction extends StatelessWidget {
 
   final ExpressionFractionSegment segment;
   final double fontSize;
+  final TextStyle textStyle;
   final bool fullySelected;
   final TextRange? wholeNumberSelection;
   final TextRange? numeratorSelection;
@@ -3442,6 +3467,7 @@ class _InlineFraction extends StatelessWidget {
                     ? segment.activeCaretOffset
                     : null,
                 fontSize: fontSize,
+                textStyle: textStyle,
                 selection: wholeNumberSelection,
                 onTap: (offset) {
                   onFieldTap(FractionField.wholeNumber, offset);
@@ -3466,6 +3492,7 @@ class _InlineFraction extends StatelessWidget {
                         ? segment.activeCaretOffset
                         : null,
                     fontSize: fontSize,
+                    textStyle: textStyle,
                     selection: numeratorSelection,
                     onTap: (offset) {
                       onFieldTap(FractionField.numerator, offset);
@@ -3488,6 +3515,7 @@ class _InlineFraction extends StatelessWidget {
                         ? segment.activeCaretOffset
                         : null,
                     fontSize: fontSize,
+                    textStyle: textStyle,
                     selection: denominatorSelection,
                     onTap: (offset) {
                       onFieldTap(FractionField.denominator, offset);
@@ -3522,6 +3550,7 @@ class _FractionFieldDisplay extends StatelessWidget {
     required this.gestureKey,
     required this.geometryKey,
     required this.fontSize,
+    required this.textStyle,
     required this.selection,
     required this.onTap,
     super.key,
@@ -3534,6 +3563,7 @@ class _FractionFieldDisplay extends StatelessWidget {
   final GlobalKey gestureKey;
   final GlobalKey geometryKey;
   final double fontSize;
+  final TextStyle textStyle;
   final TextRange? selection;
   final ValueChanged<int> onTap;
 
@@ -3543,15 +3573,6 @@ class _FractionFieldDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textScaler = MediaQuery.textScalerOf(context);
-    final textColor = Theme.of(context).colorScheme.onSurface;
-    final textStyle = DefaultTextStyle.of(context).style.merge(
-      TextStyle(
-        color: textColor,
-        fontSize: fontSize,
-        fontWeight: FontWeight.w400,
-        height: 1,
-      ),
-    );
     final placeholderStyle = textStyle.copyWith(
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
