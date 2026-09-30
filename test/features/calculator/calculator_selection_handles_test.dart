@@ -122,15 +122,13 @@ Offset _renderedFractionBoundary(
   String value,
   int offset,
 ) {
-  final text = find.descendant(
+  final richText = find.descendant(
     of: find.byKey(fieldKey),
-    matching: find.byWidgetPredicate(
-      (widget) => widget is Text && widget.data == value,
-    ),
+    matching: find.byType(RichText),
   );
-  expect(text, findsOneWidget);
-  final richText = find.descendant(of: text, matching: find.byType(RichText));
+  expect(richText, findsOneWidget);
   final paragraph = tester.renderObject<RenderParagraph>(richText);
+  expect(paragraph.text.toPlainText(), value);
   return paragraph.localToGlobal(
     paragraph.getOffsetForCaret(TextPosition(offset: offset), Rect.zero),
   );
@@ -1419,6 +1417,50 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('calculatorSelectionToolbar')), findsOneWidget);
     expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('分数全体選択中に式表示欄の白い余白をタップすると選択UIだけを解除する', (tester) async {
+    final controller = CalculatorController();
+    _enterFraction(controller, '12−566', '12345678');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    final expressionBefore = controller.expression;
+    controller.selectRange(
+      const RawExpressionPosition(0),
+      const RawExpressionPosition(1),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const Key('selectedFractionNode')), findsOneWidget);
+    _expectHandles();
+
+    final expressionRect = tester.getRect(
+      find.byKey(const Key('expressionText')),
+    );
+    await tester.tapAt(
+      Offset(expressionRect.left + 12, expressionRect.bottom - 12),
+    );
+    await tester.pumpAndSettle();
+
+    expect(controller.expression, expressionBefore);
+    expect(controller.selection, isNull);
+    expect(find.byKey(const Key('selectedFractionNode')), findsNothing);
+    expect(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
+
+    await _doubleTapAt(
+      tester,
+      _renderedFractionCharacterCenter(
+        tester,
+        const Key('fractionNumeratorField'),
+        '12−566',
+        4,
+      ),
+    );
+    expect(controller.selectedClipboardText, '566');
+    _expectHandles();
   });
 
   testWidgets('baseとextentが逆向きでも両端ハンドルを表示する', (tester) async {

@@ -159,7 +159,7 @@ void main() {
               )
               .first,
         );
-        expect(numeratorText.style?.fontSize, 54.6);
+        expect((numeratorText.textSpan as TextSpan?)?.style?.fontSize, 54.6);
         expect(tester.takeException(), isNull, reason: '$length digits');
       }
     });
@@ -187,10 +187,13 @@ void main() {
       expect(textFinder, findsOneWidget);
       final textWidget = tester.widget<Text>(textFinder);
       final renderParagraph = tester.renderObject<RenderParagraph>(textFinder);
-      expect(textWidget.data, value);
+      expect(textWidget.textSpan?.toPlainText(), value);
       expect(renderParagraph.text.toPlainText(), value);
       final painter = TextPainter(
-        text: TextSpan(text: value, style: textWidget.style),
+        text: TextSpan(
+          text: value,
+          style: (textWidget.textSpan as TextSpan?)?.style,
+        ),
         textDirection: TextDirection.ltr,
         maxLines: 1,
       )..layout();
@@ -203,7 +206,8 @@ void main() {
         find.byKey(const Key('expressionLineScale-0')),
       );
       final scale = fittedBox.child!.getTransformTo(fittedBox).storage[0];
-      expect((caretRect.left - textRect.right) / scale, closeTo(2, 0.01));
+      // The paragraph and the overlaid caret are independently pixel-snapped.
+      expect((caretRect.left - textRect.right) / scale, closeTo(0, 0.5));
       _expectCaretInside(tester, fieldKey);
     }
 
@@ -519,12 +523,12 @@ void _expectCaretInside(WidgetTester tester, Key fieldKey) {
 }
 
 String _displayedFieldText(WidgetTester tester, Key fieldKey) {
-  return tester
-      .widgetList<Text>(
-        find.descendant(of: find.byKey(fieldKey), matching: find.byType(Text)),
-      )
-      .map((text) => text.data ?? '')
-      .join();
+  final richText = find.descendant(
+    of: find.byKey(fieldKey),
+    matching: find.byType(RichText),
+  );
+  expect(richText, findsOneWidget);
+  return tester.renderObject<RenderParagraph>(richText).text.toPlainText();
 }
 
 Future<void> _pumpFractionCalculator(

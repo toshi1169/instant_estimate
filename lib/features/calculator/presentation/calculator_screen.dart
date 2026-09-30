@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart'
     show CupertinoTextMagnifier, cupertinoTextSelectionControls;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -2137,11 +2138,15 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
   }
 
-  TextStyle _fractionTextStyle(BuildContext context) => TextStyle(
-    color: Theme.of(context).colorScheme.onSurface,
-    fontSize: _EditableExpressionLine._expressionFontSize,
-    height: 1,
-  );
+  TextStyle _fractionTextStyle(BuildContext context) =>
+      DefaultTextStyle.of(context).style.merge(
+        TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: _EditableExpressionLine._expressionFontSize,
+          fontWeight: FontWeight.w400,
+          height: 1,
+        ),
+      );
 
   (int, int)? get _selectedRawRange {
     final selection = widget.controller.selection;
@@ -2224,6 +2229,12 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
 
   void _handleExpressionBackgroundTap(TapUpDetails details) {
     if (_consumeSuppressedTap()) return;
+    if (widget.controller.hasSelection &&
+        !_hitTargetContains(details.globalPosition)) {
+      _hideEditingToolbars();
+      widget.controller.clearSelection();
+      return;
+    }
     final resolved = _resolvePosition(details.globalPosition);
     _hideEditingToolbars();
     if (resolved != null) {
@@ -2231,6 +2242,20 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     } else if (widget.controller.hasSelection) {
       widget.controller.clearSelection();
     }
+  }
+
+  bool _hitTargetContains(Offset globalPosition) {
+    for (final target in _hitTargets) {
+      if (target.kind == _ExpressionHitTargetKind.fractionBefore ||
+          target.kind == _ExpressionHitTargetKind.fractionAfter) {
+        continue;
+      }
+      final box = _coordinateBoxForTarget(target);
+      if (box == null || !box.hasSize) continue;
+      final rect = box.localToGlobal(Offset.zero) & box.size;
+      if (rect.contains(globalPosition)) return true;
+    }
+    return false;
   }
 
   void clearTransientEditing() {
@@ -2413,13 +2438,17 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       return null;
     }
     final local = box.globalToLocal(globalPosition);
+    if (target.kind == _ExpressionHitTargetKind.fractionField &&
+        box is RenderParagraph) {
+      return box.getPositionForOffset(local).offset.clamp(0, text.length - 1);
+    }
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout();
-    final textX = _textXForTarget(target, local.dx);
+    final textX = local.dx;
     for (var index = 0; index < text.length; index++) {
       final boxes = painter.getBoxesForSelection(
         TextSelection(baseOffset: index, extentOffset: index + 1),
@@ -2873,9 +2902,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   }
 
   void _dragSelectionHandle(Offset globalPosition) {
-    final resolved = _resolvePosition(globalPosition);
     final anchor = _selectionDragAnchor;
     final endpoint = _activeSelectionEndpoint;
+    final resolved = _resolveSelectionDragPosition(globalPosition, anchor);
     if (resolved == null || anchor == null || endpoint == null) return;
     if (resolved.position == anchor) {
       // Defer the collapsed selection until pointer-up. Keeping the current
@@ -2889,6 +2918,31 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     } else {
       widget.controller.selectRange(anchor, resolved.position);
     }
+  }
+
+  _ResolvedExpressionPosition? _resolveSelectionDragPosition(
+    Offset globalPosition,
+    ExpressionPosition? anchor,
+  ) {
+    if (anchor is FractionExpressionPosition) {
+      for (final target in _hitTargets) {
+        if (target.kind != _ExpressionHitTargetKind.fractionField ||
+            target.marker != anchor.marker ||
+            target.field != anchor.field) {
+          continue;
+        }
+        final gestureBox =
+            target.key.currentContext?.findRenderObject() as RenderBox?;
+        if (gestureBox == null || !gestureBox.hasSize) break;
+        final gestureRect =
+            gestureBox.localToGlobal(Offset.zero) & gestureBox.size;
+        if (gestureRect.contains(globalPosition)) {
+          return _resolveTarget(target, globalPosition);
+        }
+        break;
+      }
+    }
+    return _resolvePosition(globalPosition);
   }
 
   void _finishSelectionHandleDrag(int pointer) {
@@ -2964,6 +3018,16 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     final text = target.kind == _ExpressionHitTargetKind.text
         ? target.text
         : target.fieldValue;
+    if (target.kind == _ExpressionHitTargetKind.fractionField &&
+        box is RenderParagraph) {
+      final safeOffset = offset.clamp(0, text.length);
+      final x = box
+          .getOffsetForCaret(TextPosition(offset: safeOffset), Rect.zero)
+          .dx;
+      final top = box.localToGlobal(Offset(x, 0));
+      final bottom = box.localToGlobal(Offset(x, box.size.height));
+      return Rect.fromLTRB(top.dx - 1, top.dy, bottom.dx + 1, bottom.dy);
+    }
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
@@ -2971,15 +3035,11 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       maxLines: 1,
     )..layout();
     final safeOffset = offset.clamp(0, text.length);
-    var x =
+    final x =
         horizontalInset +
         painter
             .getOffsetForCaret(TextPosition(offset: safeOffset), Rect.zero)
             .dx;
-    if (target.fractionCaretInserted &&
-        safeOffset > (target.activeCaretOffset ?? text.length)) {
-      x += _FractionFieldDisplay.caretInsertionWidth;
-    }
     final top = box.localToGlobal(Offset(x, 0));
     final bottom = box.localToGlobal(Offset(x, box.size.height));
     return Rect.fromLTRB(top.dx - 1, top.dy, bottom.dx + 1, bottom.dy);
@@ -3135,20 +3195,11 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
             .dx;
       case _ExpressionHitTargetKind.fractionField:
         final value = target.fieldValue;
-        final painter = TextPainter(
-          text: TextSpan(text: value, style: target.style),
-          textDirection: TextDirection.ltr,
-          textScaler: MediaQuery.textScalerOf(context),
-          maxLines: 1,
-        )..layout();
-        final textX = _textXForTarget(target, local.dx);
-        final activeOffset = target.activeCaretOffset;
-        final fieldOffset = value.isEmpty
+        final paragraph = box is RenderParagraph ? box : null;
+        final fieldOffset = value.isEmpty || paragraph == null
             ? 0
-            : painter
-                  .getPositionForOffset(
-                    Offset(textX.clamp(0.0, painter.width), 0),
-                  )
+            : paragraph
+                  .getPositionForOffset(local)
                   .offset
                   .clamp(0, value.length);
         position = FractionExpressionPosition(
@@ -3156,15 +3207,14 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           field: target.field!,
           offset: fieldOffset,
         );
-        var fractionCaretX = painter
-            .getOffsetForCaret(TextPosition(offset: fieldOffset), Rect.zero)
-            .dx;
-        if (target.fractionCaretInserted &&
-            activeOffset != null &&
-            fieldOffset > activeOffset) {
-          fractionCaretX += _FractionFieldDisplay.caretInsertionWidth;
-        }
-        caretX = fractionCaretX;
+        caretX = paragraph == null
+            ? 0
+            : paragraph
+                  .getOffsetForCaret(
+                    TextPosition(offset: fieldOffset),
+                    Rect.zero,
+                  )
+                  .dx;
       case _ExpressionHitTargetKind.fractionBefore:
         position = RawExpressionPosition(
           widget.controller.expression.indexOf(target.marker!),
@@ -3194,39 +3244,11 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
   }
 
-  double _textWidthForStyle(String text, TextStyle style) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-      maxLines: 1,
-    )..layout();
-    return painter.width;
-  }
-
   RenderBox? _coordinateBoxForTarget(_ExpressionHitTarget target) {
     final coordinateKey = target.kind == _ExpressionHitTargetKind.fractionField
         ? target.geometryKey ?? target.key
         : target.key;
     return coordinateKey.currentContext?.findRenderObject() as RenderBox?;
-  }
-
-  double _textXForTarget(_ExpressionHitTarget target, double localX) {
-    if (target.kind != _ExpressionHitTargetKind.fractionField ||
-        !target.fractionCaretInserted) {
-      return localX;
-    }
-    final activeOffset = target.activeCaretOffset;
-    final style = target.style;
-    if (activeOffset == null || style == null) return localX;
-    final safeOffset = activeOffset.clamp(0, target.fieldValue.length);
-    final prefixWidth = _textWidthForStyle(
-      target.fieldValue.substring(0, safeOffset),
-      style,
-    );
-    return localX > prefixWidth
-        ? localX - _FractionFieldDisplay.caretInsertionWidth
-        : localX;
   }
 }
 
@@ -3515,19 +3537,20 @@ class _FractionFieldDisplay extends StatelessWidget {
   final TextRange? selection;
   final ValueChanged<int> onTap;
 
-  static const double _caretGap = 2;
   static const double _caretWidth = 1.5;
   static const double _caretHeight = 32;
-  static const double caretInsertionWidth = _caretGap + _caretWidth;
 
   @override
   Widget build(BuildContext context) {
     final textScaler = MediaQuery.textScalerOf(context);
     final textColor = Theme.of(context).colorScheme.onSurface;
-    final textStyle = TextStyle(
-      color: textColor,
-      fontSize: fontSize,
-      height: 1,
+    final textStyle = DefaultTextStyle.of(context).style.merge(
+      TextStyle(
+        color: textColor,
+        fontSize: fontSize,
+        fontWeight: FontWeight.w400,
+        height: 1,
+      ),
     );
     final placeholderStyle = textStyle.copyWith(
       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -3535,75 +3558,57 @@ class _FractionFieldDisplay extends StatelessWidget {
     final offset = (caretOffset ?? value.length).clamp(0, value.length);
     final displayValue = value.isEmpty ? '□' : value;
     final displayOffset = value.isEmpty ? 0 : offset;
-    final prefix = displayValue.substring(0, displayOffset);
-    final suffix = displayValue.substring(displayOffset);
     void handleTap(TapUpDetails details) {
       if (value.isEmpty) {
         onTap(0);
         return;
       }
-      final painter = TextPainter(
-        text: TextSpan(text: value, style: textStyle),
-        textDirection: TextDirection.ltr,
-        textScaler: textScaler,
-        maxLines: 1,
-      )..layout();
       final gestureBox =
           gestureKey.currentContext?.findRenderObject() as RenderBox?;
       final geometryBox =
           geometryKey.currentContext?.findRenderObject() as RenderBox?;
-      if (gestureBox == null || geometryBox == null) return;
+      if (gestureBox == null || geometryBox is! RenderParagraph) return;
       final globalPosition = gestureBox.localToGlobal(details.localPosition);
-      var localX = geometryBox.globalToLocal(globalPosition).dx;
-      if (active &&
-          selection == null &&
-          localX >
-              _textWidth(value.substring(0, offset), textStyle, textScaler)) {
-        localX -= caretInsertionWidth;
-      }
-      final position = painter.getPositionForOffset(
-        Offset(localX.clamp(0.0, painter.width), 0),
+      final position = geometryBox.getPositionForOffset(
+        geometryBox.globalToLocal(globalPosition),
       );
       onTap(position.offset.clamp(0, value.length));
     }
 
-    if (selection != null && value.isNotEmpty) {
-      final range = TextRange(
-        start: selection!.start.clamp(0, value.length),
-        end: selection!.end.clamp(0, value.length),
-      );
-      final highlight = Theme.of(
-        context,
-      ).colorScheme.primary.withValues(alpha: 0.28);
-      return GestureDetector(
-        key: gestureKey,
-        behavior: HitTestBehavior.opaque,
-        onTapUp: handleTap,
-        child: SizedBox(
-          height: fontSize * 1.05,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 5),
-            child: Align(
-              alignment: Alignment.center,
-              child: SizedBox(
-                key: geometryKey,
-                child: CustomPaint(
-                  key: Key('${caretSlotKey.toString()}-selection'),
-                  painter: _FractionSelectionHighlightPainter(
-                    text: value,
-                    style: textStyle,
-                    textScaler: textScaler,
-                    range: range,
-                    color: highlight,
-                  ),
-                  child: Text(value, style: textStyle, maxLines: 1),
-                ),
+    final range = selection == null || value.isEmpty
+        ? null
+        : TextRange(
+            start: selection!.start.clamp(0, value.length),
+            end: selection!.end.clamp(0, value.length),
+          );
+    final highlight = Theme.of(
+      context,
+    ).colorScheme.primary.withValues(alpha: 0.28);
+    final caretPainter = TextPainter(
+      text: TextSpan(text: displayValue, style: textStyle),
+      textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final caretX = caretPainter
+        .getOffsetForCaret(TextPosition(offset: displayOffset), Rect.zero)
+        .dx;
+    final textSpan = range == null
+        ? TextSpan(
+            text: displayValue,
+            style: value.isEmpty ? placeholderStyle : textStyle,
+          )
+        : TextSpan(
+            style: textStyle,
+            children: [
+              TextSpan(text: value.substring(0, range.start)),
+              TextSpan(
+                text: value.substring(range.start, range.end),
+                style: TextStyle(backgroundColor: highlight),
               ),
-            ),
-          ),
-        ),
-      );
-    }
+              TextSpan(text: value.substring(range.end)),
+            ],
+          );
 
     return GestureDetector(
       key: gestureKey,
@@ -3615,36 +3620,27 @@ class _FractionFieldDisplay extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 5),
           child: Align(
             alignment: Alignment.center,
-            child: Row(
-              key: geometryKey,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Text(
-                  prefix,
-                  key: Key('${caretSlotKey.toString()}-prefix'),
-                  style: value.isEmpty ? placeholderStyle : textStyle,
-                  maxLines: 1,
-                ),
-                const SizedBox(width: _caretGap),
-                Opacity(
-                  opacity: active ? 1 : 0,
-                  child: SizedBox(
-                    key: caretSlotKey,
-                    width: _caretWidth,
-                    height: _caretHeight,
-                    child: ColoredBox(
-                      key: active ? const Key('fractionFieldCaret') : null,
-                      color: AppColors.accent,
+                Text.rich(textSpan, key: geometryKey, maxLines: 1),
+                if (range == null)
+                  Positioned(
+                    left: caretX,
+                    top: (fontSize * 1.05 - _caretHeight) / 2,
+                    child: Opacity(
+                      opacity: active ? 1 : 0,
+                      child: SizedBox(
+                        key: caretSlotKey,
+                        width: _caretWidth,
+                        height: _caretHeight,
+                        child: ColoredBox(
+                          key: active ? const Key('fractionFieldCaret') : null,
+                          color: AppColors.accent,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                Text(
-                  suffix,
-                  key: Key('${caretSlotKey.toString()}-suffix'),
-                  style: value.isEmpty ? placeholderStyle : textStyle,
-                  maxLines: 1,
-                ),
               ],
             ),
           ),
@@ -3652,56 +3648,6 @@ class _FractionFieldDisplay extends StatelessWidget {
       ),
     );
   }
-
-  double _textWidth(String text, TextStyle style, TextScaler textScaler) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: textScaler,
-      maxLines: 1,
-    )..layout();
-    return painter.width;
-  }
-}
-
-class _FractionSelectionHighlightPainter extends CustomPainter {
-  const _FractionSelectionHighlightPainter({
-    required this.text,
-    required this.style,
-    required this.textScaler,
-    required this.range,
-    required this.color,
-  });
-
-  final String text;
-  final TextStyle style;
-  final TextScaler textScaler;
-  final TextRange range;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: textScaler,
-      maxLines: 1,
-    )..layout();
-    final paint = Paint()..color = color;
-    for (final box in painter.getBoxesForSelection(
-      TextSelection(baseOffset: range.start, extentOffset: range.end),
-    )) {
-      canvas.drawRect(box.toRect(), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_FractionSelectionHighlightPainter oldDelegate) =>
-      text != oldDelegate.text ||
-      style != oldDelegate.style ||
-      textScaler != oldDelegate.textScaler ||
-      range != oldDelegate.range ||
-      color != oldDelegate.color;
 }
 
 class _Keypad extends StatelessWidget {
