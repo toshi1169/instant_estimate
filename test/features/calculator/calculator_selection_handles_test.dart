@@ -391,6 +391,123 @@ void main() {
     expect(fractionStyle.fontWeight, expressionStyle.fontWeight);
     expect(fractionStyle.fontSize, expressionStyle.fontSize);
     expect(fractionStyle.letterSpacing, expressionStyle.letterSpacing);
+    expect(expressionStyle.fontWeight, FontWeight.w400);
+    expect(expressionStyle.fontSize, 54.6);
+  });
+
+  testWidgets('分子途中から分母途中を同じselectionで部分表示する', (tester) async {
+    final controller = CalculatorController();
+    _enterFraction(controller, '123456789', '123456789');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    final marker = controller.expression;
+
+    controller.selectRange(
+      FractionExpressionPosition(
+        marker: marker,
+        field: FractionField.numerator,
+        offset: 4,
+      ),
+      FractionExpressionPosition(
+        marker: marker,
+        field: FractionField.denominator,
+        offset: 2,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    TextSpan fieldSpan(Key key) =>
+        tester
+                .widget<RichText>(
+                  find.descendant(
+                    of: find.byKey(key),
+                    matching: find.byType(RichText),
+                  ),
+                )
+                .text
+            as TextSpan;
+    List<TextSpan> leaves(TextSpan span) => [
+      if (span.text != null) span,
+      for (final child in span.children ?? const <InlineSpan>[])
+        if (child is TextSpan) ...leaves(child),
+    ];
+    final numerator = fieldSpan(const Key('fractionNumeratorField'));
+    final denominator = fieldSpan(const Key('fractionDenominatorField'));
+    final numeratorChildren = leaves(numerator);
+    final denominatorChildren = leaves(denominator);
+
+    expect(numeratorChildren.map((span) => span.text), ['1234', '56789', '']);
+    expect(numeratorChildren[1].style?.backgroundColor, isNotNull);
+    expect(denominatorChildren.map((span) => span.text), ['', '12', '3456789']);
+    expect(denominatorChildren[1].style?.backgroundColor, isNotNull);
+    expect(find.byKey(const Key('selectedFractionNode')), findsNothing);
+    _expectHandles();
+
+    final baseAnchor = _iosHandleAnchor(
+      tester,
+      const Key('calculatorSelectionBaseHandle'),
+      leftType: true,
+    );
+    final extentAnchor = _iosHandleAnchor(
+      tester,
+      const Key('calculatorSelectionExtentHandle'),
+      leftType: false,
+    );
+    final numeratorBoundary = _renderedFractionBoundary(
+      tester,
+      const Key('fractionNumeratorField'),
+      '123456789',
+      4,
+    );
+    final denominatorBoundary = _renderedFractionBoundary(
+      tester,
+      const Key('fractionDenominatorField'),
+      '123456789',
+      2,
+    );
+    expect(baseAnchor.dx, closeTo(numeratorBoundary.dx, 0.01));
+    expect(extentAnchor.dx, closeTo(denominatorBoundary.dx, 0.01));
+  });
+
+  testWidgets('分子の選択ハンドルを分母途中へドラッグして部分選択を継続する', (tester) async {
+    final controller = CalculatorController();
+    _enterFraction(controller, '123456789', '123456789');
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    final marker = controller.expression;
+    controller.selectRange(
+      FractionExpressionPosition(
+        marker: marker,
+        field: FractionField.numerator,
+        offset: 4,
+      ),
+      FractionExpressionPosition(
+        marker: marker,
+        field: FractionField.numerator,
+        offset: 9,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await _dragHandle(
+      tester,
+      handleKey: const Key('calculatorSelectionExtentHandle'),
+      destination: _renderedFractionBoundary(
+        tester,
+        const Key('fractionDenominatorField'),
+        '123456789',
+        2,
+      ),
+    );
+
+    expect(controller.selectedClipboardText, '56789÷12');
+    expect(controller.selection?.extent, isA<FractionExpressionPosition>());
+    expect(
+      (controller.selection!.extent as FractionExpressionPosition).field,
+      FractionField.denominator,
+    );
+    expect(find.byKey(const Key('selectedFractionNode')), findsNothing);
+    _expectHandles();
   });
 
   testWidgets('選択メニューのコピーは選択を維持しカットは選択範囲だけ削除する', (tester) async {

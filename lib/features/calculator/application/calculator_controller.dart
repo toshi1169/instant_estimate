@@ -266,9 +266,11 @@ class FractionExpressionPosition extends ExpressionPosition {
 }
 
 /// A session-only selection expressed with the same logical positions as the
-/// calculator caret. Selections inside a single fraction field remain local
-/// to that field. Every other selection is normalized to raw-expression
-/// boundaries so a structured fraction is always selected as one node.
+/// calculator caret. Selections inside a fraction field, and a continuous
+/// numerator-suffix/denominator-prefix range in the same fraction, remain
+/// local to that fraction. Every other selection is normalized to
+/// raw-expression boundaries so a structured fraction is selected as one
+/// node.
 class ExpressionSelection {
   const ExpressionSelection({required this.base, required this.extent});
 
@@ -293,6 +295,7 @@ class ExpressionFragment {
   ExpressionFragment({
     required this.expression,
     Map<String, FractionInputState> fractions = const {},
+    this.clipboardTextOverride,
   }) : fractions = Map.unmodifiable({
          for (final entry in fractions.entries)
            entry.key: entry.value.copyWith(),
@@ -300,6 +303,7 @@ class ExpressionFragment {
 
   final String expression;
   final Map<String, FractionInputState> fractions;
+  final String? clipboardTextOverride;
 }
 
 sealed class ExpressionDisplaySegment {
@@ -558,7 +562,8 @@ class CalculatorController extends ChangeNotifier {
     if (safeBase is FractionExpressionPosition &&
         safeExtent is FractionExpressionPosition &&
         safeBase.marker == safeExtent.marker &&
-        safeBase.field == safeExtent.field) {
+        (safeBase.field == safeExtent.field ||
+            _isNumeratorDenominatorSelection(safeBase, safeExtent))) {
       return ExpressionSelection(base: safeBase, extent: safeExtent);
     }
     final forward = _documentOrder(safeBase) <= _documentOrder(safeExtent);
@@ -567,6 +572,15 @@ class CalculatorController extends ChangeNotifier {
       extent: _rawBoundaryForSelectionEndpoint(safeExtent, isLeading: !forward),
     );
   }
+
+  bool _isNumeratorDenominatorSelection(
+    FractionExpressionPosition first,
+    FractionExpressionPosition second,
+  ) =>
+      (first.field == FractionField.numerator &&
+          second.field == FractionField.denominator) ||
+      (first.field == FractionField.denominator &&
+          second.field == FractionField.numerator);
 
   ExpressionPosition _clampPosition(ExpressionPosition position) =>
       switch (position) {
@@ -637,6 +651,9 @@ class CalculatorController extends ChangeNotifier {
 
   @visibleForTesting
   FractionInputState? fractionInputForMarker(String marker) =>
+      _fractions[marker];
+
+  FractionInputState? fractionInputForDisplay(String marker) =>
       _fractions[marker];
 
   @visibleForTesting
@@ -743,7 +760,37 @@ class CalculatorController extends ChangeNotifier {
       :final field,
       :final offset,
     )) {
+      final base = current.base as FractionExpressionPosition;
       final extent = current.extent as FractionExpressionPosition;
+      if (_isNumeratorDenominatorSelection(base, extent)) {
+        final fraction = _fractions[marker]!;
+        final numeratorPosition = field == FractionField.numerator
+            ? base
+            : extent;
+        final denominatorPosition = field == FractionField.denominator
+            ? base
+            : extent;
+        final numerator = fraction.numeratorText.substring(
+          numeratorPosition.offset,
+        );
+        final denominator = fraction.denominatorText.substring(
+          0,
+          denominatorPosition.offset,
+        );
+        final fragmentMarker = String.fromCharCode(0xE000);
+        return ExpressionFragment(
+          expression: fragmentMarker,
+          fractions: {
+            fragmentMarker: FractionInputState(
+              numeratorText: numerator,
+              denominatorText: denominator,
+            ),
+          },
+          clipboardTextOverride:
+              '${_clipboardFractionOperand(numerator)}÷'
+              '${_clipboardFractionOperand(denominator)}',
+        );
+      }
       final value = _fractionFieldValue(_fractions[marker]!, field);
       final start = math.min(offset, extent.offset);
       final end = math.max(offset, extent.offset);
@@ -768,6 +815,7 @@ class CalculatorController extends ChangeNotifier {
   }
 
   String _linearizeFragment(ExpressionFragment fragment) {
+    if (fragment.clipboardTextOverride case final override?) return override;
     final buffer = StringBuffer();
     for (final character in fragment.expression.split('')) {
       final fraction = fragment.fractions[character];
@@ -786,6 +834,15 @@ class CalculatorController extends ChangeNotifier {
         ..write(fraction.denominatorText);
     }
     return buffer.toString();
+  }
+
+  String _clipboardFractionOperand(String value) {
+    if (value.isEmpty) return '';
+    final hasBinaryOperator =
+        RegExp(r'[+×÷^%]').hasMatch(value) ||
+        value.indexOf('-', 1) >= 0 ||
+        value.indexOf('−', 1) >= 0;
+    return hasBinaryOperator ? '($value)' : value;
   }
 
   bool deleteSelection() {
@@ -840,6 +897,7 @@ class CalculatorController extends ChangeNotifier {
     return ExpressionFragment(
       expression: buffer.toString(),
       fractions: fractions,
+      clipboardTextOverride: fragment.clipboardTextOverride,
     );
   }
 
@@ -852,7 +910,32 @@ class CalculatorController extends ChangeNotifier {
       :final field,
       :final offset,
     )) {
+      final base = current.base as FractionExpressionPosition;
       final extent = current.extent as FractionExpressionPosition;
+      if (_isNumeratorDenominatorSelection(base, extent)) {
+        final fraction = _fractions[marker]!;
+        final numeratorPosition = field == FractionField.numerator
+            ? base
+            : extent;
+        final denominatorPosition = field == FractionField.denominator
+            ? base
+            : extent;
+        _fractions[marker] = fraction.copyWith(
+          numeratorText: fraction.numeratorText.substring(
+            0,
+            numeratorPosition.offset,
+          ),
+          denominatorText: fraction.denominatorText.substring(
+            denominatorPosition.offset,
+          ),
+        );
+        _setFractionPosition(
+          marker,
+          FractionField.numerator,
+          numeratorPosition.offset,
+        );
+        return true;
+      }
       final value = _fractionFieldValue(_fractions[marker]!, field);
       final start = math.min(offset, extent.offset);
       final end = math.max(offset, extent.offset);

@@ -133,32 +133,131 @@ void main() {
       expect(controller.selectedClipboardText, '56');
     });
 
-    test('同一分数でもfieldを跨ぐ選択は分数全体へsnapする', () {
+    test('同一分数の分子途中から分母途中を連続範囲として選択できる', () {
       final controller = CalculatorController();
-      _enterFraction(controller, '2', '3');
+      _enterFraction(controller, '123456789', '123456789');
       final fraction = _singleFraction(controller);
 
       controller.selectRange(
         FractionExpressionPosition(
           marker: fraction.marker,
           field: FractionField.numerator,
-          offset: 1,
+          offset: 4,
         ),
         FractionExpressionPosition(
           marker: fraction.marker,
           field: FractionField.denominator,
-          offset: 1,
+          offset: 2,
         ),
       );
 
       expect(
         controller.selection,
-        const ExpressionSelection(
-          base: RawExpressionPosition(0),
-          extent: RawExpressionPosition(1),
+        ExpressionSelection(
+          base: FractionExpressionPosition(
+            marker: fraction.marker,
+            field: FractionField.numerator,
+            offset: 4,
+          ),
+          extent: FractionExpressionPosition(
+            marker: fraction.marker,
+            field: FractionField.denominator,
+            offset: 2,
+          ),
         ),
       );
-      expect(controller.selectedClipboardText, '2/3');
+      expect(controller.selectedClipboardText, '56789÷12');
+      final fragment = controller.copySelectionFragment()!;
+      expect(fragment.fractions.values.single.numeratorText, '56789');
+      expect(fragment.fractions.values.single.denominatorText, '12');
+
+      final target = CalculatorController()..pasteAtCaret('7+');
+      expect(target.pasteFragment(fragment), isTrue);
+      final pasted = _singleFraction(target);
+      expect(pasted.numerator, '56789');
+      expect(pasted.denominator, '12');
+      expect(target.selectedClipboardText, isEmpty);
+    });
+
+    test('分母から分子への逆方向選択も同じ範囲をCutする', () {
+      final controller = CalculatorController();
+      _enterFraction(controller, '123456789', '123456789');
+      final marker = _singleFraction(controller).marker;
+
+      controller.selectRange(
+        FractionExpressionPosition(
+          marker: marker,
+          field: FractionField.denominator,
+          offset: 2,
+        ),
+        FractionExpressionPosition(
+          marker: marker,
+          field: FractionField.numerator,
+          offset: 4,
+        ),
+      );
+      expect(controller.selectedClipboardText, '56789÷12');
+      final fragment = controller.cutSelectionFragment();
+
+      expect(fragment, isNotNull);
+      final remaining = _singleFraction(controller);
+      expect(remaining.numerator, '1234');
+      expect(remaining.denominator, '3456789');
+      expect(controller.selection, isNull);
+      expect(
+        controller.expressionPosition,
+        FractionExpressionPosition(
+          marker: marker,
+          field: FractionField.numerator,
+          offset: 4,
+        ),
+      );
+    });
+
+    test('分子分母の部分式は外部コピー時に必要な括弧を付ける', () {
+      final controller = CalculatorController();
+      _enterFraction(controller, '5+6', '1+2');
+      final fraction = _singleFraction(controller);
+
+      controller.selectRange(
+        FractionExpressionPosition(
+          marker: fraction.marker,
+          field: FractionField.numerator,
+          offset: 0,
+        ),
+        FractionExpressionPosition(
+          marker: fraction.marker,
+          field: FractionField.denominator,
+          offset: 3,
+        ),
+      );
+
+      expect(controller.selectedClipboardText, '(5+6)÷(1+2)');
+    });
+
+    test('分子または分母が空になる部分削除は既存の空fieldとして保持する', () {
+      final controller = CalculatorController();
+      _enterFraction(controller, '12', '34');
+      final marker = _singleFraction(controller).marker;
+
+      controller.selectRange(
+        FractionExpressionPosition(
+          marker: marker,
+          field: FractionField.numerator,
+          offset: 0,
+        ),
+        FractionExpressionPosition(
+          marker: marker,
+          field: FractionField.denominator,
+          offset: 2,
+        ),
+      );
+      expect(controller.deleteSelection(), isTrue);
+
+      final remaining = _singleFraction(controller);
+      expect(remaining.numerator, isEmpty);
+      expect(remaining.denominator, isEmpty);
+      expect(controller.selection, isNull);
     });
 
     test('rawと分数内部を跨ぐ選択は分数全体へsnapする', () {

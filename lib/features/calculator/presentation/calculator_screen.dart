@@ -1771,7 +1771,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final style = theme.textTheme.headlineMedium!.copyWith(
+    final style = DefaultTextStyle.of(context).style.copyWith(
+      color: theme.colorScheme.onSurface,
       fontSize: _EditableExpressionLine._expressionFontSize,
       fontWeight: FontWeight.w400,
     );
@@ -2194,12 +2195,36 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     }
     final base = selection.base as FractionExpressionPosition;
     final extent = selection.extent as FractionExpressionPosition;
-    if (base.marker != marker ||
-        extent.marker != marker ||
-        base.field != field ||
-        extent.field != field) {
+    if (base.marker != marker || extent.marker != marker) {
       return null;
     }
+    if (base.field != extent.field) {
+      final numeratorPosition = base.field == FractionField.numerator
+          ? base
+          : extent.field == FractionField.numerator
+          ? extent
+          : null;
+      final denominatorPosition = base.field == FractionField.denominator
+          ? base
+          : extent.field == FractionField.denominator
+          ? extent
+          : null;
+      if (numeratorPosition == null || denominatorPosition == null) return null;
+      final fraction = widget.controller.fractionInputForDisplay(marker);
+      if (fraction == null) return null;
+      return switch (field) {
+        FractionField.numerator => TextRange(
+          start: numeratorPosition.offset,
+          end: fraction.numeratorText.length,
+        ),
+        FractionField.denominator => TextRange(
+          start: 0,
+          end: denominatorPosition.offset,
+        ),
+        FractionField.wholeNumber => null,
+      };
+    }
+    if (base.field != field) return null;
     return TextRange(
       start: math.min(base.offset, extent.offset),
       end: math.max(base.offset, extent.offset),
@@ -2516,11 +2541,31 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         position is FractionExpressionPosition &&
         base.marker == extent.marker &&
         base.marker == position.marker &&
-        base.field == extent.field &&
-        base.field == position.field) {
-      final start = math.min(base.offset, extent.offset);
-      final end = math.max(base.offset, extent.offset);
-      return position.offset >= start && position.offset <= end;
+        base.marker == position.marker) {
+      if (base.field == extent.field && base.field == position.field) {
+        final start = math.min(base.offset, extent.offset);
+        final end = math.max(base.offset, extent.offset);
+        return position.offset >= start && position.offset <= end;
+      }
+      final numeratorPosition = base.field == FractionField.numerator
+          ? base
+          : extent.field == FractionField.numerator
+          ? extent
+          : null;
+      final denominatorPosition = base.field == FractionField.denominator
+          ? base
+          : extent.field == FractionField.denominator
+          ? extent
+          : null;
+      if (numeratorPosition == null || denominatorPosition == null) {
+        return false;
+      }
+      if (position.field == FractionField.numerator) {
+        return position.offset >= numeratorPosition.offset;
+      }
+      if (position.field == FractionField.denominator) {
+        return position.offset <= denominatorPosition.offset;
+      }
     }
     return false;
   }
