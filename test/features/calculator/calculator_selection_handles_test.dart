@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -179,8 +178,16 @@ Offset _iosHandleKnobCenter(
     of: find.byKey(handleKey),
     matching: find.byType(CustomPaint),
   );
-  final rect = tester.getRect(paint.last);
-  return Offset(rect.center.dx, circleAtTop ? rect.top + 6 : rect.bottom - 6);
+  final handleBox = tester.renderObject<RenderBox>(paint.last);
+  final topLeft = handleBox.localToGlobal(Offset.zero);
+  final bottomRight = handleBox.localToGlobal(
+    handleBox.size.bottomRight(Offset.zero),
+  );
+  final scale = (bottomRight.dy - topLeft.dy) / handleBox.size.height;
+  return Offset(
+    (topLeft.dx + bottomRight.dx) / 2,
+    circleAtTop ? topLeft.dy + 6 * scale : bottomRight.dy - 6 * scale,
+  );
 }
 
 Offset _iosHandleAnchor(
@@ -188,16 +195,26 @@ Offset _iosHandleAnchor(
   Key handleKey, {
   required bool leftType,
 }) {
+  final anchorKey = handleKey == const Key('calculatorSelectionBaseHandle')
+      ? const ValueKey('calculatorSelectionBaseHandleAnchor')
+      : const ValueKey('calculatorSelectionExtentHandleAnchor');
+  final anchorBox = tester.renderObject<RenderBox>(find.byKey(anchorKey));
+  return anchorBox.localToGlobal(Offset.zero);
+}
+
+double _paintedVerticalScale(WidgetTester tester, Finder finder) {
+  final box = tester.renderObject<RenderBox>(finder);
+  final top = box.localToGlobal(Offset.zero);
+  final bottom = box.localToGlobal(Offset(0, box.size.height));
+  return (bottom - top).distance / box.size.height;
+}
+
+double _handleVisualScale(WidgetTester tester, Key handleKey) {
   final paint = find.descendant(
     of: find.byKey(handleKey),
     matching: find.byType(CustomPaint),
   );
-  final handleBox = tester.renderObject<RenderBox>(paint.last);
-  final anchor = cupertinoTextSelectionControls.getHandleAnchor(
-    leftType ? TextSelectionHandleType.left : TextSelectionHandleType.right,
-    54.6,
-  );
-  return handleBox.localToGlobal(anchor);
+  return _paintedVerticalScale(tester, paint.last);
 }
 
 Future<void> _doubleTapAt(WidgetTester tester, Offset position) async {
@@ -412,6 +429,79 @@ void main() {
       textDirection: TextDirection.ltr,
     )..layout();
     expect(fractionPainter.width, closeTo(expressionPainter.width, 0.001));
+  });
+
+  testWidgets('通常式と分子分母のhandle表示倍率は各端点の実描画倍率に追従する', (tester) async {
+    final controller = CalculatorController()
+      ..pasteAtCaret('12345678901234567890+');
+    _enterFraction(controller, '12345678', '1234');
+    await _pumpCalculator(tester, controller, size: const Size(320, 844));
+
+    final textSegment = controller.displaySegments
+        .whereType<ExpressionTextSegment>()
+        .first;
+    controller.selectRange(
+      RawExpressionPosition(textSegment.rawOffsets.first),
+      RawExpressionPosition(textSegment.rawOffsets.last),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final expressionText = _expressionTextForSegment(textSegment);
+    final expressionParagraph = find.descendant(
+      of: find.byKey(const Key('expressionText')),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is RichText && widget.text.toPlainText() == textSegment.text,
+      ),
+    );
+    final expressionScale = _paintedVerticalScale(tester, expressionParagraph);
+    expect(expressionScale, lessThan(1));
+    expect(
+      _handleVisualScale(tester, const Key('calculatorSelectionBaseHandle')),
+      closeTo(expressionScale, 0.01),
+    );
+    expect(tester.getSize(expressionText).height, greaterThan(0));
+
+    final fraction = controller.displaySegments
+        .whereType<ExpressionFractionSegment>()
+        .single;
+    controller.selectRange(
+      FractionExpressionPosition(
+        marker: fraction.marker,
+        field: FractionField.numerator,
+        offset: 2,
+      ),
+      FractionExpressionPosition(
+        marker: fraction.marker,
+        field: FractionField.denominator,
+        offset: 2,
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final numeratorParagraph = find.descendant(
+      of: find.byKey(const Key('fractionNumeratorField')),
+      matching: find.byType(RichText),
+    );
+    final denominatorParagraph = find.descendant(
+      of: find.byKey(const Key('fractionDenominatorField')),
+      matching: find.byType(RichText),
+    );
+    expect(
+      _handleVisualScale(tester, const Key('calculatorSelectionBaseHandle')),
+      closeTo(_paintedVerticalScale(tester, numeratorParagraph), 0.01),
+    );
+    expect(
+      _handleVisualScale(tester, const Key('calculatorSelectionExtentHandle')),
+      closeTo(_paintedVerticalScale(tester, denominatorParagraph), 0.01),
+    );
+    final hitSize = tester.getSize(
+      find.byKey(const Key('calculatorSelectionBaseHandle')),
+    );
+    expect(hitSize.width, greaterThanOrEqualTo(48));
+    expect(hitSize.height, greaterThanOrEqualTo(48));
   });
 
   testWidgets('分子途中から分母途中を同じselectionで部分表示する', (tester) async {

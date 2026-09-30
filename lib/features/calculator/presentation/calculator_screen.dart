@@ -1736,6 +1736,12 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   OverlayEntry? _caretToolbarOverlay;
   Rect? _baseSelectionCaretRect;
   Rect? _extentSelectionCaretRect;
+  double _baseSelectionDisplayScale = 1;
+  double _extentSelectionDisplayScale = 1;
+  double _baseSelectionDisplayHeight =
+      _EditableExpressionLine._expressionFontSize;
+  double _extentSelectionDisplayHeight =
+      _EditableExpressionLine._expressionFontSize;
   Rect? _caretToolbarRect;
   bool _selectionToolbarRequested = false;
   bool _caretToolbarRequested = false;
@@ -2622,11 +2628,21 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       _removeSelectionToolbar();
       return;
     }
+    final baseMetrics = _displayMetricsForPosition(selection.base);
+    final extentMetrics = _displayMetricsForPosition(selection.extent);
     final handlesMoved =
         _baseSelectionCaretRect != baseRect ||
-        _extentSelectionCaretRect != extentRect;
+        _extentSelectionCaretRect != extentRect ||
+        _baseSelectionDisplayScale != baseMetrics.scale ||
+        _extentSelectionDisplayScale != extentMetrics.scale ||
+        _baseSelectionDisplayHeight != baseMetrics.height ||
+        _extentSelectionDisplayHeight != extentMetrics.height;
     _baseSelectionCaretRect = baseRect;
     _extentSelectionCaretRect = extentRect;
+    _baseSelectionDisplayScale = baseMetrics.scale;
+    _extentSelectionDisplayScale = extentMetrics.scale;
+    _baseSelectionDisplayHeight = baseMetrics.height;
+    _extentSelectionDisplayHeight = extentMetrics.height;
     final overlay = Overlay.of(context, rootOverlay: true);
     _selectionHandlesOverlay ??= OverlayEntry(
       builder: _buildSelectionHandlesOverlay,
@@ -2841,6 +2857,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
                 ? TextSelectionHandleType.left
                 : TextSelectionHandleType.right,
             endpointRole: _SelectionEndpoint.base,
+            displayScale: _baseSelectionDisplayScale,
+            displayHeight: _baseSelectionDisplayHeight,
           ),
         if (extentVisible)
           _buildSelectionHandle(
@@ -2852,6 +2870,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
                 ? TextSelectionHandleType.right
                 : TextSelectionHandleType.left,
             endpointRole: _SelectionEndpoint.extent,
+            displayScale: _extentSelectionDisplayScale,
+            displayHeight: _extentSelectionDisplayHeight,
           ),
       ],
     );
@@ -2864,29 +2884,46 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     required Offset otherEndpoint,
     required TextSelectionHandleType type,
     required _SelectionEndpoint endpointRole,
+    required double displayScale,
+    required double displayHeight,
   }) {
     const touchSize = 48.0;
-    const lineHeight = _EditableExpressionLine._expressionFontSize;
+    final safeScale = displayScale.isFinite && displayScale > 0
+        ? displayScale
+        : 1.0;
+    final lineHeight = displayHeight / safeScale;
     final screen = MediaQuery.sizeOf(overlayContext);
     final controls = Theme.of(overlayContext).platform == TargetPlatform.iOS
         ? cupertinoTextSelectionControls
         : materialTextSelectionControls;
-    final anchor = controls.getHandleAnchor(type, lineHeight);
-    final handleSize = controls.getHandleSize(lineHeight);
-    final visualRect = Rect.fromLTWH(
-      endpoint.dx - anchor.dx,
-      endpoint.dy - anchor.dy,
-      handleSize.width,
-      handleSize.height,
+    const hitLineHeight = _EditableExpressionLine._expressionFontSize;
+    final hitAnchor = controls.getHandleAnchor(type, hitLineHeight);
+    final hitHandleSize = controls.getHandleSize(hitLineHeight);
+    final unscaledAnchor = controls.getHandleAnchor(type, lineHeight);
+    final anchor = unscaledAnchor * safeScale;
+    final handleSize = controls.getHandleSize(lineHeight) * safeScale;
+    final hitVisualRect = Rect.fromLTWH(
+      endpoint.dx - hitAnchor.dx,
+      endpoint.dy - hitAnchor.dy,
+      hitHandleSize.width,
+      hitHandleSize.height,
     );
     // Match Flutter's selection-handle geometry: the interactive rectangle
     // encloses the actual platform handle and is expanded to the Material
     // minimum touch target. Cupertino's left handle circle sits at the top of
     // this tall visual rectangle, while the right handle is rotated; a square
     // centered only on [endpoint] therefore misses the visible left circle.
-    final interactiveRect = visualRect.expandToInclude(
-      Rect.fromCircle(center: visualRect.center, radius: touchSize / 2),
+    final visualRect = Rect.fromLTWH(
+      endpoint.dx - anchor.dx,
+      endpoint.dy - anchor.dy,
+      handleSize.width,
+      handleSize.height,
     );
+    final interactiveRect = hitVisualRect
+        .expandToInclude(
+          Rect.fromCircle(center: hitVisualRect.center, radius: touchSize / 2),
+        )
+        .expandToInclude(visualRect);
     var desiredLeft = interactiveRect.left;
     var desiredRight = interactiveRect.right;
     if ((endpoint.dy - otherEndpoint.dy).abs() < touchSize) {
@@ -2931,9 +2968,24 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           clipBehavior: Clip.none,
           children: [
             Positioned(
+              left: endpoint.dx - left,
+              top: endpoint.dy - top,
+              child: SizedBox(
+                key: ValueKey(
+                  endpointRole == _SelectionEndpoint.base
+                      ? 'calculatorSelectionBaseHandleAnchor'
+                      : 'calculatorSelectionExtentHandleAnchor',
+                ),
+              ),
+            ),
+            Positioned(
               left: endpoint.dx - left - anchor.dx,
               top: endpoint.dy - top - anchor.dy,
-              child: handle,
+              child: Transform.scale(
+                scale: safeScale,
+                alignment: Alignment.topLeft,
+                child: handle,
+              ),
             ),
           ],
         ),
@@ -3041,7 +3093,9 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
         }
         if (target.kind == _ExpressionHitTargetKind.text) {
           final index = target.rawOffsets.indexOf(offset);
-          if (index >= 0) return _caretRectForTargetOffset(target, index);
+          if (index >= 0) {
+            return _caretRectForTargetOffset(target, index);
+          }
         }
         if (target.marker != null) {
           final markerIndex = widget.controller.expression.indexOf(
@@ -3069,6 +3123,90 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       }
     }
     return null;
+  }
+
+  ({double scale, double height}) _displayMetricsForPosition(
+    ExpressionPosition position,
+  ) {
+    for (final target in _hitTargets) {
+      if (position case RawExpressionPosition(:final offset)) {
+        if (target.kind == _ExpressionHitTargetKind.text &&
+            target.rawOffsets.contains(offset)) {
+          return _displayMetricsForTarget(target);
+        }
+        if (target.marker != null) {
+          final markerIndex = widget.controller.expression.indexOf(
+            target.marker!,
+          );
+          if ((target.kind == _ExpressionHitTargetKind.fractionBefore &&
+                  offset == markerIndex) ||
+              (target.kind == _ExpressionHitTargetKind.fractionAfter &&
+                  offset == markerIndex + 1)) {
+            return _displayMetricsForTarget(target);
+          }
+        }
+      } else if (position case FractionExpressionPosition(
+        :final marker,
+        :final field,
+      )) {
+        if (target.kind == _ExpressionHitTargetKind.fractionField &&
+            target.marker == marker &&
+            target.field == field) {
+          return _displayMetricsForTarget(target);
+        }
+      }
+    }
+    return (scale: 1, height: _EditableExpressionLine._expressionFontSize);
+  }
+
+  ({double scale, double height}) _displayMetricsForTarget(
+    _ExpressionHitTarget target,
+  ) {
+    final box = _coordinateBoxForTarget(target);
+    if (box == null || !box.hasSize || box.size.height <= 0) {
+      return (scale: 1, height: _EditableExpressionLine._expressionFontSize);
+    }
+    final top = box.localToGlobal(Offset.zero);
+    final bottom = box.localToGlobal(Offset(0, box.size.height));
+    final renderedHeight = (bottom - top).distance;
+    final transformScale = renderedHeight / box.size.height;
+    final style = target.style;
+    if (style == null) {
+      return (scale: transformScale, height: renderedHeight);
+    }
+    if (target.kind == _ExpressionHitTargetKind.text) {
+      final fontSize = style.fontSize;
+      if (fontSize == null || fontSize <= 0) {
+        return (scale: transformScale, height: renderedHeight);
+      }
+      final textScale =
+          MediaQuery.textScalerOf(context).scale(fontSize) / fontSize;
+      final painter = TextPainter(
+        text: TextSpan(text: target.text, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      return (
+        scale: transformScale * textScale,
+        height: painter.height * transformScale,
+      );
+    }
+    final text = target.kind == _ExpressionHitTargetKind.text
+        ? target.text
+        : target.fieldValue.isEmpty
+        ? '□'
+        : target.fieldValue;
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: TextScaler.noScaling,
+      maxLines: 1,
+    )..layout();
+    if (painter.height <= 0) {
+      return (scale: 1, height: renderedHeight);
+    }
+    return (scale: renderedHeight / painter.height, height: renderedHeight);
   }
 
   Rect? _caretRectForTargetOffset(
