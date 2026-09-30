@@ -2567,7 +2567,8 @@ void main() {
       int offsetWithinContainedText,
     ) async {
       final finder = find.textContaining(containedText);
-      final text = tester.widget<Text>(finder).data!;
+      final textWidget = tester.widget<Text>(finder);
+      final text = textWidget.data ?? textWidget.textSpan!.toPlainText();
       final characterIndex =
           text.indexOf(containedText) + offsetWithinContainedText;
       final rect = tester.getRect(finder);

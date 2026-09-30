@@ -38,9 +38,10 @@ Offset _textCaretGlobalPosition(
   int textOffset,
 ) {
   final widget = tester.widget<Text>(finder);
-  final text = widget.data!;
+  final text = widget.data ?? widget.textSpan!.toPlainText();
+  final style = widget.style ?? (widget.textSpan as TextSpan?)?.style;
   final painter = TextPainter(
-    text: TextSpan(text: text, style: widget.style),
+    text: TextSpan(text: text, style: style),
     textDirection: TextDirection.ltr,
     maxLines: 1,
   )..layout();

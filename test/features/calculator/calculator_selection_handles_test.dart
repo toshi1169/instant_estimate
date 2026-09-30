@@ -108,7 +108,13 @@ Offset _renderedRawBoundary(
 ) {
   final displayOffset = segment.rawOffsets.indexOf(rawOffset);
   expect(displayOffset, isNonNegative);
-  final richText = find.descendant(of: finder, matching: find.byType(RichText));
+  final text = tester.widget<Text>(finder).textSpan!.toPlainText();
+  final richText = find.descendant(
+    of: find.byKey(const Key('expressionText')),
+    matching: find.byWidgetPredicate(
+      (widget) => widget is RichText && widget.text.toPlainText() == text,
+    ),
+  );
   expect(richText, findsOneWidget);
   final paragraph = tester.renderObject<RenderParagraph>(richText);
   return paragraph.localToGlobal(
@@ -217,7 +223,7 @@ Finder _expressionTextForSegment(ExpressionTextSegment segment) =>
       matching: find.byWidgetPredicate(
         (widget) =>
             widget is Text &&
-            widget.data == segment.text &&
+            (widget.data ?? widget.textSpan?.toPlainText()) == segment.text &&
             widget.style?.fontSize == 54.6,
       ),
     );
@@ -354,15 +360,16 @@ void main() {
     await _pumpCalculator(tester, controller, size: const Size(800, 844));
 
     var text = tester.widget<Text>(_expressionTextContaining('123'));
-    final normalStyle = text.style;
+    final normalSpan = text.textSpan as TextSpan;
     await _doubleTapAt(
       tester,
       _characterCenter(tester, _expressionTextContaining('123'), '456'),
     );
     text = tester.widget<Text>(_expressionTextContaining('123'));
 
-    expect(text.style, normalStyle);
-    expect(text.data, '123 + 456');
+    final selectedSpan = text.textSpan as TextSpan;
+    expect(selectedSpan.style, normalSpan.style);
+    expect(selectedSpan.toPlainText(), '123 + 456');
     expect(find.byType(CustomPaint), findsWidgets);
   });
 
@@ -371,9 +378,9 @@ void main() {
     _enterFraction(controller, '34', '56');
     await _pumpCalculator(tester, controller, size: const Size(800, 844));
 
-    final expressionStyle = tester
-        .widget<Text>(_expressionTextContaining('12'))
-        .style!;
+    final expressionText = tester.widget<Text>(_expressionTextContaining('12'));
+    final expressionRoot = expressionText.textSpan as TextSpan;
+    final expressionStyle = expressionRoot.style!;
     final fractionText = tester.widget<RichText>(
       find.descendant(
         of: find.byKey(const Key('fractionNumeratorField')),
@@ -381,7 +388,7 @@ void main() {
       ),
     );
     final fractionRoot = fractionText.text as TextSpan;
-    final fractionStyle = fractionRoot.style!;
+    final fractionStyle = (fractionRoot.children?.single as TextSpan).style!;
 
     expect(fractionStyle.fontFamily, expressionStyle.fontFamily);
     expect(
@@ -393,8 +400,8 @@ void main() {
     expect(fractionStyle.letterSpacing, expressionStyle.letterSpacing);
     expect(expressionStyle.fontWeight, FontWeight.w400);
     expect(expressionStyle.fontSize, 54.6);
-    expect(fractionRoot.text, '34');
-    expect(fractionRoot.children, isNull);
+    expect(expressionRoot.text, '12 + ');
+    expect(expressionRoot.children, isNull);
 
     final expressionPainter = TextPainter(
       text: TextSpan(text: '1234567890', style: expressionStyle),
@@ -428,23 +435,30 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    Finder paintedSelection(Key key) => find.descendant(
-      of: find.byKey(key),
-      matching: find.byWidgetPredicate(
-        (widget) =>
-            widget is CustomPaint &&
-            widget.painter?.runtimeType.toString() ==
-                '_FractionSelectionHighlightPainter',
-      ),
-    );
-    expect(
-      paintedSelection(const Key('fractionNumeratorField')),
-      findsOneWidget,
-    );
-    expect(
-      paintedSelection(const Key('fractionDenominatorField')),
-      findsOneWidget,
-    );
+    TextSpan fieldSpan(Key key) =>
+        tester
+                .widget<RichText>(
+                  find.descendant(
+                    of: find.byKey(key),
+                    matching: find.byType(RichText),
+                  ),
+                )
+                .text
+            as TextSpan;
+    List<TextSpan> leaves(TextSpan span) => [
+      if (span.text != null) span,
+      for (final child in span.children ?? const <InlineSpan>[])
+        if (child is TextSpan) ...leaves(child),
+    ];
+    final numerator = fieldSpan(const Key('fractionNumeratorField'));
+    final denominator = fieldSpan(const Key('fractionDenominatorField'));
+    final numeratorChildren = leaves(numerator);
+    final denominatorChildren = leaves(denominator);
+
+    expect(numeratorChildren.map((span) => span.text), ['1234', '56789', '']);
+    expect(numeratorChildren[1].style?.backgroundColor, isNotNull);
+    expect(denominatorChildren.map((span) => span.text), ['', '12', '3456789']);
+    expect(denominatorChildren[1].style?.backgroundColor, isNotNull);
     expect(find.byKey(const Key('selectedFractionNode')), findsNothing);
     _expectHandles();
 
