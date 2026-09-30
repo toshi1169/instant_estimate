@@ -1754,6 +1754,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   ExpressionPosition? _collapsedDragPosition;
   Duration? _lastPointerDownTime;
   Offset? _lastPointerDownPosition;
+  ExpressionPosition? _pendingCaretDoubleTapPosition;
   int? _selectionDismissPointer;
   Offset? _selectionDismissStart;
   bool _selectionDismissMoved = false;
@@ -2258,18 +2259,30 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     }
     final previousTime = _lastPointerDownTime;
     final previousPosition = _lastPointerDownPosition;
+    if (previousTime == null || previousPosition == null) {
+      _pendingCaretDoubleTapPosition =
+          (_activeCaretDoubleTapRect()?.contains(event.position) ?? false)
+          ? widget.controller.expressionPosition
+          : null;
+    }
     _lastPointerDownTime = event.timeStamp;
     _lastPointerDownPosition = event.position;
     if (previousTime == null || previousPosition == null) return;
     final elapsed = event.timeStamp - previousTime;
     if (elapsed > const Duration(milliseconds: 300) ||
         (event.position - previousPosition).distance > 24) {
+      _pendingCaretDoubleTapPosition =
+          (_activeCaretDoubleTapRect()?.contains(event.position) ?? false)
+          ? widget.controller.expressionPosition
+          : null;
       return;
     }
+    final caretMenuPosition = _pendingCaretDoubleTapPosition;
     _lastPointerDownTime = null;
     _lastPointerDownPosition = null;
+    _pendingCaretDoubleTapPosition = null;
     _suppressNextExpressionTap = true;
-    _handleDoubleTapAt(event.position);
+    _handleDoubleTapAt(event.position, caretMenuPosition: caretMenuPosition);
     _tapSuppressionTimer?.cancel();
     _tapSuppressionTimer = Timer(const Duration(milliseconds: 400), () {
       _suppressNextExpressionTap = false;
@@ -2384,6 +2397,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   void _clearPendingDoubleTap() {
     _lastPointerDownTime = null;
     _lastPointerDownPosition = null;
+    _pendingCaretDoubleTapPosition = null;
   }
 
   bool _consumeSuppressedTap() {
@@ -2394,7 +2408,17 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     return true;
   }
 
-  void _handleDoubleTapAt(Offset globalPosition) {
+  void _handleDoubleTapAt(
+    Offset globalPosition, {
+    required ExpressionPosition? caretMenuPosition,
+  }) {
+    if (caretMenuPosition != null) {
+      _hideEditingToolbars();
+      widget.controller.moveCaretToPosition(caretMenuPosition);
+      _caretToolbarRequested = true;
+      _scheduleSelectionOverlaySync();
+      return;
+    }
     final target = _closestHitTarget(globalPosition);
     final resolved = target == null
         ? null
@@ -2474,6 +2498,75 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     widget.controller.moveCaretToPosition(resolved.position);
     _caretToolbarRequested = true;
     _scheduleSelectionOverlaySync();
+  }
+
+  Rect? _caretDoubleTapRect() {
+    if (widget.controller.hasSelection) return null;
+    final position = widget.controller.expressionPosition;
+    final caretRect = _caretRectForPosition(position);
+    if (caretRect == null) return null;
+    Rect? previousRect;
+    Rect? nextRect;
+    switch (position) {
+      case RawExpressionPosition(:final offset):
+        final expression = widget.controller.expression;
+        final previousIsFraction =
+            offset > 0 &&
+            widget.controller.fractionInputForDisplay(expression[offset - 1]) !=
+                null;
+        final nextIsFraction =
+            offset < expression.length &&
+            widget.controller.fractionInputForDisplay(expression[offset]) !=
+                null;
+        if (offset > 0 && !previousIsFraction) {
+          previousRect = _caretRectForPosition(
+            RawExpressionPosition(offset - 1),
+          );
+        }
+        if (offset < expression.length && !nextIsFraction) {
+          nextRect = _caretRectForPosition(RawExpressionPosition(offset + 1));
+        }
+      case FractionExpressionPosition(
+        :final marker,
+        :final field,
+        :final offset,
+      ):
+        final state = widget.controller.fractionInputForDisplay(marker);
+        final value = switch (field) {
+          FractionField.wholeNumber => state?.wholeNumberText ?? '',
+          FractionField.numerator => state?.numeratorText ?? '',
+          FractionField.denominator => state?.denominatorText ?? '',
+        };
+        if (offset > 0) {
+          previousRect = _caretRectForPosition(
+            FractionExpressionPosition(
+              marker: marker,
+              field: field,
+              offset: offset - 1,
+            ),
+          );
+        }
+        if (offset < value.length) {
+          nextRect = _caretRectForPosition(
+            FractionExpressionPosition(
+              marker: marker,
+              field: field,
+              offset: offset + 1,
+            ),
+          );
+        }
+    }
+    final left = previousRect == null
+        ? caretRect.left
+        : math.min(previousRect.center.dx, caretRect.center.dx);
+    final right = nextRect == null
+        ? caretRect.right
+        : math.max(nextRect.center.dx, caretRect.center.dx);
+    return Rect.fromLTRB(left, caretRect.top, right, caretRect.bottom);
+  }
+
+  Rect? _activeCaretDoubleTapRect() {
+    return _caretDoubleTapRect();
   }
 
   bool _isSelectableNumberCharacter(String value) =>
@@ -2617,8 +2710,18 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       _removeSelectionToolbar();
       return;
     }
-    final baseRect = _caretRectForPosition(selection.base);
-    final extentRect = _caretRectForPosition(selection.extent);
+    var basePosition = selection.base;
+    var extentPosition = selection.extent;
+    final collapsedPosition = _collapsedDragPosition;
+    if (collapsedPosition != null) {
+      if (_activeSelectionEndpoint == _SelectionEndpoint.base) {
+        basePosition = collapsedPosition;
+      } else if (_activeSelectionEndpoint == _SelectionEndpoint.extent) {
+        extentPosition = collapsedPosition;
+      }
+    }
+    final baseRect = _caretRectForPosition(basePosition);
+    final extentRect = _caretRectForPosition(extentPosition);
     if (baseRect == null || extentRect == null) {
       _selectionHandlesOverlay?.remove();
       _selectionHandlesOverlay = null;
@@ -2628,8 +2731,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       _removeSelectionToolbar();
       return;
     }
-    final baseMetrics = _displayMetricsForPosition(selection.base);
-    final extentMetrics = _displayMetricsForPosition(selection.extent);
+    final baseMetrics = _displayMetricsForPosition(basePosition);
+    final extentMetrics = _displayMetricsForPosition(extentPosition);
     final handlesMoved =
         _baseSelectionCaretRect != baseRect ||
         _extentSelectionCaretRect != extentRect ||
@@ -3044,6 +3147,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       // Defer the collapsed selection until pointer-up. Keeping the current
       // handle alive lets the same gesture continue across the fixed endpoint.
       _collapsedDragPosition = resolved.position;
+      _scheduleSelectionOverlaySync();
       return;
     }
     _collapsedDragPosition = null;
@@ -3542,7 +3646,14 @@ class _EditableExpressionText extends StatelessWidget {
   }
 }
 
-const double _calculatorMagnificationScale = 1.3;
+const double _calculatorMagnifierSizeScale = 1.3;
+const double _cupertinoMagnificationScale = 1.0;
+const double _materialMagnificationScale = 1.25;
+const Size _calculatorCupertinoMagnifierSize = Size(104, 61.75);
+const Size _calculatorMaterialMagnifierSize = Size(
+  77.37 * _calculatorMagnifierSizeScale,
+  37.9 * _calculatorMagnifierSizeScale,
+);
 
 class _CalculatorCupertinoTextMagnifier extends StatefulWidget {
   const _CalculatorCupertinoTextMagnifier({
@@ -3638,9 +3749,10 @@ class _CalculatorCupertinoTextMagnifierState
           (lineCenterY - info.globalGesturePosition.dy) / _dragResistance,
     );
     final rawPosition = Offset(
-      info.globalGesturePosition.dx - CupertinoMagnifier.kDefaultSize.width / 2,
+      info.globalGesturePosition.dx -
+          _calculatorCupertinoMagnifierSize.width / 2,
       lensY -
-          (CupertinoMagnifier.kDefaultSize.height -
+          (_calculatorCupertinoMagnifierSize.height -
               CupertinoMagnifier.kMagnifierAboveFocalPoint),
     );
     final screenRect = Offset.zero & MediaQuery.sizeOf(context);
@@ -3648,14 +3760,14 @@ class _CalculatorCupertinoTextMagnifierState
       bounds: Rect.fromLTRB(
         screenRect.left + _horizontalScreenEdgePadding,
         screenRect.top -
-            (CupertinoMagnifier.kDefaultSize.height +
+            (_calculatorCupertinoMagnifierSize.height +
                 CupertinoMagnifier.kMagnifierAboveFocalPoint),
         screenRect.right - _horizontalScreenEdgePadding,
         screenRect.bottom +
-            (CupertinoMagnifier.kDefaultSize.height +
+            (_calculatorCupertinoMagnifierSize.height +
                 CupertinoMagnifier.kMagnifierAboveFocalPoint),
       ),
-      rect: rawPosition & CupertinoMagnifier.kDefaultSize,
+      rect: rawPosition & _calculatorCupertinoMagnifierSize,
     ).topLeft;
     setState(() {
       _position = adjusted;
@@ -3671,13 +3783,20 @@ class _CalculatorCupertinoTextMagnifierState
       left: _position.dx,
       top: _position.dy,
       child: CupertinoMagnifier(
+        size: _calculatorCupertinoMagnifierSize,
         inOutAnimation: _animation,
-        additionalFocalPointOffset: Offset(0, _verticalFocalPointAdjustment),
+        additionalFocalPointOffset: Offset(
+          0,
+          _verticalFocalPointAdjustment +
+              (_calculatorCupertinoMagnifierSize.height -
+                      CupertinoMagnifier.kDefaultSize.height) /
+                  2,
+        ),
         borderSide: BorderSide(
           color: CupertinoTheme.of(context).primaryColor,
           width: 2,
         ),
-        magnificationScale: _calculatorMagnificationScale,
+        magnificationScale: _cupertinoMagnificationScale,
       ),
     );
   }
@@ -3695,7 +3814,7 @@ class _CalculatorMaterialTextMagnifier extends StatefulWidget {
 
 class _CalculatorMaterialTextMagnifierState
     extends State<_CalculatorMaterialTextMagnifier> {
-  static const _size = Size(77.37, 37.9);
+  static const _size = _calculatorMaterialMagnifierSize;
   static const _verticalFocalPointShift = 22.0;
   static const _lineJumpDuration = Duration(milliseconds: 70);
 
@@ -3749,7 +3868,7 @@ class _CalculatorMaterialTextMagnifierState
       bounds: screenRect,
       rect: unadjusted,
     );
-    final horizontalInset = (_size.width / 2) / _calculatorMagnificationScale;
+    final horizontalInset = (_size.width / 2) / _materialMagnificationScale;
     final focalX = info.fieldBounds.width < horizontalInset * 2
         ? info.fieldBounds.center.dx
         : adjusted.center.dx.clamp(
@@ -3785,13 +3904,15 @@ class _CalculatorMaterialTextMagnifierState
       duration: _lineJumpTimer == null ? Duration.zero : _lineJumpDuration,
       child: RawMagnifier(
         size: _size,
-        magnificationScale: _calculatorMagnificationScale,
+        magnificationScale: _materialMagnificationScale,
         focalPointOffset:
             _extraFocalPointOffset +
             Offset(0, _verticalFocalPointShift + _size.height / 2),
         decoration: const MagnifierDecoration(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(40)),
+            borderRadius: BorderRadius.all(
+              Radius.circular(40 * _calculatorMagnifierSizeScale),
+            ),
           ),
           shadows: [
             BoxShadow(

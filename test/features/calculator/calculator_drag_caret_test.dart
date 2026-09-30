@@ -70,10 +70,14 @@ void main() {
     expect(find.byKey(const Key('calculatorMagnifier')), findsOneWidget);
     expect(find.byType(CupertinoMagnifier), findsOneWidget);
     expect(
+      tester.widget<CupertinoMagnifier>(find.byType(CupertinoMagnifier)).size,
+      const Size(104, 61.75),
+    );
+    expect(
       tester
           .widget<CupertinoMagnifier>(find.byType(CupertinoMagnifier))
           .magnificationScale,
-      1.3,
+      1.0,
     );
     expect(controller.expressionPosition, const RawExpressionPosition(0));
 
@@ -307,7 +311,11 @@ void main() {
     expect(find.byType(RawMagnifier), findsOneWidget);
     expect(
       tester.widget<RawMagnifier>(find.byType(RawMagnifier)).magnificationScale,
-      1.3,
+      1.25,
+    );
+    expect(
+      tester.widget<RawMagnifier>(find.byType(RawMagnifier)).size,
+      const Size(100.581, 49.27),
     );
 
     await gesture.up();

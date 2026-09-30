@@ -152,7 +152,14 @@ Offset _renderedFractionCharacterCenter(
     value,
     index + 1,
   );
-  return Offset((leading.dx + trailing.dx) / 2, (leading.dy + trailing.dy) / 2);
+  final richText = find.descendant(
+    of: find.byKey(fieldKey),
+    matching: find.byType(RichText),
+  );
+  return Offset(
+    (leading.dx + trailing.dx) / 2,
+    tester.getRect(richText).center.dy,
+  );
 }
 
 Future<void> _dragHandle(
@@ -759,6 +766,63 @@ void main() {
     expect(controller.selectedClipboardText, '123');
   });
 
+  testWidgets('通常式キャレット左右1文字内のダブルタップはキャレットメニューを優先する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('123456');
+    await _pumpCalculator(tester, controller);
+    final text = _expressionTextContaining('123456');
+    final adjacentCharacter = _characterCenter(tester, text, '4');
+    final outsideCharacter = _characterCenter(tester, text, '6');
+    controller.moveCaretToRawOffset(3);
+    await tester.pump();
+    await tester.tapAt(
+      tester.getCenter(find.byKey(const Key('calculatorCaret'))),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await _doubleTapAt(tester, adjacentCharacter);
+
+    expect(controller.selection, isNull);
+    expect(controller.expressionPosition, const RawExpressionPosition(3));
+    expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+
+    controller.moveCaretToRawOffset(3);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await _doubleTapAt(tester, outsideCharacter);
+    expect(controller.selectedClipboardText, '123456');
+  });
+
+  testWidgets('分数fieldキャレット左右1文字内のダブルタップはキャレットメニューを優先する', (tester) async {
+    final fractionController = CalculatorController();
+    _enterFraction(fractionController, '1234', '5678');
+    await _pumpCalculator(tester, fractionController);
+    final marker = fractionController.expression;
+    final fractionBoundary = _renderedFractionBoundary(
+      tester,
+      const Key('fractionNumeratorField'),
+      '1234',
+      2,
+    );
+    final fractionAdjacentCharacter = _renderedFractionCharacterCenter(
+      tester,
+      const Key('fractionNumeratorField'),
+      '1234',
+      2,
+    );
+    final fractionPosition = FractionExpressionPosition(
+      marker: marker,
+      field: FractionField.numerator,
+      offset: 2,
+    );
+    await tester.tapAt(fractionBoundary);
+    await tester.pump(const Duration(seconds: 2));
+    expect(fractionController.expressionPosition, fractionPosition);
+    await _doubleTapAt(tester, fractionAdjacentCharacter);
+
+    expect(fractionController.selection, isNull);
+    expect(fractionController.expressionPosition, fractionPosition);
+    expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+  });
+
   testWidgets('左右両ハンドルを記号境界へ動かし終了後にメニューを一度だけ再表示する', (tester) async {
     final controller = CalculatorController()..pasteAtCaret('123+254×5−993');
     await _pumpCalculator(tester, controller, size: const Size(800, 844));
@@ -878,6 +942,19 @@ void main() {
     var gesture = await tester.startGesture(leftKnob);
     await gesture.moveBy(rightAnchor - leftAnchor);
     await tester.pump();
+    await tester.pump();
+    expect(
+      _iosHandleAnchor(
+        tester,
+        const Key('calculatorSelectionBaseHandle'),
+        leftType: true,
+      ),
+      _iosHandleAnchor(
+        tester,
+        const Key('calculatorSelectionExtentHandle'),
+        leftType: false,
+      ),
+    );
     await gesture.up();
     await tester.pumpAndSettle();
     expect(controller.selection, isNull);
@@ -907,6 +984,19 @@ void main() {
     gesture = await tester.startGesture(rightKnob);
     await gesture.moveBy(leftAnchor - rightAnchor);
     await tester.pump();
+    await tester.pump();
+    expect(
+      _iosHandleAnchor(
+        tester,
+        const Key('calculatorSelectionBaseHandle'),
+        leftType: true,
+      ),
+      _iosHandleAnchor(
+        tester,
+        const Key('calculatorSelectionExtentHandle'),
+        leftType: false,
+      ),
+    );
     await gesture.up();
     await tester.pumpAndSettle();
     expect(controller.selection, isNull);
@@ -1294,6 +1384,7 @@ void main() {
     final controller = CalculatorController();
     _enterFraction(controller, '34', '56', wholeNumber: '12');
     await _pumpCalculator(tester, controller);
+    final marker = controller.expression;
 
     for (final entry in const [
       (Key('mixedFractionWholeNumber'), '12', FractionField.wholeNumber),
@@ -1305,6 +1396,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(controller.selection, isNull);
       }
+      controller.moveCaretBeforeFraction(marker);
+      await tester.pump();
       await _doubleTapAt(tester, tester.getCenter(find.byKey(entry.$1)));
       expect(controller.selectedClipboardText, entry.$2);
       expect(
@@ -1323,6 +1416,8 @@ void main() {
     final controller = CalculatorController();
     _enterFraction(controller, '12', '12345678');
     await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    controller.moveCaretBeforeFraction(controller.expression);
+    await tester.pump();
 
     await _doubleTapAt(
       tester,
@@ -1353,6 +1448,8 @@ void main() {
     }
     controller.press('a/b');
     await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    controller.moveCaretBeforeFraction(controller.expression);
+    await tester.pump();
 
     await _doubleTapAt(
       tester,
@@ -1379,6 +1476,8 @@ void main() {
     final controller = CalculatorController();
     _enterFraction(controller, '12', '12345678');
     await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    controller.moveCaretBeforeFraction(controller.expression);
+    await tester.pump();
 
     await _doubleTapAt(
       tester,
@@ -1730,6 +1829,8 @@ void main() {
     );
     expect(find.byKey(const Key('calculatorSelectionToolbar')), findsNothing);
 
+    controller.moveCaretBeforeFraction(controller.expression);
+    await tester.pump();
     await _doubleTapAt(
       tester,
       _renderedFractionCharacterCenter(

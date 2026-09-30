@@ -2335,6 +2335,10 @@ void main() {
       expressionRect.right - 20,
       expressionRect.center.dy,
     );
+    await tester.tapAt(
+      Offset(expressionRect.left + 2, expressionRect.center.dy),
+    );
+    await tester.pump(const Duration(seconds: 2));
     await tester.tapAt(expressionPosition);
     await tester.pump(const Duration(milliseconds: 50));
     await tester.tapAt(expressionPosition);
