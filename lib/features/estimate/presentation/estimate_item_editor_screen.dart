@@ -456,6 +456,20 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final groupFieldTheme = Theme.of(context).copyWith(
+      inputDecorationTheme: Theme.of(context).inputDecorationTheme.copyWith(
+        filled: true,
+        fillColor: colors.primaryContainer,
+        labelStyle: TextStyle(color: colors.onPrimaryContainer),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colors.primary),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: colors.primary, width: 2),
+        ),
+      ),
+    );
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.text(widget.isEditing ? '見積明細を編集' : '見積明細へ追加')),
@@ -491,64 +505,70 @@ class _EstimateItemEditorScreenState extends State<EstimateItemEditorScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 88,
-                    child: DropdownButtonFormField<String>(
-                      key: const Key('estimateConstructionSymbolField'),
-                      initialValue: _constructionSymbol,
-                      decoration: InputDecoration(
-                        labelText: l10n.choose(
-                          japanese: '記号',
-                          english: 'Symbol',
-                          simplifiedChinese: '符号',
-                          traditionalChinese: '符號',
-                          vietnamese: 'Ký hiệu',
-                          indonesian: 'Simbol',
-                          filipino: 'Simbolo',
-                          myanmar: 'သင်္ကေတ',
+              Theme(
+                data: groupFieldTheme,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 88,
+                      child: DropdownButtonFormField<String>(
+                        key: const Key('estimateConstructionSymbolField'),
+                        initialValue: _constructionSymbol,
+                        decoration: InputDecoration(
+                          labelText: l10n.choose(
+                            japanese: '記号',
+                            english: 'Symbol',
+                            simplifiedChinese: '符号',
+                            traditionalChinese: '符號',
+                            vietnamese: 'Ký hiệu',
+                            indonesian: 'Simbol',
+                            filipino: 'Simbolo',
+                            myanmar: 'သင်္ကေတ',
+                          ),
+                          border: const OutlineInputBorder(),
                         ),
-                        border: const OutlineInputBorder(),
+                        items: [
+                          const DropdownMenuItem(value: '', child: Text('—')),
+                          for (final symbol in {
+                            ...estimateItemSymbols,
+                            if (_constructionSymbol.isNotEmpty)
+                              _constructionSymbol,
+                          })
+                            DropdownMenuItem(
+                              value: symbol,
+                              child: Text(symbol),
+                            ),
+                        ],
+                        onChanged: _selectConstructionSymbol,
                       ),
-                      items: [
-                        const DropdownMenuItem(value: '', child: Text('—')),
-                        for (final symbol in {
-                          ...estimateItemSymbols,
-                          if (_constructionSymbol.isNotEmpty)
-                            _constructionSymbol,
-                        })
-                          DropdownMenuItem(value: symbol, child: Text(symbol)),
-                      ],
-                      onChanged: _selectConstructionSymbol,
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _field(
-                      _constructionLocation,
-                      l10n.choose(
-                        japanese: '施工場所',
-                        english: 'Work location',
-                        simplifiedChinese: '施工地点',
-                        traditionalChinese: '施工地點',
-                        vietnamese: 'Vị trí thi công',
-                        indonesian: 'Lokasi pekerjaan',
-                        filipino: 'Lokasyon ng trabaho',
-                        myanmar: 'ဆောက်လုပ်ရေးနေရာ',
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _field(
+                        _constructionLocation,
+                        l10n.choose(
+                          japanese: '施工場所',
+                          english: 'Work location',
+                          simplifiedChinese: '施工地点',
+                          traditionalChinese: '施工地點',
+                          vietnamese: 'Vị trí thi công',
+                          indonesian: 'Lokasi pekerjaan',
+                          filipino: 'Lokasyon ng trabaho',
+                          myanmar: 'ဆောက်လုပ်ရေးနေရာ',
+                        ),
+                        key: const Key('estimateConstructionLocationField'),
+                        maxLines: null,
+                        padding: EdgeInsets.zero,
+                        guidanceKey: const Key(
+                          'estimateConstructionLocationGuidance',
+                        ),
+                        japaneseCharacterLimit: 52,
+                        japaneseLineLimit: 2,
                       ),
-                      key: const Key('estimateConstructionLocationField'),
-                      maxLines: null,
-                      padding: EdgeInsets.zero,
-                      guidanceKey: const Key(
-                        'estimateConstructionLocationGuidance',
-                      ),
-                      japaneseCharacterLimit: 52,
-                      japaneseLineLimit: 2,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
               _field(

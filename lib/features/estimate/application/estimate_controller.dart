@@ -276,6 +276,61 @@ class EstimateController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> reorderItemsInGroup({
+    required String constructionSymbol,
+    required String constructionLocation,
+    required List<String> itemIds,
+  }) async {
+    final group = groups.firstWhere(
+      (candidate) =>
+          candidate.constructionSymbol == constructionSymbol &&
+          candidate.constructionLocation == constructionLocation,
+      orElse: () => throw StateError('Estimate group was not found.'),
+    );
+    final currentIds = group.items.map((item) => item.id).toSet();
+    if (itemIds.length != currentIds.length ||
+        itemIds.toSet().length != itemIds.length ||
+        !itemIds.every(currentIds.contains)) {
+      throw ArgumentError('Item order must contain the complete group.');
+    }
+    final byId = {for (final item in group.items) item.id: item};
+    final reorderedGroup = [for (final id in itemIds) byId[id]!];
+    final updated = <EstimateItem>[];
+    var inserted = false;
+    for (final item in _items) {
+      if (currentIds.contains(item.id)) {
+        if (!inserted) {
+          updated.addAll(reorderedGroup);
+          inserted = true;
+        }
+      } else {
+        updated.add(item);
+      }
+    }
+    await _replaceItemOrder(updated);
+  }
+
+  Future<void> reorderGroups(List<List<String>> groupItemIds) async {
+    final expectedIds = _items.map((item) => item.id).toSet();
+    final orderedIds = groupItemIds.expand((ids) => ids).toList();
+    if (orderedIds.length != expectedIds.length ||
+        orderedIds.toSet().length != orderedIds.length ||
+        !orderedIds.every(expectedIds.contains)) {
+      throw ArgumentError('Group order must contain every estimate item.');
+    }
+    final byId = {for (final item in _items) item.id: item};
+    await _replaceItemOrder([for (final id in orderedIds) byId[id]!]);
+  }
+
+  Future<void> _replaceItemOrder(List<EstimateItem> updated) async {
+    if (listEquals(updated, _items)) return;
+    await _save(updated);
+    _items
+      ..clear()
+      ..addAll(updated);
+    notifyListeners();
+  }
+
   Future<void> updateInfo(EstimateInfo info) async {
     final workspace = _workspaceWithActive(info: info);
     await store?.save(workspace);

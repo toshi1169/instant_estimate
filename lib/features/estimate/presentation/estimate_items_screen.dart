@@ -27,7 +27,9 @@ import 'estimate_pdf_script_notice.dart';
 import 'estimate_success_snack_bar.dart';
 import 'merge_estimate_quantity_dialog.dart';
 
-enum _EstimateItemAction { duplicate, edit, delete }
+enum _EstimateItemAction { reorder, duplicate, edit, delete }
+
+enum _EstimateReorderMode { none, items, groups }
 
 enum _EstimateOutputAction { print, pdf, excel }
 
@@ -62,6 +64,10 @@ class EstimateItemsScreen extends StatefulWidget {
 class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
   late AppSettings _settings = widget.settings;
   Future<void> _taxSettingsSave = Future<void>.value();
+  _EstimateReorderMode _reorderMode = _EstimateReorderMode.none;
+  List<EstimateItemGroup> _workingGroups = const [];
+  EstimateItemGroup? _itemReorderGroup;
+  List<EstimateItem> _workingItems = const [];
 
   EstimateController get controller => widget.controller;
   AppSettings get settings => _settings;
@@ -82,94 +88,119 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isReordering = _reorderMode != _EstimateReorderMode.none;
     return Scaffold(
       appBar: AppBar(
+        leading: isReordering
+            ? IconButton(
+                key: const Key('cancelEstimateReorder'),
+                onPressed: _cancelReorder,
+                icon: const Icon(Icons.close),
+              )
+            : null,
+        title: isReordering ? Text(l10n.text('並び替え')) : null,
         actions: [
-          TextButton(
-            key: const Key('estimateOutputButton'),
-            style: TextButton.styleFrom(
-              foregroundColor: IconTheme.of(context).color,
-              minimumSize: const Size(86, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              tapTargetSize: MaterialTapTargetSize.padded,
+          if (isReordering)
+            TextButton(
+              key: const Key('finishEstimateReorder'),
+              onPressed: _finishReorder,
+              child: Text(l10n.text('完了')),
+            )
+          else ...[
+            TextButton(
+              key: const Key('estimateOutputButton'),
+              style: TextButton.styleFrom(
+                foregroundColor: IconTheme.of(context).color,
+                minimumSize: const Size(86, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                tapTargetSize: MaterialTapTargetSize.padded,
+              ),
+              onPressed: () => _showOutputOptions(context),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _EstimateOutputIcon(),
+                  const SizedBox(width: 5),
+                  Text(l10n.estimateOutput, maxLines: 1),
+                ],
+              ),
             ),
-            onPressed: () => _showOutputOptions(context),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const _EstimateOutputIcon(),
-                const SizedBox(width: 5),
-                Text(l10n.estimateOutput, maxLines: 1),
-              ],
-            ),
-          ),
-          Semantics(
-            container: true,
-            button: true,
-            label: l10n.estimateMoreActions,
-            child: PopupMenuButton<_EstimateMoreAction>(
-              key: const Key('estimateMoreActions'),
-              tooltip: l10n.estimateMoreActions,
-              onSelected: (action) => _handleMoreAction(context, action),
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  key: const Key('editEstimateInfo'),
-                  value: _EstimateMoreAction.editInfo,
-                  child: ListTile(
-                    leading: const Icon(Icons.edit_note_outlined),
-                    title: Text(l10n.editEstimateInformation),
+            Semantics(
+              container: true,
+              button: true,
+              label: l10n.estimateMoreActions,
+              child: PopupMenuButton<_EstimateMoreAction>(
+                key: const Key('estimateMoreActions'),
+                tooltip: l10n.estimateMoreActions,
+                onSelected: (action) => _handleMoreAction(context, action),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    key: const Key('editEstimateInfo'),
+                    value: _EstimateMoreAction.editInfo,
+                    child: ListTile(
+                      leading: const Icon(Icons.edit_note_outlined),
+                      title: Text(l10n.editEstimateInformation),
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  key: const Key('editCompanyProfileFromEstimateItems'),
-                  value: _EstimateMoreAction.editCompanyProfile,
-                  child: ListTile(
-                    leading: const Icon(Icons.business_outlined),
-                    title: Text(l10n.editCompanyProfile),
+                  PopupMenuItem(
+                    key: const Key('editCompanyProfileFromEstimateItems'),
+                    value: _EstimateMoreAction.editCompanyProfile,
+                    child: ListTile(
+                      leading: const Icon(Icons.business_outlined),
+                      title: Text(l10n.editCompanyProfile),
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  key: const Key('copyEstimateTable'),
-                  value: _EstimateMoreAction.copyTable,
-                  child: ListTile(
-                    leading: const Icon(Icons.table_view_outlined),
-                    title: Text(l10n.copyTableForExcel),
+                  PopupMenuItem(
+                    key: const Key('copyEstimateTable'),
+                    value: _EstimateMoreAction.copyTable,
+                    child: ListTile(
+                      leading: const Icon(Icons.table_view_outlined),
+                      title: Text(l10n.copyTableForExcel),
+                    ),
                   ),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem(
-                  key: const Key('editEstimateTaxSettings'),
-                  value: _EstimateMoreAction.editTax,
-                  child: ListTile(
-                    leading: const Icon(Icons.percent_outlined),
-                    title: Text(l10n.taxSettings),
-                    subtitle: Text(
-                      l10n.taxSettingsSummary(
-                        enabled: controller.info.taxEnabled,
-                        rate: formatTaxRateBasisPoints(
-                          controller.info.taxRateBasisPoints,
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    key: const Key('editEstimateTaxSettings'),
+                    value: _EstimateMoreAction.editTax,
+                    child: ListTile(
+                      leading: const Icon(Icons.percent_outlined),
+                      title: Text(l10n.taxSettings),
+                      subtitle: Text(
+                        l10n.taxSettingsSummary(
+                          enabled: controller.info.taxEnabled,
+                          rate: formatTaxRateBasisPoints(
+                            controller.info.taxRateBasisPoints,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('addEstimateItemDirect'),
-        onPressed: () => _addItem(context),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.text('明細を追加')),
-      ),
+      floatingActionButton: isReordering
+          ? null
+          : FloatingActionButton.extended(
+              key: const Key('addEstimateItemDirect'),
+              onPressed: () => _addItem(context),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.text('明細を追加')),
+            ),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: controller,
           builder: (context, _) {
             if (!controller.isLoaded) {
               return const Center(child: CircularProgressIndicator());
+            }
+            if (_reorderMode == _EstimateReorderMode.groups) {
+              return _buildGroupReorderList(context);
+            }
+            if (_reorderMode == _EstimateReorderMode.items) {
+              return _buildItemReorderList(context);
             }
             return Column(
               children: [
@@ -189,6 +220,27 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
                   ),
                 ),
                 const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.text('記号・施工場所'),
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      IconButton(
+                        key: const Key('reorderEstimateGroups'),
+                        tooltip: l10n.text('記号・施工場所を入替'),
+                        onPressed: controller.items.isEmpty
+                            ? null
+                            : _startGroupReorder,
+                        icon: const Icon(Icons.settings_outlined),
+                      ),
+                    ],
+                  ),
+                ),
                 Expanded(
                   child: controller.items.isEmpty
                       ? Center(
@@ -221,6 +273,158 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
           },
         ),
       ),
+    );
+  }
+
+  void _startGroupReorder() {
+    setState(() {
+      _workingGroups = List.of(controller.groups);
+      _reorderMode = _EstimateReorderMode.groups;
+    });
+  }
+
+  void _startItemReorder(EstimateItem item) {
+    final group = controller.groups.firstWhere(
+      (candidate) => candidate.items.any((entry) => entry.id == item.id),
+    );
+    setState(() {
+      _itemReorderGroup = group;
+      _workingItems = List.of(group.items);
+      _reorderMode = _EstimateReorderMode.items;
+    });
+  }
+
+  void _cancelReorder() {
+    setState(() {
+      _reorderMode = _EstimateReorderMode.none;
+      _workingGroups = const [];
+      _workingItems = const [];
+      _itemReorderGroup = null;
+    });
+  }
+
+  Future<void> _finishReorder() async {
+    try {
+      if (_reorderMode == _EstimateReorderMode.groups) {
+        await controller.reorderGroups([
+          for (final group in _workingGroups)
+            [for (final item in group.items) item.id],
+        ]);
+      } else if (_reorderMode == _EstimateReorderMode.items) {
+        final group = _itemReorderGroup!;
+        await controller.reorderItemsInGroup(
+          constructionSymbol: group.constructionSymbol,
+          constructionLocation: group.constructionLocation,
+          itemIds: [for (final item in _workingItems) item.id],
+        );
+      }
+      if (mounted) _cancelReorder();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).text('並び順を保存できませんでした')),
+        ),
+      );
+    }
+  }
+
+  Widget _buildGroupReorderList(BuildContext context) {
+    return ReorderableListView.builder(
+      key: const Key('estimateGroupReorderList'),
+      padding: const EdgeInsets.all(12),
+      buildDefaultDragHandles: false,
+      autoScrollerVelocityScalar: 50,
+      itemCount: _workingGroups.length,
+      proxyDecorator: (child, _, animation) => Material(
+        elevation: 6 * animation.value,
+        color: Colors.transparent,
+        child: child,
+      ),
+      onReorderItem: (oldIndex, newIndex) {
+        setState(() {
+          final group = _workingGroups.removeAt(oldIndex);
+          _workingGroups.insert(newIndex, group);
+        });
+      },
+      itemBuilder: (context, index) => Padding(
+        key: ValueKey(
+          'reorder-group-${_workingGroups[index].constructionSymbol}-${_workingGroups[index].constructionLocation}',
+        ),
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _EstimateGroupSection(
+          group: _workingGroups[index],
+          groupIndex: index,
+          itemIndex: (item) =>
+              controller.items.indexWhere((entry) => entry.id == item.id),
+          onAction: (_, _) {},
+          groupDragHandle: ReorderableDragStartListener(
+            key: Key('estimateGroupDragHandle$index'),
+            index: index,
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Icon(Icons.drag_handle),
+            ),
+          ),
+          hideItemMenus: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemReorderList(BuildContext context) {
+    final group = _itemReorderGroup!;
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        ColoredBox(
+          color: colors.primaryContainer,
+          child: ListTile(
+            key: const Key('estimateItemReorderGroupHeader'),
+            title: Text(
+              group.displayName.isEmpty ? '—' : group.displayName,
+              style: TextStyle(
+                color: colors.onPrimaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ReorderableListView.builder(
+            key: const Key('estimateItemReorderList'),
+            padding: const EdgeInsets.all(12),
+            buildDefaultDragHandles: false,
+            autoScrollerVelocityScalar: 50,
+            itemCount: _workingItems.length,
+            onReorderItem: (oldIndex, newIndex) {
+              setState(() {
+                final item = _workingItems.removeAt(oldIndex);
+                _workingItems.insert(newIndex, item);
+              });
+            },
+            itemBuilder: (context, index) => Card(
+              key: ValueKey(_workingItems[index].id),
+              margin: const EdgeInsets.only(bottom: 8),
+              child: _EstimateItemCard(
+                item: _workingItems[index],
+                index: controller.items.indexWhere(
+                  (item) => item.id == _workingItems[index].id,
+                ),
+                onAction: (_) {},
+                dragHandle: ReorderableDragStartListener(
+                  key: Key('estimateItemDragHandle$index'),
+                  index: index,
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Icon(Icons.drag_handle),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -659,6 +863,8 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
     _EstimateItemAction action,
   ) async {
     switch (action) {
+      case _EstimateItemAction.reorder:
+        _startItemReorder(item);
       case _EstimateItemAction.duplicate:
         final result = await Navigator.of(context)
             .push<EstimateItemEditorResult>(
@@ -1020,11 +1226,15 @@ class _EstimateItemCard extends StatelessWidget {
     required this.item,
     required this.index,
     required this.onAction,
+    this.dragHandle,
+    this.hideMenu = false,
   });
 
   final EstimateItem item;
   final int index;
   final ValueChanged<_EstimateItemAction> onAction;
+  final Widget? dragHandle;
+  final bool hideMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -1042,39 +1252,48 @@ class _EstimateItemCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                ?dragHandle,
                 Expanded(
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                PopupMenuButton<_EstimateItemAction>(
-                  key: Key('estimateItemMenu$index'),
-                  onSelected: onAction,
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                      value: _EstimateItemAction.duplicate,
-                      child: ListTile(
-                        leading: Icon(Icons.copy_outlined),
-                        title: Text(l10n.text('複製')),
+                if (!hideMenu)
+                  PopupMenuButton<_EstimateItemAction>(
+                    key: Key('estimateItemMenu$index'),
+                    onSelected: onAction,
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: _EstimateItemAction.reorder,
+                        child: ListTile(
+                          leading: const Icon(Icons.settings_outlined),
+                          title: Text(l10n.text('項目入替')),
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: _EstimateItemAction.edit,
-                      child: ListTile(
-                        leading: Icon(Icons.edit_outlined),
-                        title: Text(l10n.text('編集')),
+                      PopupMenuItem(
+                        value: _EstimateItemAction.duplicate,
+                        child: ListTile(
+                          leading: Icon(Icons.copy_outlined),
+                          title: Text(l10n.text('複製')),
+                        ),
                       ),
-                    ),
-                    PopupMenuItem(
-                      value: _EstimateItemAction.delete,
-                      child: ListTile(
-                        leading: Icon(Icons.delete_outline),
-                        title: Text(l10n.delete),
+                      PopupMenuItem(
+                        value: _EstimateItemAction.edit,
+                        child: ListTile(
+                          leading: Icon(Icons.edit_outlined),
+                          title: Text(l10n.text('編集')),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      PopupMenuItem(
+                        value: _EstimateItemAction.delete,
+                        child: ListTile(
+                          leading: Icon(Icons.delete_outline),
+                          title: Text(l10n.delete),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
             if (item.specification.isNotEmpty) ...[
@@ -1116,12 +1335,16 @@ class _EstimateGroupSection extends StatelessWidget {
     required this.groupIndex,
     required this.itemIndex,
     required this.onAction,
+    this.groupDragHandle,
+    this.hideItemMenus = false,
   });
 
   final EstimateItemGroup group;
   final int groupIndex;
   final int Function(EstimateItem item) itemIndex;
   final void Function(EstimateItem item, _EstimateItemAction action) onAction;
+  final Widget? groupDragHandle;
+  final bool hideItemMenus;
 
   @override
   Widget build(BuildContext context) {
@@ -1140,6 +1363,7 @@ class _EstimateGroupSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
+                  ?groupDragHandle,
                   Expanded(
                     child: Text(
                       group.displayName.isEmpty ? '—' : group.displayName,
@@ -1161,6 +1385,7 @@ class _EstimateGroupSection extends StatelessWidget {
               item: group.items[index],
               index: itemIndex(group.items[index]),
               onAction: (action) => onAction(group.items[index], action),
+              hideMenu: hideItemMenus,
             ),
           ],
           const Divider(height: 1),

@@ -729,4 +729,66 @@ void main() {
     expect(controller.unitPriceMasters.single.trade, '土工事');
     expect(store.workspace.unitPriceMasters, hasLength(1));
   });
+
+  test('グループ内明細とグループの順序を保存して再読込できる', () async {
+    final store = _MemoryEstimateItemStore();
+    final controller = EstimateController(store: store);
+    await controller.load();
+    for (final draft in const [
+      EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側',
+        name: 'A',
+        quantity: 1,
+        unitPrice: 100,
+      ),
+      EstimateItemDraft(
+        constructionSymbol: '①',
+        constructionLocation: '北側',
+        name: 'B',
+        quantity: 2,
+        unitPrice: 200,
+      ),
+      EstimateItemDraft(
+        constructionSymbol: '②',
+        constructionLocation: '南側',
+        name: 'C',
+        quantity: 3,
+        unitPrice: 300,
+      ),
+      EstimateItemDraft(
+        constructionSymbol: '②',
+        constructionLocation: '南側',
+        name: 'D',
+        quantity: 4,
+        unitPrice: 400,
+      ),
+    ]) {
+      await controller.add(draft);
+    }
+    final firstGroup = controller.groups.first;
+    await controller.reorderItemsInGroup(
+      constructionSymbol: firstGroup.constructionSymbol,
+      constructionLocation: firstGroup.constructionLocation,
+      itemIds: firstGroup.items.reversed.map((item) => item.id).toList(),
+    );
+    expect(controller.items.map((item) => item.name), ['B', 'A', 'C', 'D']);
+
+    final groups = controller.groups;
+    await controller.reorderGroups([
+      groups[1].items.map((item) => item.id).toList(),
+      groups[0].items.map((item) => item.id).toList(),
+    ]);
+    expect(controller.items.map((item) => item.name), ['C', 'D', 'B', 'A']);
+    expect(controller.subtotalAmount, 3000);
+
+    final restored = EstimateController(store: store);
+    await restored.load();
+    expect(restored.items.map((item) => item.name), ['C', 'D', 'B', 'A']);
+    expect(restored.groups.map((group) => group.constructionSymbol), [
+      '②',
+      '①',
+    ]);
+    expect(restored.groups.first.items.map((item) => item.name), ['C', 'D']);
+  });
 }
