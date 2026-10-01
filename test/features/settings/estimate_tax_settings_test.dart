@@ -186,6 +186,8 @@ void main() {
     expect(settings.defaultEstimateTaxRateBasisPoints, 800);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('toggleEstimateHeader')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('estimateSubtotalAmount')), findsOneWidget);
     expect(find.byKey(const Key('estimateTaxAmount')), findsOneWidget);
     expect(find.textContaining('消費税（12%）'), findsOneWidget);

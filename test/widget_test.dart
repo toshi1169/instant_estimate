@@ -2867,8 +2867,8 @@ void main() {
     expect(find.byKey(const Key('estimateItemsList')), findsOneWidget);
     expect(find.text('試験明細'), findsOneWidget);
     expect(find.text('24 m²'), findsOneWidget);
-    expect(find.text('税抜合計  ¥ 2,400'), findsOneWidget);
-    expect(find.text('消費税（10%）  ¥ 240'), findsOneWidget);
+    expect(find.text('税抜合計  ¥ 2,400'), findsNothing);
+    expect(find.text('消費税（10%）  ¥ 240'), findsNothing);
     expect(find.text('税込総額  ¥ 2,640'), findsOneWidget);
   });
 
@@ -3145,7 +3145,7 @@ void main() {
     await tester.tap(find.byKey(const Key('saveEstimateChanges')));
     await tester.pumpAndSettle();
 
-    expect(find.text('税抜合計  ¥ 10,000'), findsOneWidget);
+    expect(find.text('税抜合計  ¥ 10,000'), findsNothing);
     expect(find.text('税込総額  ¥ 11,000'), findsOneWidget);
     expect(find.text('① 北側通路'), findsOneWidget);
     expect(find.text('工種：型枠工事'), findsOneWidget);
@@ -3162,8 +3162,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('emptyEstimateItems')), findsOneWidget);
-    expect(find.text('税抜合計  ¥ 0'), findsOneWidget);
-    expect(find.text('消費税（10%）  ¥ 0'), findsOneWidget);
+    expect(find.text('税抜合計  ¥ 0'), findsNothing);
+    expect(find.text('消費税（10%）  ¥ 0'), findsNothing);
     expect(find.text('税込総額  ¥ 0'), findsOneWidget);
     expect(store.items, isEmpty);
   });
@@ -3225,8 +3225,8 @@ void main() {
     expect(find.text('小計'), findsNWidgets(2));
     expect(find.text('¥ 11,000'), findsOneWidget);
     expect(find.text('¥ 500'), findsNWidgets(2));
-    expect(find.text('税抜合計  ¥ 11,500'), findsOneWidget);
-    expect(find.text('消費税（10%）  ¥ 1,150'), findsOneWidget);
+    expect(find.text('税抜合計  ¥ 11,500'), findsNothing);
+    expect(find.text('消費税（10%）  ¥ 1,150'), findsNothing);
     expect(find.text('税込総額  ¥ 12,650'), findsOneWidget);
   });
 
@@ -3365,7 +3365,7 @@ void main() {
 
     expect(find.text('工種：コンクリート工事'), findsOneWidget);
     expect(find.text('コンクリート打設'), findsOneWidget);
-    expect(find.text('税抜合計  ¥ 45,000'), findsOneWidget);
+    expect(find.text('税抜合計  ¥ 45,000'), findsNothing);
     expect(find.text('税込総額  ¥ 49,500'), findsOneWidget);
     expect(find.text('¥ 45,000'), findsNWidgets(2));
     expect(store.items.single.name, 'コンクリート打設');
@@ -3526,9 +3526,9 @@ void main() {
 
     expect(find.text('根切り'), findsOneWidget);
     expect(find.text('根切り 追加分'), findsOneWidget);
-    expect(find.text('2件'), findsNWidgets(2));
+    expect(find.text('2件'), findsOneWidget);
     expect(find.text('¥ 20,000'), findsOneWidget);
-    expect(find.text('税抜合計  ¥ 20,000'), findsOneWidget);
+    expect(find.text('税抜合計  ¥ 20,000'), findsNothing);
     expect(find.text('税込総額  ¥ 22,000'), findsOneWidget);
     expect(store.items, hasLength(2));
     expect(store.items[0].id, isNot(store.items[1].id));
@@ -3592,8 +3592,8 @@ void main() {
     await tester.tap(find.byKey(const Key('saveEstimateInfo')));
     await tester.pumpAndSettle();
 
-    expect(find.text('○○邸 外構工事'), findsOneWidget);
-    expect(find.textContaining('旧現場名'), findsNothing);
+    expect(find.textContaining('○○邸 外構工事'), findsOneWidget);
+    expect(find.textContaining('旧現場名'), findsOneWidget);
     expect(find.textContaining('旧宛名'), findsNothing);
     expect(find.textContaining('旧見積番号'), findsNothing);
     expect(store.document.info.siteName, '旧現場名');
@@ -3757,7 +3757,7 @@ void main() {
     expect(find.byType(EstimateItemsScreen), findsOneWidget);
     expect(find.text('○○邸 見積（コピー）'), findsOneWidget);
     expect(find.text('根切り'), findsOneWidget);
-    expect(find.text('税抜合計  ¥ 8,000'), findsOneWidget);
+    expect(find.text('税抜合計  ¥ 8,000'), findsNothing);
     expect(find.text('税込総額  ¥ 8,800'), findsOneWidget);
     expect(controller.estimates, hasLength(2));
     expect(controller.info.id, isNot(sourceInfoId));

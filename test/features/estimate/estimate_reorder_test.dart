@@ -77,6 +77,32 @@ void main() {
     expect(controller.groups.last.items.single.name, 'C');
   });
 
+  testWidgets('明細並び替えは名称とツマミだけを折り返して表示する', (tester) async {
+    const longName = '狭い画面でも明細を識別できるように複数行へ折り返す非常に長い名称';
+    final controller = await _controller(firstName: longName);
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('estimateItemMenu0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('項目入替'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('estimateItemReorderList')), findsOneWidget);
+    expect(find.byKey(const Key('estimateItemDragHandle0')), findsOneWidget);
+    expect(find.text(longName), findsOneWidget);
+    expect(find.text('仕様Aは並び替え中に表示しない'), findsNothing);
+    expect(
+      find.byKey(const Key('estimateItemReorderGroupHeader')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('グループを配下明細ごと並び替える', (tester) async {
     final controller = await _controller();
     await tester.pumpWidget(
@@ -101,6 +127,90 @@ void main() {
       '①',
     ]);
     expect(controller.items.map((item) => item.name), ['C', 'A', 'B']);
+  });
+
+  testWidgets('グループ並び替えは見出しとツマミだけを表示してキャンセルできる', (tester) async {
+    final controller = await _controller();
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('reorderEstimateGroups')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('① 北側'), findsOneWidget);
+    expect(find.byKey(const Key('estimateGroupDragHandle0')), findsOneWidget);
+    expect(find.text('A'), findsNothing);
+    expect(find.text('仕様Aは並び替え中に表示しない'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('cancelEstimateReorder')));
+    await tester.pumpAndSettle();
+    expect(controller.groups.map((group) => group.constructionSymbol), [
+      '①',
+      '②',
+    ]);
+  });
+
+  testWidgets('上部情報は初期省略で切替でき税ONの税込総額だけを表示する', (tester) async {
+    final controller = await _controller();
+    await controller.updateInfo(
+      controller.info.copyWith(
+        estimateName: '長い見積名を狭い画面でも表示する確認用見積',
+        siteName: '長い施工場所名を含む現場',
+        notes: '省略される備考',
+      ),
+    );
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(home: EstimateItemsScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('estimateCollapsedSummary')), findsOneWidget);
+    expect(find.byKey(const Key('estimateInfoSummary')), findsNothing);
+    expect(find.textContaining('税込総額'), findsOneWidget);
+    expect(find.textContaining('税抜合計'), findsNothing);
+    expect(find.textContaining('省略される備考'), findsNothing);
+    expect(find.byIcon(Icons.keyboard_arrow_down), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('toggleEstimateHeader')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('estimateInfoSummary')), findsOneWidget);
+    expect(find.textContaining('税抜合計'), findsOneWidget);
+    expect(find.textContaining('省略される備考'), findsOneWidget);
+    expect(find.byIcon(Icons.keyboard_arrow_up), findsOneWidget);
+  });
+
+  testWidgets('税OFFの省略表示は合計を表示しLightとDarkで崩れない', (tester) async {
+    for (final brightness in Brightness.values) {
+      final controller = await _controller();
+      await controller.updateInfo(controller.info.copyWith(taxEnabled: false));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.green,
+              brightness: brightness,
+            ),
+          ),
+          home: EstimateItemsScreen(controller: controller),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final total = tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const Key('estimateCollapsedTotal')),
+          matching: find.byType(Text),
+        ),
+      );
+      expect(total.data, startsWith('合計'));
+      expect(total.data, isNot(contains('税込総額')));
+      expect(tester.takeException(), isNull);
+    }
   });
 
   testWidgets('記号と施工場所だけがグループ見出し色を使う', (tester) async {
@@ -152,14 +262,15 @@ void main() {
   });
 }
 
-Future<EstimateController> _controller() async {
+Future<EstimateController> _controller({String firstName = 'A'}) async {
   final controller = EstimateController();
   await controller.load();
-  for (final draft in const [
+  for (final draft in [
     EstimateItemDraft(
       constructionSymbol: '①',
       constructionLocation: '北側',
-      name: 'A',
+      name: firstName,
+      specification: '仕様Aは並び替え中に表示しない',
       quantity: 1,
       unitPrice: 100,
     ),

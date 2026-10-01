@@ -117,7 +117,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       final displayedName = tester.widget<Text>(
-        find.byKey(const Key('estimateInfoSummaryName')),
+        find.byKey(const Key('estimateCollapsedNameAndSite')),
       );
       expect(displayedName.overflow, TextOverflow.ellipsis);
       expect(controller.info.estimateName, '非常に長い建設工事の見積書タイトル${language.name}');
@@ -138,10 +138,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('estimateInfoSummaryName')), findsOneWidget);
+    expect(
+      find.byKey(const Key('estimateCollapsedNameAndSite')),
+      findsOneWidget,
+    );
     expect(find.text('松本邸見積'), findsOneWidget);
     expect(find.textContaining('見積名・現場名：'), findsNothing);
-    await tester.tap(find.byKey(const Key('editEstimateInfoFromSummary')));
+    await tester.tap(
+      find.byKey(const Key('editEstimateInfoFromCollapsedSummary')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('estimateInfoEditor')), findsOneWidget);

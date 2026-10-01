@@ -68,6 +68,7 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
   List<EstimateItemGroup> _workingGroups = const [];
   EstimateItemGroup? _itemReorderGroup;
   List<EstimateItem> _workingItems = const [];
+  bool _isHeaderCollapsed = true;
 
   EstimateController get controller => widget.controller;
   AppSettings get settings => _settings;
@@ -204,21 +205,29 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
             }
             return Column(
               children: [
-                _EstimateInfoSummary(
-                  info: controller.info,
-                  onTap: () => _editInfo(context),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-                  child: _EstimateTotalsSummary(
-                    itemCount: controller.items.length,
-                    subtotal: controller.subtotalAmount,
-                    tax: controller.taxAmount,
+                if (_isHeaderCollapsed)
+                  _EstimateCollapsedSummary(
+                    info: controller.info,
                     grandTotal: controller.grandTotalAmount,
-                    taxEnabled: controller.info.taxEnabled,
-                    taxRateBasisPoints: controller.info.taxRateBasisPoints,
+                    onTap: () => _editInfo(context),
+                  )
+                else ...[
+                  _EstimateInfoSummary(
+                    info: controller.info,
+                    onTap: () => _editInfo(context),
                   ),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                    child: _EstimateTotalsSummary(
+                      itemCount: controller.items.length,
+                      subtotal: controller.subtotalAmount,
+                      tax: controller.taxAmount,
+                      grandTotal: controller.grandTotalAmount,
+                      taxEnabled: controller.info.taxEnabled,
+                      taxRateBasisPoints: controller.info.taxRateBasisPoints,
+                    ),
+                  ),
+                ],
                 const Divider(height: 1),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
@@ -237,6 +246,20 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
                             ? null
                             : _startGroupReorder,
                         icon: const Icon(Icons.settings_outlined),
+                      ),
+                      IconButton(
+                        key: const Key('toggleEstimateHeader'),
+                        tooltip: l10n.text(
+                          _isHeaderCollapsed ? '上部情報を表示' : '上部情報を省略',
+                        ),
+                        onPressed: () => setState(
+                          () => _isHeaderCollapsed = !_isHeaderCollapsed,
+                        ),
+                        icon: Icon(
+                          _isHeaderCollapsed
+                              ? Icons.keyboard_arrow_down
+                              : Icons.keyboard_arrow_up,
+                        ),
                       ),
                     ],
                   ),
@@ -352,13 +375,10 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
           'reorder-group-${_workingGroups[index].constructionSymbol}-${_workingGroups[index].constructionLocation}',
         ),
         padding: const EdgeInsets.only(bottom: 12),
-        child: _EstimateGroupSection(
+        child: _EstimateGroupReorderTile(
           group: _workingGroups[index],
           groupIndex: index,
-          itemIndex: (item) =>
-              controller.items.indexWhere((entry) => entry.id == item.id),
-          onAction: (_, _) {},
-          groupDragHandle: ReorderableDragStartListener(
+          dragHandle: ReorderableDragStartListener(
             key: Key('estimateGroupDragHandle$index'),
             index: index,
             child: const Padding(
@@ -366,65 +386,36 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
               child: Icon(Icons.drag_handle),
             ),
           ),
-          hideItemMenus: true,
         ),
       ),
     );
   }
 
   Widget _buildItemReorderList(BuildContext context) {
-    final group = _itemReorderGroup!;
-    final colors = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        ColoredBox(
-          color: colors.primaryContainer,
-          child: ListTile(
-            key: const Key('estimateItemReorderGroupHeader'),
-            title: Text(
-              group.displayName.isEmpty ? '—' : group.displayName,
-              style: TextStyle(
-                color: colors.onPrimaryContainer,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+    return ReorderableListView.builder(
+      key: const Key('estimateItemReorderList'),
+      padding: const EdgeInsets.all(12),
+      buildDefaultDragHandles: false,
+      autoScrollerVelocityScalar: 50,
+      itemCount: _workingItems.length,
+      onReorderItem: (oldIndex, newIndex) {
+        setState(() {
+          final item = _workingItems.removeAt(oldIndex);
+          _workingItems.insert(newIndex, item);
+        });
+      },
+      itemBuilder: (context, index) => _EstimateItemReorderTile(
+        key: ValueKey(_workingItems[index].id),
+        item: _workingItems[index],
+        dragHandle: ReorderableDragStartListener(
+          key: Key('estimateItemDragHandle$index'),
+          index: index,
+          child: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Icon(Icons.drag_handle),
           ),
         ),
-        Expanded(
-          child: ReorderableListView.builder(
-            key: const Key('estimateItemReorderList'),
-            padding: const EdgeInsets.all(12),
-            buildDefaultDragHandles: false,
-            autoScrollerVelocityScalar: 50,
-            itemCount: _workingItems.length,
-            onReorderItem: (oldIndex, newIndex) {
-              setState(() {
-                final item = _workingItems.removeAt(oldIndex);
-                _workingItems.insert(newIndex, item);
-              });
-            },
-            itemBuilder: (context, index) => Card(
-              key: ValueKey(_workingItems[index].id),
-              margin: const EdgeInsets.only(bottom: 8),
-              child: _EstimateItemCard(
-                item: _workingItems[index],
-                index: controller.items.indexWhere(
-                  (item) => item.id == _workingItems[index].id,
-                ),
-                onAction: (_) {},
-                dragHandle: ReorderableDragStartListener(
-                  key: Key('estimateItemDragHandle$index'),
-                  index: index,
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Icon(Icons.drag_handle),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -1089,6 +1080,70 @@ String _displayQuantity(double? value) {
   return formatEstimateQuantity(value);
 }
 
+class _EstimateCollapsedSummary extends StatelessWidget {
+  const _EstimateCollapsedSummary({
+    required this.info,
+    required this.grandTotal,
+    required this.onTap,
+  });
+
+  final EstimateInfo info;
+  final int grandTotal;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final siteName = info.siteName.trim();
+    final names = [
+      l10n.text(info.displayName),
+      if (siteName.isNotEmpty && siteName != info.displayName)
+        l10n.text(siteName),
+    ];
+    final totalLabel = info.taxEnabled ? l10n.text('税込総額') : l10n.estimateTotal;
+    return Card(
+      key: const Key('estimateCollapsedSummary'),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: const Key('editEstimateInfoFromCollapsedSummary'),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  names.join(' / '),
+                  key: const Key('estimateCollapsedNameAndSite'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: FittedBox(
+                  key: const Key('estimateCollapsedTotal'),
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '$totalLabel  ¥ ${_money(grandTotal.toDouble())}',
+                    key: const Key('estimateGrandTotalAmount'),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _EstimateTotalsSummary extends StatelessWidget {
   const _EstimateTotalsSummary({
     required this.itemCount,
@@ -1226,15 +1281,11 @@ class _EstimateItemCard extends StatelessWidget {
     required this.item,
     required this.index,
     required this.onAction,
-    this.dragHandle,
-    this.hideMenu = false,
   });
 
   final EstimateItem item;
   final int index;
   final ValueChanged<_EstimateItemAction> onAction;
-  final Widget? dragHandle;
-  final bool hideMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -1252,48 +1303,46 @@ class _EstimateItemCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                ?dragHandle,
                 Expanded(
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                if (!hideMenu)
-                  PopupMenuButton<_EstimateItemAction>(
-                    key: Key('estimateItemMenu$index'),
-                    onSelected: onAction,
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: _EstimateItemAction.reorder,
-                        child: ListTile(
-                          leading: const Icon(Icons.settings_outlined),
-                          title: Text(l10n.text('項目入替')),
-                        ),
+                PopupMenuButton<_EstimateItemAction>(
+                  key: Key('estimateItemMenu$index'),
+                  onSelected: onAction,
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: _EstimateItemAction.reorder,
+                      child: ListTile(
+                        leading: const Icon(Icons.settings_outlined),
+                        title: Text(l10n.text('項目入替')),
                       ),
-                      PopupMenuItem(
-                        value: _EstimateItemAction.duplicate,
-                        child: ListTile(
-                          leading: Icon(Icons.copy_outlined),
-                          title: Text(l10n.text('複製')),
-                        ),
+                    ),
+                    PopupMenuItem(
+                      value: _EstimateItemAction.duplicate,
+                      child: ListTile(
+                        leading: Icon(Icons.copy_outlined),
+                        title: Text(l10n.text('複製')),
                       ),
-                      PopupMenuItem(
-                        value: _EstimateItemAction.edit,
-                        child: ListTile(
-                          leading: Icon(Icons.edit_outlined),
-                          title: Text(l10n.text('編集')),
-                        ),
+                    ),
+                    PopupMenuItem(
+                      value: _EstimateItemAction.edit,
+                      child: ListTile(
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text(l10n.text('編集')),
                       ),
-                      PopupMenuItem(
-                        value: _EstimateItemAction.delete,
-                        child: ListTile(
-                          leading: Icon(Icons.delete_outline),
-                          title: Text(l10n.delete),
-                        ),
+                    ),
+                    PopupMenuItem(
+                      value: _EstimateItemAction.delete,
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline),
+                        title: Text(l10n.delete),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
               ],
             ),
             if (item.specification.isNotEmpty) ...[
@@ -1329,22 +1378,99 @@ class _EstimateItemCard extends StatelessWidget {
   }
 }
 
+class _EstimateItemReorderTile extends StatelessWidget {
+  const _EstimateItemReorderTile({
+    required this.item,
+    required this.dragHandle,
+    super.key,
+  });
+
+  final EstimateItem item;
+  final Widget dragHandle;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          children: [
+            dragHandle,
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                item.name.isEmpty ? l10n.text('名称未入力') : item.name,
+                key: Key('estimateItemReorderName${item.id}'),
+                softWrap: true,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EstimateGroupReorderTile extends StatelessWidget {
+  const _EstimateGroupReorderTile({
+    required this.group,
+    required this.groupIndex,
+    required this.dragHandle,
+  });
+
+  final EstimateItemGroup group;
+  final int groupIndex;
+  final Widget dragHandle;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      key: Key('estimateGroup$groupIndex'),
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: ColoredBox(
+        color: colors.primaryContainer,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: [
+              dragHandle,
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  group.displayName.isEmpty ? '—' : group.displayName,
+                  key: Key('estimateGroupName$groupIndex'),
+                  softWrap: true,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: colors.onPrimaryContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _EstimateGroupSection extends StatelessWidget {
   const _EstimateGroupSection({
     required this.group,
     required this.groupIndex,
     required this.itemIndex,
     required this.onAction,
-    this.groupDragHandle,
-    this.hideItemMenus = false,
   });
 
   final EstimateItemGroup group;
   final int groupIndex;
   final int Function(EstimateItem item) itemIndex;
   final void Function(EstimateItem item, _EstimateItemAction action) onAction;
-  final Widget? groupDragHandle;
-  final bool hideItemMenus;
 
   @override
   Widget build(BuildContext context) {
@@ -1363,7 +1489,6 @@ class _EstimateGroupSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
-                  ?groupDragHandle,
                   Expanded(
                     child: Text(
                       group.displayName.isEmpty ? '—' : group.displayName,
@@ -1385,7 +1510,6 @@ class _EstimateGroupSection extends StatelessWidget {
               item: group.items[index],
               index: itemIndex(group.items[index]),
               onAction: (action) => onAction(group.items[index], action),
-              hideMenu: hideItemMenus,
             ),
           ],
           const Divider(height: 1),
