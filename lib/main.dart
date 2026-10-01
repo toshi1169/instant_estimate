@@ -22,7 +22,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerThirdPartyLicenses();
   await configureAppOrientation();
-  const profileScreenshotFullAccess = kProfileMode;
+  const profileTestAds =
+      kProfileMode &&
+      bool.fromEnvironment('PROFILE_TEST_ADS', defaultValue: false);
+  const profileScreenshotFullAccess = kProfileMode && !profileTestAds;
   final onboardingPreferences = PlatformOnboardingPreferences();
   final calculationHistoryStore = PlatformCalculationHistoryStore();
   final appSettingsStore = PlatformAppSettingsStore(
