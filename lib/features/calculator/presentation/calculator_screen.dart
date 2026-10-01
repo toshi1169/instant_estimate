@@ -118,6 +118,7 @@ class CalculatorScreen extends StatefulWidget {
 class _CalculatorScreenState extends State<CalculatorScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _expressionLineKey = GlobalKey<_EditableExpressionLineState>();
+  bool _isConvenientEstimateTransferPending = false;
   Timer? _digitLimitVisibilityTimer;
   Timer? _digitLimitCooldownTimer;
   bool _digitLimitNoticeVisible = false;
@@ -400,7 +401,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             () => Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => ConstructionCalculationsScreen(
-                  onSendToEstimate: _sendDraftToEstimate,
+                  onSendToEstimate: _sendConvenientDraftToEstimate,
                   productivityController: _productivityController,
                   settings: widget.settings,
                   onSettingsChanged: widget.onSettingsChanged,
@@ -742,6 +743,22 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           : '見積明細へ追加しました（${_estimateController.items.length}件）',
       itemId: addedItemId,
     );
+  }
+
+  Future<void> _sendConvenientDraftToEstimate(EstimateItemDraft draft) async {
+    if (_isConvenientEstimateTransferPending) return;
+    _isConvenientEstimateTransferPending = true;
+    try {
+      final requestAccess = widget.onRequestRewardedAdAccess;
+      if (requestAccess != null &&
+          !await requestAccess(RewardedAdEntryPoint.instantEstimate)) {
+        return;
+      }
+      if (!mounted) return;
+      await _sendDraftToEstimate(draft);
+    } finally {
+      _isConvenientEstimateTransferPending = false;
+    }
   }
 
   Future<void> _showHistoryMenu(
