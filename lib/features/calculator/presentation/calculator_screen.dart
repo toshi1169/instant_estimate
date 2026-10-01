@@ -2556,13 +2556,111 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           );
         }
     }
-    final left = previousRect == null
-        ? caretRect.left
-        : math.min(previousRect.center.dx, caretRect.center.dx);
-    final right = nextRect == null
-        ? caretRect.right
-        : math.max(nextRect.center.dx, caretRect.center.dx);
-    return Rect.fromLTRB(left, caretRect.top, right, caretRect.bottom);
+    if (previousRect != null || nextRect != null) {
+      final left = previousRect == null
+          ? caretRect.left
+          : math.min(previousRect.center.dx, caretRect.center.dx);
+      final right = nextRect == null
+          ? caretRect.right
+          : math.max(nextRect.center.dx, caretRect.center.dx);
+      return Rect.fromLTRB(left, caretRect.top, right, caretRect.bottom);
+    }
+
+    // An empty expression (or empty fraction field) has no neighbouring glyph
+    // boundary from which to derive a double-tap target. Use one rendered digit
+    // on either side of the caret, while retaining the platform minimum touch
+    // target. The rectangle is shifted into the expression viewport instead of
+    // being clipped at the right-aligned caret.
+    final characterWidth = _emptyCaretCharacterWidth(position);
+    final width = math.max(48.0, characterWidth * 2);
+    final height = math.max(48.0, caretRect.height);
+    var rect = Rect.fromCenter(
+      center: caretRect.center,
+      width: width,
+      height: height,
+    );
+    final viewport = _expressionViewportRect;
+    if (viewport != null) {
+      final fittedWidth = math.min(rect.width, viewport.width);
+      final fittedHeight = math.min(rect.height, viewport.height);
+      final center = Offset(
+        rect.center.dx.clamp(
+          viewport.left + fittedWidth / 2,
+          viewport.right - fittedWidth / 2,
+        ),
+        rect.center.dy.clamp(
+          viewport.top + fittedHeight / 2,
+          viewport.bottom - fittedHeight / 2,
+        ),
+      );
+      rect = Rect.fromCenter(
+        center: center,
+        width: fittedWidth,
+        height: fittedHeight,
+      );
+    }
+    return rect;
+  }
+
+  double _emptyCaretCharacterWidth(ExpressionPosition position) {
+    TextStyle? style;
+    for (final target in _hitTargets) {
+      if (position case FractionExpressionPosition(
+        :final marker,
+        :final field,
+      )) {
+        if (target.kind == _ExpressionHitTargetKind.fractionField &&
+            target.marker == marker &&
+            target.field == field) {
+          style = target.style;
+          break;
+        }
+      }
+    }
+    style ??= DefaultTextStyle.of(context).style.copyWith(
+      color: Theme.of(context).colorScheme.onSurface,
+      fontSize: _EditableExpressionLine._expressionFontSize,
+      fontWeight: FontWeight.w400,
+    );
+    final painter = TextPainter(
+      text: TextSpan(text: '0', style: style),
+      textDirection: TextDirection.ltr,
+      // Fraction display metrics already contain the field's TextScaler;
+      // the raw caret metrics contain only the enclosing FittedBox transform.
+      textScaler: position is FractionExpressionPosition
+          ? TextScaler.noScaling
+          : MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final metrics = _displayMetricsForPosition(position);
+    return painter.width * metrics.scale;
+  }
+
+  bool get _caretFieldHasSelectableText {
+    return switch (widget.controller.expressionPosition) {
+      RawExpressionPosition() => widget.controller.expression.isNotEmpty,
+      FractionExpressionPosition(:final marker, :final field) =>
+        switch (field) {
+          FractionField.wholeNumber =>
+            widget.controller
+                    .fractionInputForDisplay(marker)
+                    ?.wholeNumberText
+                    .isNotEmpty ??
+                false,
+          FractionField.numerator =>
+            widget.controller
+                    .fractionInputForDisplay(marker)
+                    ?.numeratorText
+                    .isNotEmpty ??
+                false,
+          FractionField.denominator =>
+            widget.controller
+                    .fractionInputForDisplay(marker)
+                    ?.denominatorText
+                    .isNotEmpty ??
+                false,
+        },
+    };
   }
 
   Rect? _activeCaretDoubleTapRect() {
@@ -2836,17 +2934,19 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
           secondaryAnchor: caretRect.bottomCenter,
         ),
         buttonItems: [
-          ContextMenuButtonItem(
-            label: strings.text('選択'),
-            onPressed: _selectNumberFromCaretToolbar,
-          ),
-          ContextMenuButtonItem(
-            type: ContextMenuButtonType.selectAll,
-            label: MaterialLocalizations.of(
-              overlayContext,
-            ).selectAllButtonLabel,
-            onPressed: _selectAllFromCaretToolbar,
-          ),
+          if (_caretFieldHasSelectableText) ...[
+            ContextMenuButtonItem(
+              label: strings.text('選択'),
+              onPressed: _selectNumberFromCaretToolbar,
+            ),
+            ContextMenuButtonItem(
+              type: ContextMenuButtonType.selectAll,
+              label: MaterialLocalizations.of(
+                overlayContext,
+              ).selectAllButtonLabel,
+              onPressed: _selectAllFromCaretToolbar,
+            ),
+          ],
           ContextMenuButtonItem(
             type: ContextMenuButtonType.paste,
             label: strings.text('ペースト'),
@@ -3162,6 +3262,17 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     Offset globalPosition,
     ExpressionPosition? anchor,
   ) {
+    if (anchor != null && _isInsideAnchorBoundaryCell(globalPosition, anchor)) {
+      final caretRect = _caretRectForPosition(anchor);
+      final lineBounds = _lineBoundsForPosition(anchor);
+      if (caretRect != null && lineBounds != null) {
+        return _ResolvedExpressionPosition(
+          position: anchor,
+          caretRect: caretRect,
+          lineBounds: lineBounds,
+        );
+      }
+    }
     if (anchor is FractionExpressionPosition) {
       for (final target in _hitTargets) {
         if (target.kind != _ExpressionHitTargetKind.fractionField ||
@@ -3181,6 +3292,114 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       }
     }
     return _resolvePosition(globalPosition);
+  }
+
+  bool _isInsideAnchorBoundaryCell(
+    Offset globalPosition,
+    ExpressionPosition anchor,
+  ) {
+    final anchorRect = _caretRectForPosition(anchor);
+    final target = _targetForPosition(anchor);
+    final box = target == null ? null : _coordinateBoxForTarget(target);
+    if (anchorRect == null || target == null || box == null || !box.hasSize) {
+      return false;
+    }
+    final targetRect = box.localToGlobal(Offset.zero) & box.size;
+    // The dragged endpoint lies on the text edge, so include that edge while
+    // rejecting another line or another fraction field.
+    if (globalPosition.dy < targetRect.top - 1 ||
+        globalPosition.dy > targetRect.bottom + 1) {
+      return false;
+    }
+    final neighbours = _neighbourPositions(anchor);
+    final previousRect = neighbours.$1 == null
+        ? null
+        : _caretRectForPosition(neighbours.$1!);
+    final nextRect = neighbours.$2 == null
+        ? null
+        : _caretRectForPosition(neighbours.$2!);
+    final anchorX = anchorRect.center.dx;
+    final previousWidth = previousRect == null
+        ? null
+        : (anchorX - previousRect.center.dx).abs();
+    final nextWidth = nextRect == null
+        ? null
+        : (nextRect.center.dx - anchorX).abs();
+    final fallbackWidth = previousWidth ?? nextWidth;
+    if (fallbackWidth == null || fallbackWidth <= 0) return false;
+    final left = previousRect == null
+        ? anchorX - fallbackWidth / 2
+        : (previousRect.center.dx + anchorX) / 2;
+    final right = nextRect == null
+        ? anchorX + fallbackWidth / 2
+        : (anchorX + nextRect.center.dx) / 2;
+    return globalPosition.dx >= math.min(left, right) &&
+        globalPosition.dx <= math.max(left, right);
+  }
+
+  (ExpressionPosition?, ExpressionPosition?) _neighbourPositions(
+    ExpressionPosition position,
+  ) {
+    return switch (position) {
+      RawExpressionPosition(:final offset) => (
+        offset > 0 ? RawExpressionPosition(offset - 1) : null,
+        offset < widget.controller.expression.length
+            ? RawExpressionPosition(offset + 1)
+            : null,
+      ),
+      FractionExpressionPosition(:final marker, :final field, :final offset) =>
+        (() {
+          final fraction = widget.controller.fractionInputForDisplay(marker);
+          final value = switch (field) {
+            FractionField.wholeNumber => fraction?.wholeNumberText ?? '',
+            FractionField.numerator => fraction?.numeratorText ?? '',
+            FractionField.denominator => fraction?.denominatorText ?? '',
+          };
+          return (
+            offset > 0
+                ? FractionExpressionPosition(
+                    marker: marker,
+                    field: field,
+                    offset: offset - 1,
+                  )
+                : null,
+            offset < value.length
+                ? FractionExpressionPosition(
+                    marker: marker,
+                    field: field,
+                    offset: offset + 1,
+                  )
+                : null,
+          );
+        })(),
+    };
+  }
+
+  _ExpressionHitTarget? _targetForPosition(ExpressionPosition position) {
+    for (final target in _hitTargets) {
+      switch (position) {
+        case RawExpressionPosition(:final offset):
+          if (target.kind == _ExpressionHitTargetKind.text &&
+              target.rawOffsets.contains(offset)) {
+            return target;
+          }
+        case FractionExpressionPosition(:final marker, :final field):
+          if (target.kind == _ExpressionHitTargetKind.fractionField &&
+              target.marker == marker &&
+              target.field == field) {
+            return target;
+          }
+      }
+    }
+    return null;
+  }
+
+  Rect? _lineBoundsForPosition(ExpressionPosition position) {
+    final target = _targetForPosition(position);
+    final lineBox =
+        target?.lineKey.currentContext?.findRenderObject() as RenderBox?;
+    if (lineBox == null || !lineBox.hasSize) return null;
+    return lineBox.localToGlobal(Offset.zero) & lineBox.size;
   }
 
   void _finishSelectionHandleDrag(int pointer) {

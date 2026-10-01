@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -1001,6 +1003,143 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.selection, isNull);
     expect(controller.expressionPosition, const RawExpressionPosition(4));
+  });
+
+  testWidgets('実描画ノブのpointer経路は境界cell内で左右ともcollapseしてメニューを表示する', (
+    tester,
+  ) async {
+    final controller = CalculatorController()..pasteAtCaret('1234567890');
+    await _pumpCalculator(tester, controller, size: const Size(320, 844));
+    final text = _expressionTextContaining('1234567890');
+
+    Future<void> collapseFrom(Key handleKey, bool circleAtTop) async {
+      controller.selectRange(
+        const RawExpressionPosition(3),
+        const RawExpressionPosition(7),
+      );
+      await tester.pumpAndSettle();
+      final movingAnchor = _iosHandleAnchor(
+        tester,
+        handleKey,
+        leftType: circleAtTop,
+      );
+      final fixedKey = handleKey == const Key('calculatorSelectionBaseHandle')
+          ? const Key('calculatorSelectionExtentHandle')
+          : const Key('calculatorSelectionBaseHandle');
+      final fixedAnchor = _iosHandleAnchor(
+        tester,
+        fixedKey,
+        leftType: !circleAtTop,
+      );
+      final knob = _iosHandleKnobCenter(
+        tester,
+        handleKey,
+        circleAtTop: circleAtTop,
+      );
+      final adjacent = _characterBoundary(
+        tester,
+        text,
+        circleAtTop ? '7' : '4',
+        trailing: circleAtTop,
+      );
+      final insideBoundaryCell = Offset(
+        fixedAnchor.dx + (adjacent.dx - fixedAnchor.dx) * 0.2,
+        fixedAnchor.dy,
+      );
+      final gesture = await tester.startGesture(knob);
+      await gesture.moveBy(insideBoundaryCell - movingAnchor);
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(controller.selection, isNull);
+      expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+      expect(find.byKey(handleKey), findsNothing);
+    }
+
+    await collapseFrom(const Key('calculatorSelectionBaseHandle'), true);
+    await collapseFrom(const Key('calculatorSelectionExtentHandle'), false);
+  });
+
+  testWidgets('分子と分母の実描画ノブを同じfield境界へ動かすとcaretへcollapseする', (tester) async {
+    for (final field in [FractionField.numerator, FractionField.denominator]) {
+      final controller = CalculatorController();
+      _enterFraction(controller, '12345678', '87654321');
+      final marker = controller.expression;
+      controller.selectRange(
+        FractionExpressionPosition(marker: marker, field: field, offset: 2),
+        FractionExpressionPosition(marker: marker, field: field, offset: 6),
+      );
+      await _pumpCalculator(tester, controller, size: const Size(320, 844));
+
+      final movingKey = const Key('calculatorSelectionBaseHandle');
+      final movingAnchor = _iosHandleAnchor(tester, movingKey, leftType: true);
+      final fixedAnchor = _iosHandleAnchor(
+        tester,
+        const Key('calculatorSelectionExtentHandle'),
+        leftType: false,
+      );
+      final knob = _iosHandleKnobCenter(tester, movingKey, circleAtTop: true);
+      final gesture = await tester.startGesture(knob);
+      await gesture.moveBy(fixedAnchor - movingAnchor);
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(controller.selection, isNull);
+      expect(
+        controller.expressionPosition,
+        FractionExpressionPosition(marker: marker, field: field, offset: 6),
+      );
+      expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('空式の右寄せcaret周囲は48px以上でPasteだけのメニューを開く', (tester) async {
+    _mockClipboard(initialText: '12');
+    final controller = CalculatorController();
+    await _pumpCalculator(tester, controller, size: const Size(390, 844));
+    final caret = tester.getRect(find.byKey(const Key('calculatorCaret')));
+    final viewport = tester.getRect(find.byKey(const Key('expressionText')));
+    final point = Offset(
+      math.max(viewport.left + 1, caret.center.dx - 22),
+      caret.center.dy,
+    );
+
+    await _doubleTapAt(tester, point);
+
+    expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+    expect(_caretToolbarAction('ペースト'), findsOneWidget);
+    expect(_caretToolbarAction('選択'), findsNothing);
+    expect(_caretToolbarAction(_selectAllLabel(tester)), findsNothing);
+    expect(controller.expression, isEmpty);
+  });
+
+  testWidgets('空の分子・分母もcaret周囲のダブルタップでPasteだけを表示する', (tester) async {
+    _mockClipboard(initialText: '8');
+    for (final field in [FractionField.numerator, FractionField.denominator]) {
+      final controller = CalculatorController()..press('a/b');
+      if (field == FractionField.denominator) controller.press('a/b');
+      await _pumpCalculator(tester, controller, size: const Size(390, 844));
+      final caret = tester.getRect(find.byKey(const Key('fractionFieldCaret')));
+      await _doubleTapAt(tester, Offset(caret.center.dx - 20, caret.center.dy));
+      expect(find.byKey(const Key('calculatorCaretToolbar')), findsOneWidget);
+      expect(_caretToolbarAction('ペースト'), findsOneWidget);
+      expect(_caretToolbarAction('選択'), findsNothing);
+      expect(_caretToolbarAction(_selectAllLabel(tester)), findsNothing);
+      expect(
+        controller.expressionPosition,
+        FractionExpressionPosition(
+          marker: controller.expression,
+          field: field,
+          offset: 0,
+        ),
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('通常式のTextPainter境界とplatform handle anchorは同じ描画座標を使う', (
