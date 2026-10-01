@@ -1980,6 +1980,18 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     );
   }
 
+  ExpressionSelection? get _displaySelection {
+    final selection = widget.controller.selection;
+    final collapsedPosition = _collapsedDragPosition;
+    final endpoint = _activeSelectionEndpoint;
+    if (selection == null || collapsedPosition == null || endpoint == null) {
+      return selection;
+    }
+    return endpoint == _SelectionEndpoint.base
+        ? ExpressionSelection(base: collapsedPosition, extent: selection.extent)
+        : ExpressionSelection(base: selection.base, extent: collapsedPosition);
+  }
+
   Widget _buildCaretSegment(
     GlobalKey lineKey,
     int lineIndex,
@@ -2182,7 +2194,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   );
 
   (int, int)? get _selectedRawRange {
-    final selection = widget.controller.selection;
+    final selection = _displaySelection;
     if (selection == null ||
         selection.base is! RawExpressionPosition ||
         selection.extent is! RawExpressionPosition) {
@@ -2190,11 +2202,12 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     }
     final base = (selection.base as RawExpressionPosition).offset;
     final extent = (selection.extent as RawExpressionPosition).offset;
+    if (base == extent) return null;
     return (math.min(base, extent), math.max(base, extent));
   }
 
   TextRange? _fractionFieldSelection(String marker, FractionField field) {
-    final selection = widget.controller.selection;
+    final selection = _displaySelection;
     if (selection == null ||
         selection.base is! FractionExpressionPosition ||
         selection.extent is! FractionExpressionPosition) {
@@ -2205,6 +2218,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     if (base.marker != marker || extent.marker != marker) {
       return null;
     }
+    if (base == extent) return null;
     if (base.field != extent.field) {
       final numeratorPosition = base.field == FractionField.numerator
           ? base
@@ -2798,7 +2812,7 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
   }
 
   void _syncSelectionHandlesOverlay() {
-    final selection = widget.controller.selection;
+    final selection = _displaySelection;
     if (selection == null) {
       _selectionHandlesOverlay?.remove();
       _selectionHandlesOverlay = null;
@@ -2808,16 +2822,8 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
       _removeSelectionToolbar();
       return;
     }
-    var basePosition = selection.base;
-    var extentPosition = selection.extent;
-    final collapsedPosition = _collapsedDragPosition;
-    if (collapsedPosition != null) {
-      if (_activeSelectionEndpoint == _SelectionEndpoint.base) {
-        basePosition = collapsedPosition;
-      } else if (_activeSelectionEndpoint == _SelectionEndpoint.extent) {
-        extentPosition = collapsedPosition;
-      }
-    }
+    final basePosition = selection.base;
+    final extentPosition = selection.extent;
     final baseRect = _caretRectForPosition(basePosition);
     final extentRect = _caretRectForPosition(extentPosition);
     if (baseRect == null || extentRect == null) {
@@ -3246,11 +3252,15 @@ class _EditableExpressionLineState extends State<_EditableExpressionLine> {
     if (resolved.position == anchor) {
       // Defer the collapsed selection until pointer-up. Keeping the current
       // handle alive lets the same gesture continue across the fixed endpoint.
-      _collapsedDragPosition = resolved.position;
+      if (_collapsedDragPosition != resolved.position) {
+        setState(() => _collapsedDragPosition = resolved.position);
+      }
       _scheduleSelectionOverlaySync();
       return;
     }
-    _collapsedDragPosition = null;
+    if (_collapsedDragPosition != null) {
+      setState(() => _collapsedDragPosition = null);
+    }
     if (endpoint == _SelectionEndpoint.base) {
       widget.controller.selectRange(resolved.position, anchor);
     } else {
@@ -3826,6 +3836,9 @@ class _EditableExpressionText extends StatelessWidget {
 
     final selected = selectedRawRange;
     final textWidget = CustomPaint(
+      key: selected == null
+          ? null
+          : const Key('calculatorExpressionSelectionHighlight'),
       painter: selected == null
           ? null
           : _ExpressionSelectionHighlightPainter(
@@ -4456,7 +4469,12 @@ class _FractionFieldDisplay extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                Text.rich(textSpan, key: geometryKey, maxLines: 1),
+                KeyedSubtree(
+                  key: range == null
+                      ? null
+                      : const Key('calculatorFractionSelectionHighlight'),
+                  child: Text.rich(textSpan, key: geometryKey, maxLines: 1),
+                ),
                 if (range == null)
                   Positioned(
                     left: caretX,

@@ -888,6 +888,10 @@ void main() {
 
     final text = _expressionTextContaining('123');
     await _doubleTapAt(tester, _characterCenter(tester, text, '456'));
+    expect(
+      find.byKey(const Key('calculatorExpressionSelectionHighlight')),
+      findsOneWidget,
+    );
     final start = _characterBoundary(tester, text, '1', trailing: false);
     var gesture = await tester.startGesture(
       _iosHandleKnobCenter(
@@ -946,6 +950,10 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(
+      find.byKey(const Key('calculatorExpressionSelectionHighlight')),
+      findsNothing,
+    );
+    expect(
       _iosHandleAnchor(
         tester,
         const Key('calculatorSelectionBaseHandle'),
@@ -968,6 +976,10 @@ void main() {
     expect(_caretToolbarAction('カット'), findsNothing);
 
     await _doubleTapAt(tester, _characterCenter(tester, text, '456'));
+    expect(
+      find.byKey(const Key('calculatorExpressionSelectionHighlight')),
+      findsOneWidget,
+    );
     final rightKnob = _iosHandleKnobCenter(
       tester,
       const Key('calculatorSelectionExtentHandle'),
@@ -987,6 +999,10 @@ void main() {
     await gesture.moveBy(leftAnchor - rightAnchor);
     await tester.pump();
     await tester.pump();
+    expect(
+      find.byKey(const Key('calculatorExpressionSelectionHighlight')),
+      findsNothing,
+    );
     expect(
       _iosHandleAnchor(
         tester,
@@ -1061,6 +1077,75 @@ void main() {
     await collapseFrom(const Key('calculatorSelectionExtentHandle'), false);
   });
 
+  testWidgets('縮小表示のcollapse候補を通過後に戻すと背景とhandle位置が追従する', (tester) async {
+    final controller = CalculatorController()..pasteAtCaret('1234567890');
+    controller.selectRange(
+      const RawExpressionPosition(3),
+      const RawExpressionPosition(7),
+    );
+    await _pumpCalculator(tester, controller, size: const Size(320, 844));
+    final text = _expressionTextContaining('1234567890');
+    const movingKey = Key('calculatorSelectionBaseHandle');
+    const fixedKey = Key('calculatorSelectionExtentHandle');
+    final movingAnchor = _iosHandleAnchor(tester, movingKey, leftType: true);
+    final fixedAnchor = _iosHandleAnchor(tester, fixedKey, leftType: false);
+    final knob = _iosHandleKnobCenter(tester, movingKey, circleAtTop: true);
+    final gesture = await tester.startGesture(knob);
+
+    await gesture.moveBy(fixedAnchor - movingAnchor);
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.byKey(const Key('calculatorExpressionSelectionHighlight')),
+      findsNothing,
+    );
+    expect(
+      _iosHandleAnchor(tester, movingKey, leftType: true).dx,
+      _iosHandleAnchor(tester, fixedKey, leftType: false).dx,
+    );
+
+    final crossedBoundary = _characterBoundary(
+      tester,
+      text,
+      '8',
+      trailing: true,
+    );
+    await gesture.moveBy(crossedBoundary - fixedAnchor);
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.byKey(const Key('calculatorExpressionSelectionHighlight')),
+      findsOneWidget,
+    );
+
+    final currentMovingAnchor = _iosHandleAnchor(
+      tester,
+      movingKey,
+      leftType: false,
+    );
+    final currentFixedAnchor = _iosHandleAnchor(
+      tester,
+      fixedKey,
+      leftType: true,
+    );
+    await gesture.moveBy(currentFixedAnchor - currentMovingAnchor);
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.byKey(const Key('calculatorExpressionSelectionHighlight')),
+      findsNothing,
+    );
+    expect(
+      _iosHandleAnchor(tester, movingKey, leftType: true).dx,
+      _iosHandleAnchor(tester, fixedKey, leftType: false).dx,
+    );
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.selection, isNull);
+    expect(controller.expressionPosition, const RawExpressionPosition(7));
+  });
+
   testWidgets('分子と分母の実描画ノブを同じfield境界へ動かすとcaretへcollapseする', (tester) async {
     for (final field in [FractionField.numerator, FractionField.denominator]) {
       final controller = CalculatorController();
@@ -1071,6 +1156,10 @@ void main() {
         FractionExpressionPosition(marker: marker, field: field, offset: 6),
       );
       await _pumpCalculator(tester, controller, size: const Size(320, 844));
+      expect(
+        find.byKey(const Key('calculatorFractionSelectionHighlight')),
+        findsOneWidget,
+      );
 
       final movingKey = const Key('calculatorSelectionBaseHandle');
       final movingAnchor = _iosHandleAnchor(tester, movingKey, leftType: true);
@@ -1083,6 +1172,19 @@ void main() {
       final gesture = await tester.startGesture(knob);
       await gesture.moveBy(fixedAnchor - movingAnchor);
       await tester.pump();
+      await tester.pump();
+      expect(
+        find.byKey(const Key('calculatorFractionSelectionHighlight')),
+        findsNothing,
+      );
+      expect(
+        _iosHandleAnchor(tester, movingKey, leftType: true).dx,
+        _iosHandleAnchor(
+          tester,
+          const Key('calculatorSelectionExtentHandle'),
+          leftType: false,
+        ).dx,
+      );
       await gesture.up();
       await tester.pumpAndSettle();
 
