@@ -867,6 +867,33 @@ class AppLocalizations {
     myanmar:
         'တရားဝင် Excel တွင် မျက်နှာဖုံးနှင့် အတန်း ၂၀ စက်ဝန်းအသေးစိတ်ကို ထုတ်ပေးသည်။ တရားဝင် PDF သည် တူညီသောခန့်မှန်းဒေတာနှင့် စာမျက်နှာပုံစံကို အသုံးပြုပြီး သိမ်းဆည်း သို့မဟုတ် မျှဝေနိုင်သည်။ ပုံနှိပ်ခြင်းသည် အသစ်ထုတ်သော တရားဝင် PDF ကို OS ပုံနှိပ်မျက်နှာပြင်သို့ တိုက်ရိုက်ပို့သည်။ Excel ဇယားကူးယူမှုသည် ပြင်ဆင်ရန်ဒေတာဖြစ်သည်။\n\nကုမ္ပဏီအချက်အလက်သည် သတ်မှတ်ထားသောအစီအစဉ်နှင့် ပြ/မပြကို လိုက်နာပြီး စာရွက်တွင် ၅ ခုအထိ ထုတ်သည်။ အလုပ်အမျိုးအစားကို တရားဝင် Excel၊ PDF နှင့် ပုံနှိပ်တွင် မပြပါ။',
   );
+  String get rewardedOutputGranted => _pick(
+    japanese: '報酬を獲得しました。選択した出力を実行します。',
+    english: 'Reward earned. Starting your selected output.',
+    simplifiedChinese: '已获得奖励，正在执行所选输出。',
+    traditionalChinese: '已獲得獎勵，正在執行所選輸出。',
+  );
+  String get rewardedOutputNotEarned => _pick(
+    japanese: '報酬を確認できなかったため出力しませんでした。動画を最後まで視聴してから閉じてください。',
+    english:
+        'No reward was confirmed, so output was cancelled. Watch the full video before closing it.',
+    simplifiedChinese: '未确认获得奖励，已取消输出。请完整观看视频后再关闭。',
+    traditionalChinese: '未確認獲得獎勵，已取消輸出。請完整觀看影片後再關閉。',
+  );
+  String get rewardedOutputUnavailable => _pick(
+    japanese: '広告を読み込めなかったため出力しませんでした。通信状態を確認して、もう一度お試しください。',
+    english:
+        'The ad could not be loaded, so output was cancelled. Check your connection and try again.',
+    simplifiedChinese: '无法加载广告，已取消输出。请检查网络连接后重试。',
+    traditionalChinese: '無法載入廣告，已取消輸出。請檢查網路連線後重試。',
+  );
+  String get rewardedOutputFailed => _pick(
+    japanese: '広告を表示できなかったため出力しませんでした。もう一度お試しください。',
+    english:
+        'The ad could not be shown, so output was cancelled. Please try again.',
+    simplifiedChinese: '无法显示广告，已取消输出。请重试。',
+    traditionalChinese: '無法顯示廣告，已取消輸出。請重試。',
+  );
   String get helpRewardedAdsTitle => _pick(
     japanese: '動画広告と広告非表示プラン',
     english: 'Video ads and ad-free plans',

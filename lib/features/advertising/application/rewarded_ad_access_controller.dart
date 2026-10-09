@@ -22,12 +22,14 @@ class RewardedAdAccessController {
   RewardedAdAccessController({
     required AppAccessState initialState,
     this.store,
+    this.onAdResult,
     this.presenter = const UnavailableRewardedAdPresenter(),
     DateTime Function()? now,
   }) : _state = initialState,
        _now = now ?? DateTime.now;
 
   final AppAccessStateStore? store;
+  final void Function(RewardedAdEntryPoint, RewardedAdResult)? onAdResult;
   final RewardedAdPresenter presenter;
   final DateTime Function() _now;
   final Map<RewardedAdGroup, Future<bool>> _pending = {};
@@ -78,6 +80,8 @@ class RewardedAdAccessController {
     } catch (_) {
       result = RewardedAdResult.failed;
     }
+
+    onAdResult?.call(entryPoint, result);
 
     if (result == RewardedAdResult.dismissed ||
         (group == RewardedAdGroup.output &&

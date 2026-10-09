@@ -37,69 +37,98 @@ class GoogleMobileAdsRewardedAdPresenter implements RewardedAdPresenter {
     if (adUnitId == null) return RewardedAdResult.unavailable;
 
     final result = Completer<RewardedAdResult>();
-    RewardedAd? loadedAd;
+    Timer? loadTimer;
     var rewardEarned = false;
-    var timedOut = false;
+    var disposed = false;
+
+    void trace(String event) {
+      if (kDebugMode) debugPrint('[RewardedAd] ${entryPoint.name}: $event');
+    }
+
+    void dispose(RewardedAd ad) {
+      if (disposed) return;
+      disposed = true;
+      unawaited(
+        ad.dispose().catchError((Object error) {
+          trace('disposeFailed');
+        }),
+      );
+    }
 
     void complete(RewardedAdResult value) {
-      if (!result.isCompleted) result.complete(value);
+      if (result.isCompleted) return;
+      loadTimer?.cancel();
+      trace('result=${value.name}');
+      result.complete(value);
     }
 
+    // Bound loading only. A video/end card may remain on screen much longer.
+    loadTimer = Timer(loadTimeout, () {
+      trace('loadTimeout');
+      complete(RewardedAdResult.unavailable);
+    });
+    trace('load');
     try {
-      await RewardedAd.load(
-        adUnitId: adUnitId,
-        request: const AdRequest(),
-        rewardedAdLoadCallback: RewardedAdLoadCallback(
-          onAdLoaded: (ad) {
-            if (timedOut || result.isCompleted) {
-              ad.dispose();
-              return;
-            }
-            loadedAd = ad;
-            ad.fullScreenContentCallback = FullScreenContentCallback(
-              onAdDismissedFullScreenContent: (ad) {
-                ad.dispose();
-                complete(
-                  rewardEarned
-                      ? RewardedAdResult.completed
-                      : RewardedAdResult.dismissed,
+      unawaited(
+        RewardedAd.load(
+          adUnitId: adUnitId,
+          request: const AdRequest(),
+          rewardedAdLoadCallback: RewardedAdLoadCallback(
+            onAdLoaded: (ad) {
+              if (result.isCompleted) {
+                dispose(ad);
+                return;
+              }
+              loadTimer?.cancel();
+              trace('loaded');
+              ad.fullScreenContentCallback = FullScreenContentCallback(
+                onAdDismissedFullScreenContent: (ad) {
+                  trace('onAdDismissed reward=$rewardEarned');
+                  complete(
+                    rewardEarned
+                        ? RewardedAdResult.completed
+                        : RewardedAdResult.dismissed,
+                  );
+                  dispose(ad);
+                },
+                onAdFailedToShowFullScreenContent: (ad, error) {
+                  trace('showFailed code=${error.code}');
+                  complete(RewardedAdResult.failed);
+                  dispose(ad);
+                },
+              );
+              try {
+                unawaited(
+                  ad
+                      .show(
+                        onUserEarnedReward: (ad, reward) {
+                          if (result.isCompleted) return;
+                          rewardEarned = true;
+                          trace('onUserEarnedReward');
+                        },
+                      )
+                      .catchError((Object error) {
+                        complete(RewardedAdResult.failed);
+                        dispose(ad);
+                      }),
                 );
-              },
-              onAdFailedToShowFullScreenContent: (ad, error) {
-                ad.dispose();
+              } catch (_) {
                 complete(RewardedAdResult.failed);
-              },
-            );
-            unawaited(
-              ad
-                  .show(
-                    onUserEarnedReward: (ad, reward) {
-                      rewardEarned = true;
-                    },
-                  )
-                  .catchError((Object error) {
-                    ad.dispose();
-                    complete(RewardedAdResult.failed);
-                  }),
-            );
-          },
-          onAdFailedToLoad: (error) {
-            complete(RewardedAdResult.unavailable);
-          },
-        ),
+                dispose(ad);
+              }
+            },
+            onAdFailedToLoad: (error) {
+              trace('loadFailed code=${error.code}');
+              complete(RewardedAdResult.unavailable);
+            },
+          ),
+        ).catchError((Object error) {
+          complete(RewardedAdResult.failed);
+        }),
       );
     } catch (_) {
-      loadedAd?.dispose();
-      return RewardedAdResult.failed;
+      complete(RewardedAdResult.failed);
     }
-
-    return result.future.timeout(
-      loadTimeout,
-      onTimeout: () {
-        timedOut = true;
-        loadedAd?.dispose();
-        return RewardedAdResult.unavailable;
-      },
-    );
+    return result.future;
   }
 }

@@ -66,6 +66,7 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
   late final RewardedAdAccessController _rewardedAdAccessController =
       RewardedAdAccessController(
         initialState: _accessState,
+        onAdResult: _showRewardedAdResult,
         store: widget.accessStateStore,
         presenter:
             widget.rewardedAdPresenter ??
@@ -147,10 +148,11 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
     PurchaseEntitlementSnapshot snapshot,
   ) async {
     if (!snapshot.isVerified) return;
-    final updatedState = _accessState.reconcileVerifiedPlan(
-      snapshot.effectivePlan,
-      verifiedAt: DateTime.now(),
-    );
+    final updatedState = _rewardedAdAccessController.state
+        .reconcileVerifiedPlan(
+          snapshot.effectivePlan,
+          verifiedAt: DateTime.now(),
+        );
     await _saveAndApplyAccessState(updatedState);
     _startAdvertisingIfNeeded();
   }
@@ -166,6 +168,14 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
   }
 
   Future<void> _saveAndApplyAccessState(AppAccessState updatedState) async {
+    if (!mounted) return;
+    // Apply before awaiting persistence. A reward can arrive while saving;
+    // a late save acknowledgment must not replace that newer access state.
+    setState(() {
+      _accessState = updatedState;
+      _accessPlan = updatedState.effectivePlan();
+      _rewardedAdAccessController.updateState(updatedState);
+    });
     final store = widget.accessStateStore;
     if (store != null) {
       try {
@@ -174,12 +184,6 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
         // ストアの購入結果は画面へ反映し、保存は次回の復元で再取得できる。
       }
     }
-    if (!mounted) return;
-    setState(() {
-      _accessState = updatedState;
-      _accessPlan = updatedState.effectivePlan();
-      _rewardedAdAccessController.updateState(updatedState);
-    });
   }
 
   void _handleAdvertisingConsentChanged() {
@@ -192,13 +196,18 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
   }
 
   Future<bool> _requestRewardedAdAccess(RewardedAdEntryPoint entryPoint) async {
+    if (!_rewardedAdAccessController.requiresAd(entryPoint)) return true;
     final consentManager = widget.advertisingConsentManager;
     if (widget.enableGoogleMobileAds &&
         consentManager != null &&
         !consentManager.state.value.canRequestAds) {
       await consentManager.gatherConsent();
       if (!consentManager.state.value.canRequestAds) {
-        // 同意情報や広告を取得できない場合も、機能は利用可能にする。
+        if (entryPoint.group == RewardedAdGroup.output) {
+          _showRewardedAdResult(entryPoint, RewardedAdResult.unavailable);
+          return false;
+        }
+        // 出力以外は既存の広告取得失敗時の利用方針を維持する。
         return true;
       }
     }
@@ -209,6 +218,23 @@ class _InstantEstimateAppState extends State<InstantEstimateApp>
       _accessPlan = _accessState.effectivePlan();
     });
     return granted;
+  }
+
+  void _showRewardedAdResult(
+    RewardedAdEntryPoint entryPoint,
+    RewardedAdResult result,
+  ) {
+    if (!mounted || entryPoint.group != RewardedAdGroup.output) return;
+    final l10n = AppLocalizations(_settings.language);
+    final message = switch (result) {
+      RewardedAdResult.completed => l10n.rewardedOutputGranted,
+      RewardedAdResult.dismissed => l10n.rewardedOutputNotEarned,
+      RewardedAdResult.unavailable => l10n.rewardedOutputUnavailable,
+      RewardedAdResult.failed => l10n.rewardedOutputFailed,
+    };
+    _scaffoldMessengerKey.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   bool _isRewardedAdRequired(RewardedAdEntryPoint entryPoint) {

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -58,6 +59,7 @@ class EstimateItemsScreen extends StatefulWidget {
 
 class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
   late AppSettings _settings = widget.settings;
+  bool _outputBusy = false;
 
   EstimateController get controller => widget.controller;
   AppSettings get settings => _settings;
@@ -89,7 +91,9 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               tapTargetSize: MaterialTapTargetSize.padded,
             ),
-            onPressed: () => _showOutputOptions(context),
+            onPressed: _outputBusy
+                ? null
+                : () => _withOutputLock(() => _showOutputOptions(context)),
             child: SizedBox(
               width: 78,
               child: FittedBox(
@@ -107,7 +111,14 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
           IconButton(
             key: const Key('copyEstimateTable'),
             tooltip: l10n.copyTableForExcel,
-            onPressed: () => _copyTable(context),
+            onPressed: _outputBusy
+                ? null
+                : () => _withOutputLock(
+                    () => _runOutput(
+                      RewardedAdEntryPoint.excelExport,
+                      () => _copyTable(context),
+                    ),
+                  ),
             icon: const Icon(Icons.table_view_outlined),
           ),
           IconButton(
@@ -257,11 +268,20 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
     if (action == null || !context.mounted) return;
     switch (action) {
       case _EstimateOutputAction.print:
-        await _printEstimate(context);
+        await _runOutput(
+          RewardedAdEntryPoint.printOutput,
+          () => _printEstimate(context),
+        );
       case _EstimateOutputAction.pdf:
-        await _shareEstimatePdf(context);
+        await _runOutput(
+          RewardedAdEntryPoint.pdfExport,
+          () => _shareEstimatePdf(context),
+        );
       case _EstimateOutputAction.excel:
-        await _exportExcel(context);
+        await _runOutput(
+          RewardedAdEntryPoint.excelExport,
+          () => _exportExcel(context),
+        );
     }
   }
 
@@ -274,7 +294,6 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
       );
       return;
     }
-    if (!await _requestOutputAccess(RewardedAdEntryPoint.printOutput)) return;
     if (!context.mounted) return;
     try {
       final pdfBytes = await _buildFormalPdf();
@@ -305,7 +324,6 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
       );
       return;
     }
-    if (!await _requestOutputAccess(RewardedAdEntryPoint.pdfExport)) return;
     if (!context.mounted) return;
     try {
       final pdfBytes = await _buildFormalPdf();
@@ -346,7 +364,6 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
       );
       return;
     }
-    if (!await _requestOutputAccess(RewardedAdEntryPoint.excelExport)) return;
     if (!context.mounted) return;
     try {
       final file = await createWorkbookFile(
@@ -386,7 +403,6 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
       );
       return;
     }
-    if (!await _requestOutputAccess(RewardedAdEntryPoint.excelExport)) return;
     if (!context.mounted) return;
     try {
       await Clipboard.setData(
@@ -415,8 +431,44 @@ class _EstimateItemsScreenState extends State<EstimateItemsScreen> {
     }
   }
 
-  Future<bool> _requestOutputAccess(RewardedAdEntryPoint entryPoint) async {
-    return await onRequestRewardedAdAccess?.call(entryPoint) ?? true;
+  // Keep the selected action on this await chain and hold the lock through
+  // consent, the ad, generation and sharing. Never re-enter the ad gate.
+  Future<void> _withOutputLock(Future<void> Function() action) async {
+    if (_outputBusy) return;
+    setState(() => _outputBusy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _outputBusy = false);
+    }
+  }
+
+  Future<void> _runOutput(
+    RewardedAdEntryPoint entryPoint,
+    Future<void> Function() action,
+  ) async {
+    if (controller.items.isEmpty) {
+      // Preserve the existing empty-data notice without asking for an ad.
+      await action();
+      return;
+    }
+    if (kDebugMode) debugPrint('[RewardedOutput] ${entryPoint.name}: pending');
+    bool granted;
+    try {
+      granted = await onRequestRewardedAdAccess?.call(entryPoint) ?? true;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).rewardedOutputFailed),
+          ),
+        );
+      }
+      return;
+    }
+    if (!granted || !mounted) return;
+    if (kDebugMode) debugPrint('[RewardedOutput] ${entryPoint.name}: execute');
+    await action();
   }
 
   Future<void> _addItem(BuildContext context) async {

@@ -316,6 +316,101 @@ class FakeEstimateItemStore implements EstimateItemStore {
 }
 
 void main() {
+  for (final rewardFirst in [true, false]) {
+    testWidgets('広告報酬と復帰時の課金確認が競合しても報酬を保持する rewardFirst=$rewardFirst', (
+      tester,
+    ) async {
+      final store = _DelayedSaveAccessStore();
+      final purchase = FakeEntitlementPurchaseStore(
+        const PurchaseEntitlementSnapshot.failed('initial'),
+      );
+      final presenter = FakeCompletedRewardedAdPresenter();
+      await tester.pumpWidget(
+        InstantEstimateApp(
+          onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+          accessStateStore: store,
+          purchaseStore: purchase,
+          rewardedAdPresenter: presenter,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final request = tester
+          .widget<CalculatorScreen>(find.byType(CalculatorScreen))
+          .onRequestRewardedAdAccess!;
+      store.blockNext = true;
+      Future<bool>? pending;
+      if (rewardFirst) {
+        pending = request(RewardedAdEntryPoint.pdfExport);
+        await tester.pump();
+        purchase.emitVerified([]);
+      } else {
+        purchase.emitVerified([]);
+        await tester.pump();
+        pending = request(RewardedAdEntryPoint.pdfExport);
+      }
+      await tester.pumpAndSettle();
+      store.acknowledge.complete();
+      await tester.pumpAndSettle();
+      expect(await pending, isTrue);
+      expect(store.state.rewardedAccessGroups, contains('output'));
+      expect(await request(RewardedAdEntryPoint.excelExport), isTrue);
+      expect(presenter.calls, [RewardedAdEntryPoint.pdfExport]);
+    });
+  }
+
+  for (final result in RewardedAdResult.values) {
+    testWidgets('出力広告の${result.name}理由を画面表示する', (tester) async {
+      await tester.pumpWidget(
+        InstantEstimateApp(
+          onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+          rewardedAdPresenter: _ResultRewardedAdPresenter(result),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final request = tester
+          .widget<CalculatorScreen>(find.byType(CalculatorScreen))
+          .onRequestRewardedAdAccess!;
+      final granted = await request(RewardedAdEntryPoint.pdfExport);
+      await tester.pumpAndSettle();
+      expect(granted, result == RewardedAdResult.completed);
+      final l10n = AppLocalizations(AppLanguage.japanese);
+      expect(
+        find.text(switch (result) {
+          RewardedAdResult.completed => l10n.rewardedOutputGranted,
+          RewardedAdResult.dismissed => l10n.rewardedOutputNotEarned,
+          RewardedAdResult.unavailable => l10n.rewardedOutputUnavailable,
+          RewardedAdResult.failed => l10n.rewardedOutputFailed,
+        }),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('同意情報未取得の出力は報酬なしで許可せず理由を表示する', (tester) async {
+    final presenter = FakeCompletedRewardedAdPresenter();
+    await tester.pumpWidget(
+      InstantEstimateApp(
+        onboardingPreferences: FakeOnboardingPreferences(hasSelected: true),
+        rewardedAdPresenter: presenter,
+        advertisingConsentManager: FakeAdvertisingConsentManager(),
+        enableGoogleMobileAds: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final request = tester
+        .widget<CalculatorScreen>(find.byType(CalculatorScreen))
+        .onRequestRewardedAdAccess!;
+    expect(await request(RewardedAdEntryPoint.pdfExport), isFalse);
+    await tester.pumpAndSettle();
+    expect(presenter.calls, isEmpty);
+    expect(
+      find.text(
+        AppLocalizations(AppLanguage.japanese).rewardedOutputUnavailable,
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('初期状態は見積・単価マスタ0件で表示できる', (tester) async {
     final controller = EstimateController(store: FakeEstimateItemStore.empty());
     await controller.load();
@@ -3708,3 +3803,25 @@ String _menuSemanticsLabel(AppLanguage language) =>
       simplifiedChinese: '菜单',
       traditionalChinese: '選單',
     );
+
+class _ResultRewardedAdPresenter implements RewardedAdPresenter {
+  const _ResultRewardedAdPresenter(this.result);
+  final RewardedAdResult result;
+  @override
+  Future<RewardedAdResult> show(RewardedAdEntryPoint entryPoint) async =>
+      result;
+}
+
+class _DelayedSaveAccessStore extends FakeAppAccessStateStore {
+  _DelayedSaveAccessStore() : super(const AppAccessState());
+  bool blockNext = false;
+  final acknowledge = Completer<void>();
+  @override
+  Future<void> save(AppAccessState state) async {
+    this.state = state;
+    if (blockNext) {
+      blockNext = false;
+      await acknowledge.future;
+    }
+  }
+}

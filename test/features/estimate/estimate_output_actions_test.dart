@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -14,6 +15,121 @@ import 'package:instant_estimate/features/subscription/domain/app_access_state.d
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final action in [
+    'printEstimatePdf',
+    'shareEstimatePdf',
+    'exportEstimateExcel',
+  ]) {
+    testWidgets('$action: 保留した出力は1回だけ再開し共有終了まで連打を防ぐ', (tester) async {
+      final controller = await _controllerWithItem();
+      final permission = Completer<bool>();
+      final sharing = Completer<void>();
+      var requests = 0;
+      var outputs = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: EstimateItemsScreen(
+            controller: controller,
+            onRequestRewardedAdAccess: (_) {
+              requests++;
+              return permission.future;
+            },
+            printPdfBytes: ({required bytes, required name}) async {
+              outputs++;
+              await sharing.future;
+              return true;
+            },
+            sharePdfBytes:
+                ({
+                  required bytes,
+                  required fileName,
+                  required subject,
+                  sharePositionOrigin,
+                }) async {
+                  outputs++;
+                  await sharing.future;
+                },
+            createWorkbookFile:
+                ({
+                  required info,
+                  required items,
+                  required companyProfile,
+                  required estimateDecimalPlaces,
+                }) async => File('test.xlsx'),
+            shareWorkbookFile:
+                ({required file, required subject, sharePositionOrigin}) async {
+                  outputs++;
+                  await sharing.future;
+                },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _select(tester, action);
+      await tester.pump(const Duration(seconds: 31));
+      expect(requests, 1);
+      expect(outputs, 0);
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('estimateOutputButton')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<IconButton>(find.byKey(const Key('copyEstimateTable')))
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(find.byKey(const Key('estimateOutputButton')));
+      await tester.tap(find.byKey(const Key('copyEstimateTable')));
+      permission.complete(true);
+      await tester.pumpAndSettle();
+      expect(outputs, 1);
+      expect(requests, 1);
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('estimateOutputButton')))
+            .onPressed,
+        isNull,
+      );
+      sharing.complete();
+      await tester.pumpAndSettle();
+      expect(outputs, 1);
+      expect(requests, 1);
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('estimateOutputButton')))
+            .onPressed,
+        isNotNull,
+      );
+    });
+  }
+
+  testWidgets('広告待ち中に画面が破棄された場合は出力しない', (tester) async {
+    final permission = Completer<bool>();
+    var outputs = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EstimateItemsScreen(
+          controller: await _controllerWithItem(),
+          onRequestRewardedAdAccess: (_) => permission.future,
+          printPdfBytes: ({required bytes, required name}) async {
+            outputs++;
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _select(tester, 'printEstimatePdf');
+    await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+    permission.complete(true);
+    await tester.pumpAndSettle();
+    expect(outputs, 0);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('出力の3択を表示しキャンセルでは何も生成しない', (tester) async {
     final controller = await _controllerWithItem();
