@@ -14,6 +14,70 @@ import 'package:instant_estimate/features/settings/domain/company_profile.dart';
 import 'package:xml/xml.dart';
 
 void main() {
+  test('表紙の有効期限は縮小表示し備考ラベルと本文の下罫線を連続させる', () {
+    const notes = '既存設備を利用します。\n追加工事は別途見積です。';
+    final bytes = buildEstimateWorkbook(
+      info: _formalInfo().copyWith(notes: notes),
+      items: [],
+    );
+    final cover = Excel.decodeBytes(bytes)['御見積書'];
+    expect(
+      cover.spannedItems,
+      containsAll(['B11:D11', 'E11:G11', 'B15:D15', 'B16:E16', 'H16:M16']),
+    );
+    expect(_text(cover, 'B11'), '見 積 有 効 期 限');
+    expect(_text(cover, 'B16'), '備考');
+    expect(_text(cover, 'H16'), notes);
+    final validity = cover.cell(CellIndex.indexByString('B11')).cellStyle!;
+    final payment = cover.cell(CellIndex.indexByString('B15')).cellStyle!;
+    final label = cover.cell(CellIndex.indexByString('B16')).cellStyle!;
+    final body = cover.cell(CellIndex.indexByString('H16')).cellStyle!;
+    expect(validity.wrap, TextWrapping.Clip);
+    expect(validity.fontSize, 12);
+    expect(validity.verticalAlignment, VerticalAlign.Bottom);
+    expect(label.wrap, TextWrapping.Clip);
+    expect(label.horizontalAlignment, HorizontalAlign.Center);
+    expect(label.verticalAlignment, VerticalAlign.Center);
+    expect(label.fontSize, payment.fontSize);
+    expect(label.fontFamily, payment.fontFamily);
+    expect(cover.getRowHeight(15), cover.getRowHeight(14));
+    expect(body.wrap, TextWrapping.WrapText);
+    expect(body.fontSize, 10);
+    expect(body.horizontalAlignment, HorizontalAlign.Left);
+    expect(body.verticalAlignment, VerticalAlign.Bottom);
+    for (final col in [1, 5, 6, 7]) {
+      final border = cover
+          .cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 15))
+          .cellStyle!
+          .bottomBorder;
+      expect(border.borderStyle, BorderStyle.Thin);
+      expect(border.borderColorHex, payment.bottomBorder.borderColorHex);
+    }
+    final archive = ZipDecoder().decodeBytes(bytes);
+    final sheetXml = XmlDocument.parse(
+      utf8.decode(
+        archive.findFile('xl/worksheets/sheet1.xml')!.content as List<int>,
+      ),
+    );
+    final stylesXml = XmlDocument.parse(
+      utf8.decode(archive.findFile('xl/styles.xml')!.content as List<int>),
+    );
+    final xfs = stylesXml
+        .findAllElements('cellXfs')
+        .single
+        .findElements('xf')
+        .toList();
+    for (final ref in ['B11', 'B16']) {
+      final cell = sheetXml
+          .findAllElements('c')
+          .singleWhere((c) => c.getAttribute('r') == ref);
+      final alignment = xfs[int.parse(cell.getAttribute('s')!)]
+          .findElements('alignment')
+          .single;
+      expect(alignment.getAttribute('shrinkToFit'), '1');
+    }
+  });
+
   test('表紙をA1:P17の原本仕様で生成し内訳総額と自社情報を連動する', () {
     final items = [
       _item(
@@ -148,7 +212,7 @@ void main() {
     expect(notesStyle.verticalAlignment, VerticalAlign.Bottom);
     expect(notesStyle.wrap, TextWrapping.WrapText);
     expect(notesStyle.bottomBorder.borderStyle, BorderStyle.Thin);
-    expect(notesStyle.bottomBorder.borderColorHex, 'FF000000');
+    expect(notesStyle.bottomBorder.borderColorHex, 'FF808080');
     expect(notesStyle.topBorder.borderStyle, isNull);
     expect(notesStyle.leftBorder.borderStyle, isNull);
     expect(notesStyle.rightBorder.borderStyle, isNull);
@@ -202,7 +266,7 @@ void main() {
     for (var row = 10; row <= 14; row++) {
       expect(cover.getRowHeight(row), closeTo(24.75, 0.001));
     }
-    expect(cover.getRowHeight(15), closeTo(38.25, 0.001));
+    expect(cover.getRowHeight(15), closeTo(24.75, 0.001));
     expect(cover.getRowHeight(16), closeTo(18.75, 0.001));
     expect(
       cover.cell(CellIndex.indexByString('I1')).cellStyle?.fontFamily,
@@ -967,7 +1031,7 @@ void main() {
     final notesStyle = cover.cell(CellIndex.indexByString('H16')).cellStyle!;
     expect(notesStyle.wrap, TextWrapping.WrapText);
     expect(notesStyle.bottomBorder.borderStyle, BorderStyle.Thin);
-    expect(notesStyle.bottomBorder.borderColorHex, 'FF000000');
+    expect(notesStyle.bottomBorder.borderColorHex, 'FF808080');
     expect(_text(cover, 'O13'), '');
     expect(_formula(cover, 'H6'), 'EstimateGrandTotal');
   });

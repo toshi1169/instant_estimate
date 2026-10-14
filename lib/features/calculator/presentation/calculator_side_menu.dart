@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/domain/app_access_plan.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/widgets/technical_term_info.dart';
+import '../../../core/widgets/installed_app_version.dart';
 import '../../advertising/domain/rewarded_ad_policy.dart';
 import '../../advertising/presentation/google_mobile_ads_banner.dart';
 
@@ -36,7 +37,6 @@ class CalculatorSideMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final strings = AppLocalizations.of(context);
 
     return Drawer(
@@ -156,14 +156,7 @@ class CalculatorSideMenu extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 18),
-            Text(
-              'Version 1.1.0',
-              key: const Key('sideMenuVersion'),
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+            const InstalledAppVersion(),
           ],
         ),
       ),

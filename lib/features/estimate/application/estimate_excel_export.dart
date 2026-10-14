@@ -15,6 +15,7 @@ const _breakdownSheetName = '内訳';
 const _grandTotalDefinedName = 'EstimateGrandTotal';
 const _breakdownHeaders = ['記号', '名称', '仕様', '数量', '単位', '単価', '金額', '摘要'];
 const _moneyFormat = '#,##0';
+const _coverConditionRowHeight = 24.75;
 const _breakdownBlockRows = 20;
 const _breakdownDataRows = 17;
 
@@ -112,12 +113,12 @@ void _writeCoverSheet(
     36.0,
     39.75,
     39.0,
-    24.75,
-    24.75,
-    24.75,
-    24.75,
-    24.75,
-    38.25,
+    _coverConditionRowHeight,
+    _coverConditionRowHeight,
+    _coverConditionRowHeight,
+    _coverConditionRowHeight,
+    _coverConditionRowHeight,
+    _coverConditionRowHeight,
     18.75,
   ];
   for (var column = 0; column < widths.length; column++) {
@@ -158,7 +159,13 @@ void _writeCoverSheet(
     _coverStatementStyle(),
   );
 
-  _mergeText(sheet, 'B11', 'D11', '見 積 有 効 期 限', _coverLabelStyle());
+  _mergeText(
+    sheet,
+    'B11',
+    'D11',
+    '見 積 有 効 期 限',
+    _coverLabelStyle().copyWith(textWrappingVal: TextWrapping.Clip),
+  );
   _mergeText(sheet, 'E11', 'G11', '', _coverHelperStyle());
   _mergeText(
     sheet,
@@ -177,6 +184,16 @@ void _writeCoverSheet(
   );
   _mergeText(sheet, 'B15', 'D15', '御 支 払 条 件', _coverLabelStyle());
   _mergeText(sheet, 'H15', 'M15', info.paymentTerms.trim(), _coverValueStyle());
+  _mergeText(
+    sheet,
+    'B16',
+    'E16',
+    '備考',
+    _coverLabelStyle().copyWith(
+      verticalAlignVal: VerticalAlign.Center,
+      textWrappingVal: TextWrapping.Clip,
+    ),
+  );
   _mergeText(sheet, 'H16', 'M16', info.notes.trim(), _coverNotesStyle());
 
   _writeCompanyProfile(sheet, companyProfile);
@@ -660,6 +677,7 @@ void _applyCoverBorders(Sheet sheet) {
   _applyBottomBorder(sheet, 10, 1, 12, _thinBorder());
   _applyBottomBorder(sheet, 12, 1, 12, _thinBorder());
   _applyBottomBorder(sheet, 14, 1, 12, _thinBorder());
+  _applyBottomBorder(sheet, 15, 1, 12, _thinBorder());
 }
 
 void _applyBottomBorder(
@@ -803,7 +821,7 @@ CellStyle _coverNotesStyle() => CellStyle(
   horizontalAlign: HorizontalAlign.Left,
   verticalAlign: VerticalAlign.Bottom,
   textWrapping: TextWrapping.WrapText,
-  bottomBorder: _breakdownThinBorder(),
+  bottomBorder: _thinBorder(),
 );
 
 CellStyle _companyInformationStyle() => CellStyle(
