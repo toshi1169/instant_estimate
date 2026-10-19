@@ -37,7 +37,7 @@ void main() {
     expect(validity.verticalAlignment, VerticalAlign.Bottom);
     expect(label.wrap, TextWrapping.Clip);
     expect(label.horizontalAlignment, HorizontalAlign.Center);
-    expect(label.verticalAlignment, VerticalAlign.Center);
+    expect(label.verticalAlignment, VerticalAlign.Bottom);
     expect(label.fontSize, payment.fontSize);
     expect(label.fontFamily, payment.fontFamily);
     expect(cover.getRowHeight(15), cover.getRowHeight(14));

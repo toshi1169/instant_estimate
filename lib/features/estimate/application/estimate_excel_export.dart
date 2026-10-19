@@ -190,7 +190,7 @@ void _writeCoverSheet(
     'E16',
     '備考',
     _coverLabelStyle().copyWith(
-      verticalAlignVal: VerticalAlign.Center,
+      verticalAlignVal: VerticalAlign.Bottom,
       textWrappingVal: TextWrapping.Clip,
     ),
   );
